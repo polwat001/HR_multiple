@@ -5,26 +5,34 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-app.use(cors()); // เปิดให้ Frontend ยิงมาได้
-app.use(express.json()); // อ่าน JSON จาก Body ได้
+app.use(cors());
+app.use(express.json());
 
-// Routes (เดี๋ยวเรามาสร้างไฟล์พวกนี้ทีหลัง)
-//app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/employees', require('./routes/employeeRoutes'));
-//app.use('/api/companies', require('./routes/companyRoutes'));
-
-// Test Route
+// เช็คสถานะ Server
 app.get('/', (req, res) => {
-    res.send('HR API is running...');
+  res.send('HR Group System API is running...');
 });
 
-// Error Handling Middleware
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something broke!');
-});
+// ==========================================
+// 📍 รวบรวม Routes (API Endpoints) ทั้งหมด
+// ==========================================
 
+// 🟢 โมดูลที่สร้างเสร็จแล้ว (เปิดใช้งานแล้ว)
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/employees', require('./routes/employeeRoutes'));
+
+// 🟡 โมดูลที่กำลังจะสร้าง (คอมเมนต์ไว้ก่อน)
+app.use('/api/organization', require('./routes/orgRoutes'));
+// app.use('/api/attendance', require('./routes/attendanceRoutes'));
+// app.use('/api/leaves', require('./routes/leaveRoutes'));
+// app.use('/api/contracts', require('./routes/contractRoutes'));
+// app.use('/api/reports', require('./routes/reportRoutes'));
+// app.use('/api/users', require('./routes/userRoutes'));
+
+// ==========================================
+
+// เริ่มเปิด Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
