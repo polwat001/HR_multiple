@@ -20,17 +20,20 @@ app.get('/', (req, res) => {
 // 🟢 โมดูลที่สร้างเสร็จแล้ว (เปิดใช้งานแล้ว)
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/employees', require('./routes/employeeRoutes'));
-
-// 🟡 โมดูลที่กำลังจะสร้าง (คอมเมนต์ไว้ก่อน)
 app.use('/api/organization', require('./routes/orgRoutes'));
-// app.use('/api/attendance', require('./routes/attendanceRoutes'));
-// app.use('/api/leaves', require('./routes/leaveRoutes'));
-// app.use('/api/contracts', require('./routes/contractRoutes'));
-// app.use('/api/reports', require('./routes/reportRoutes'));
-// app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/attendance', require('./routes/attendanceRoutes'));
+app.use('/api/leaves', require('./routes/leaveRoutes'));
+app.use('/api/contracts', require('./routes/contractRoutes'));
+app.use('/api/schedules', require('./routes/scheduleRoutes'));
+app.use('/api/shifts', require('./routes/shiftRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+// 🟡 โมดูลที่กำลังจะสร้าง (คอมเมนต์ไว้ก่อน)
+
+
 
 // ==========================================
-
+ 
 // เริ่มเปิด Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
