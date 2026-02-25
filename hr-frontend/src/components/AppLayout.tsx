@@ -34,11 +34,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
-          <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
+          <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center text-white font-bold text-sm shrink-0">
             HR
           </div>
           {!collapsed && (
-            <span className="text-sidebar-foregroundbar font-semibold text-sm truncate">
+            <span className="text-white font-semibold text-sm truncate">
               HR Core System
             </span>
           )}
@@ -54,10 +54,10 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm  transition-colors-300",
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-primary-foreground font-medium"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    ? "bg-white/15 text-white font-medium "
+                    : "text-white "
                 )}
               >
                 <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-sidebar-primary")} />
