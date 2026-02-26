@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { orgStructure } from "@/data/mockData";
+"use client";
+import { useState, useEffect, use } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight, ChevronDown, Building2, Building, GitBranch, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import error from "next/error";
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
   group: { icon: Building2, color: "text-primary" },
@@ -13,7 +14,7 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
 
 interface OrgNode {
   id: string;
-  name: string;
+  NAME: string;
   type: string;
   costCenter?: string;
   children: OrgNode[];
@@ -40,7 +41,7 @@ const TreeNode = ({ node, level = 0 }: { node: OrgNode; level?: number }) => {
           <span className="w-4 shrink-0" />
         )}
         <Icon className={cn("h-4 w-4 shrink-0", config.color)} />
-        <span className="text-sm font-medium">{node.name}</span>
+        <span className="text-sm font-medium">{node.NAME}</span>
         {node.costCenter && (
           <span className="text-xs text-muted-foreground ml-auto">{node.costCenter}</span>
         )}
@@ -57,6 +58,26 @@ const TreeNode = ({ node, level = 0 }: { node: OrgNode; level?: number }) => {
 };
 
 const OrganizationStructure = () => {
+  const [data, setData] = useState<OrgNode | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/organization/departments");
+        const json = await res.json();
+        setData(json);
+      }catch(error){
+        console.error("Failed to fetch org structure:", error);
+      }finally{
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) return <div className="p-6 text-center">Loading organization structure... </div>
+  if (!data) return <div className="p-6 text-center">No organization structure data available.</div>;
   return (
     <div className="space-y-6 animate-fade-in">
       <Card className="shadow-card">
@@ -64,7 +85,7 @@ const OrganizationStructure = () => {
           <CardTitle className="text-base">Company Structure (Organization Tree)</CardTitle>
         </CardHeader>
         <CardContent>
-          <TreeNode node={orgStructure as OrgNode} />
+          <TreeNode node={data} />
         </CardContent>
       </Card>
     </div>
