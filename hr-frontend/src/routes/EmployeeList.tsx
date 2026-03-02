@@ -3,13 +3,15 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCompany } from "@/contexts/CompanyContexts";
+// สมมติว่าคุณสร้างไฟล์ api.ts ไว้ที่ src/lib/api.ts แล้ว
+// import { apiCall } from "@/lib/api"; 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter } from "lucide-react";
 
-// 1. Interface ให้ตรงกับ Mapper ของ Backend
+// 1. Interface
 interface Employee {
   id: string;
   employeeCode: string;
@@ -46,13 +48,14 @@ const EmployeeList = () => {
   const [deptFilter, setDeptFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
 
-  // 2. ดึงข้อมูลจาก API จริง
+  // 2. ดึงข้อมูลจาก API
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
         const headers = { "Authorization": `Bearer ${token}` };
 
+        // ใช้ Promise.all เพื่อดึงข้อมูลพร้อมกัน
         const [empRes, compRes] = await Promise.all([
           fetch("http://localhost:5000/api/employees", { headers }),
           fetch("http://localhost:5000/api/companies", { headers })
@@ -61,6 +64,8 @@ const EmployeeList = () => {
         if (empRes.ok && compRes.ok) {
           setEmployees(await empRes.json());
           setCompanies(await compRes.json());
+        } else {
+          console.error("Failed to fetch data", { empStatus: empRes.status, compStatus: compRes.status });
         }
       } catch (error) {
         console.error("Fetch error:", error);
@@ -71,33 +76,32 @@ const EmployeeList = () => {
     fetchData();
   }, []);
 
-  // 3. ระบบ Filter ที่รองรับทั้ง UUID และ Company ID จาก Context
+  // 3. ระบบ Filter
   const companyFilter = searchParams.get("company") || selectedCompany.id;
 
   const filtered = useMemo(() => {
     return employees.filter((emp) => {
-      // เปรียบเทียบ ID โดยตัด prefix 'company-' ออกถ้ามี
       const empCompId = String(emp.companyId);
       const targetCompId = String(companyFilter).replace("company-", "");
       
       if (companyFilter !== "all" && empCompId !== targetCompId) return false;
       if (deptFilter !== "all" && emp.department !== deptFilter) return false;
       
-if (search) {
-  const q = search.toLowerCase();
-  return (
-    // ใช้ Optional Chaining (?.) หรือเช็คค่าก่อนดึง .toLowerCase()
-    (emp.firstname_th?.toLowerCase().includes(q) ?? false) ||
-    (emp.lastname_th?.toLowerCase().includes(q) ?? false) ||
-    (emp.employeeCode?.toLowerCase().includes(q) ?? false) ||
-    (emp.position?.toLowerCase().includes(q) ?? false)
-  );
-}
+      if (search) {
+        const q = search.toLowerCase();
+        return (
+          // ดักจับค่า undefined ด้วย Optional Chaining เพื่อป้องกัน Error
+          (emp.firstname_th?.toLowerCase().includes(q) ?? false) ||
+          (emp.lastname_th?.toLowerCase().includes(q) ?? false) ||
+          (emp.employeeCode?.toLowerCase().includes(q) ?? false) ||
+          (emp.position?.toLowerCase().includes(q) ?? false)
+        );
+      }
       return true;
     });
   }, [employees, companyFilter, deptFilter, search]);
 
-  // ดึงรายชื่อแผนกที่ไม่ซ้ำกันเพื่อทำ Dropdown
+  // ดึงรายชื่อแผนกที่ไม่ซ้ำกัน
   const departments = useMemo(() => {
     return [...new Set(employees.map((e) => e.department))].filter(Boolean);
   }, [employees]);
@@ -170,7 +174,7 @@ if (search) {
                         className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors"
                         onClick={() => router.push(`/employees/${emp.id}`)}
                       >
-                        <td className="px-4 py-3 font-mono text-xs">{emp.employeeCode}</td>
+                        <td className="px-4 py-3 font-mono text-xs">{emp.employeeCode || "N/A"}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <span className="text-lg">
@@ -190,8 +194,8 @@ if (search) {
                             {company?.logo} {company?.shortName || "N/A"}
                           </span>
                         </td>
-                        <td className="px-4 py-3">{emp.department}</td>
-                        <td className="px-4 py-3">{emp.position}</td>
+                        <td className="px-4 py-3">{emp.department || "N/A"}</td>
+                        <td className="px-4 py-3">{emp.position || "N/A"}</td>
                         <td className="px-4 py-3">
                           <Badge variant="outline" className={statusStyles[emp.STATUS?.toLowerCase()] || ""}>
                             {emp.STATUS || "N/A"}

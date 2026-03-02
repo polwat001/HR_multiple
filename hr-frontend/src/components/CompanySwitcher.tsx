@@ -14,6 +14,15 @@ interface Company {
   color: string;
 }
 
+// 1. สร้างตัวเลือก "บริษัททั้งหมด" เตรียมไว้
+const ALL_COMPANIES_OPTION: Company = {
+  id: "all",
+  name: "บริษัททั้งหมด",
+  shortName: "ALL",
+  logo: "🏢",
+  color: "hsl(215 70% 45%)"
+};
+
 const CompanySwitcher = () => {
   const { selectedCompany, setSelectedCompany } = useCompany();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -22,7 +31,6 @@ const CompanySwitcher = () => {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        // อย่าลืมใส่ Token เพราะ API ของเราต้องการการตรวจสอบสิทธิ์
         const token = localStorage.getItem("token"); 
         const response = await fetch("http://localhost:5000/api/companies", {
           headers: {
@@ -36,11 +44,14 @@ const CompanySwitcher = () => {
         }
 
         const data = await response.json();
-        setCompanies(data);
+        
+        // 2. นำ "บริษัททั้งหมด" ไปต่อหน้าข้อมูลที่ได้จาก API
+        const companiesWithAll = [ALL_COMPANIES_OPTION, ...data];
+        setCompanies(companiesWithAll);
 
-        // ถ้ายังไม่ได้เลือกบริษัท ให้เลือกบริษัทแรกเป็นค่าเริ่มต้น
-        if (data.length > 0 && !selectedCompany.id) {
-          setSelectedCompany(data[0]);
+        // ถ้ายังไม่ได้เลือกบริษัท ให้เลือก "บริษัททั้งหมด" เป็นค่าเริ่มต้น (index 0)
+        if (companiesWithAll.length > 0 && !selectedCompany.id) {
+          setSelectedCompany(companiesWithAll[0]);
         }
       } catch (error) {
         console.error("Fetch error:", error);
@@ -58,6 +69,7 @@ const CompanySwitcher = () => {
     <Select
       value={selectedCompany.id}
       onValueChange={(val) => {
+        // หาบริษัทที่ตรงกับ id ที่เลือก (รวมถึง "all" ด้วย)
         const c = companies.find((c) => c.id === val);
         if (c) setSelectedCompany(c);
       }}
@@ -68,17 +80,17 @@ const CompanySwitcher = () => {
           <SelectValue placeholder="เลือกบริษัท" />
         </div>
       </SelectTrigger>
-  <SelectContent>
-  {/* เพิ่มการเช็ค Array.isArray เพื่อความปลอดภัย 100% */}
-   {Array.isArray(companies) && companies.map((c) => (
-      <SelectItem key={c.id} value={c.id}>
-      <span className="flex items-center gap-2">
-        <span>{c.logo}</span>
-        <span>{c.name}</span>
-      </span>
-    </SelectItem>
-  ))}
-</SelectContent>
+      <SelectContent>
+        {/* เช็ค Array.isArray เพื่อความปลอดภัย 100% */}
+        {Array.isArray(companies) && companies.map((c) => (
+          <SelectItem key={c.id} value={c.id}>
+            <span className="flex items-center gap-2">
+              <span>{c.logo}</span>
+              <span>{c.name}</span>
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
     </Select>
   );
 };

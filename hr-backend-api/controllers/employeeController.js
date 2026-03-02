@@ -5,14 +5,28 @@ const db = require('../config/db');
 // ==========================================
 exports.getAllEmployees = async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM employees ORDER BY id DESC');
+    const query = `
+      SELECT 
+        e.id,
+        e.employee_code AS employeeCode,       
+        e.firstname_th,
+        e.lastname_th,
+        e.current_company_id AS companyId,     
+        e.STATUS,
+        e.avatar_url AS avatar,
+        COALESCE(d.NAME, 'ยังไม่ระบุแผนก') AS department, -- ดึงคอลัมน์ NAME จากตาราง departments
+        'ยังไม่ระบุตำแหน่ง' AS position          -- จำลองตำแหน่งไว้ก่อนจนกว่าจะทำตาราง positions
+      FROM employees e
+      LEFT JOIN departments d ON e.department_id = d.id -- เชื่อมตารางด้วย department_id
+      ORDER BY e.id DESC
+    `;
+    const [rows] = await db.query(query);
     res.status(200).json(rows);
   } catch (err) {
-    console.error(err);
+    console.error("❌ Get Employees Error:", err);
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูล', error: err.message });
   }
 };
-
 // ==========================================
 // 2. เพิ่มข้อมูลพนักงานใหม่ (POST)
 // ==========================================
@@ -66,20 +80,41 @@ exports.createEmployee = async (req, res) => {
 // 3. ดึงข้อมูลพนักงานรายบุคคล (GET by ID)
 // ==========================================
 exports.getEmployeeById = async (req, res) => {
-    try {
-      const { id } = req.params; // รับค่า id จาก URL
-      const [rows] = await db.query('SELECT * FROM employees WHERE id = ?', [id]);
-      
-      if (rows.length === 0) {
-        return res.status(404).json({ message: 'ไม่พบข้อมูลพนักงาน' });
-      }
-      
-      res.status(200).json(rows[0]);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูล', error: err.message });
+  try {
+    const { id } = req.params; 
+    
+    // ดึงข้อมูลและ Map ชื่อคอลัมน์ให้ตรงกันเผื่อนำไปแสดงในหน้า Profile
+    const query = `
+      SELECT 
+        e.id,
+        COALESCE(e.employee_code, '') AS employeeCode,
+        e.firstname_th,
+        e.lastname_th,
+        e.nickname,
+        e.id_card_number,
+        COALESCE(p.name_th, 'ไม่ระบุ') AS position,
+        COALESCE(d.name_th, 'ไม่ระบุ') AS department,
+        e.current_company_id AS companyId,
+        e.STATUS,
+        e.avatar_url AS avatar
+      FROM employees e
+      LEFT JOIN positions p ON e.position_id = p.title_th
+      LEFT JOIN departments d ON e.department_id = d.id
+      WHERE e.id = ?
+    `;
+    
+    const [rows] = await db.query(query, [id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'ไม่พบข้อมูลพนักงาน' });
     }
-  };
+    
+    res.status(200).json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูล', error: err.message });
+  }
+};
   
   // ==========================================
   // 4. อัปเดตข้อมูล/ย้ายบริษัทพนักงาน (PUT)
