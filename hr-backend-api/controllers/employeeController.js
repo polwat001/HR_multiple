@@ -1,156 +1,62 @@
 const db = require('../config/db');
 
-// ==========================================
-// 1. ดึงข้อมูลพนักงานทั้งหมด (GET)
-// ==========================================
 exports.getAllEmployees = async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        e.id,
-        e.employee_code AS employeeCode,       
-        e.firstname_th,
-        e.lastname_th,
-        e.current_company_id AS companyId,     
-        e.STATUS,
-        e.avatar_url AS avatar,
-        COALESCE(d.NAME, 'ยังไม่ระบุแผนก') AS department, -- ดึงคอลัมน์ NAME จากตาราง departments
-        'ยังไม่ระบุตำแหน่ง' AS position          -- จำลองตำแหน่งไว้ก่อนจนกว่าจะทำตาราง positions
-      FROM employees e
-      LEFT JOIN departments d ON e.department_id = d.id -- เชื่อมตารางด้วย department_id
-      ORDER BY e.id DESC
-    `;
-    const [rows] = await db.query(query);
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error("❌ Get Employees Error:", err);
-    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูล', error: err.message });
-  }
-};
-// ==========================================
-// 2. เพิ่มข้อมูลพนักงานใหม่ (POST)
-// ==========================================
-exports.createEmployee = async (req, res) => {
-  try {
-    const { 
-      employee_code, 
-      firstname_th, 
-      lastname_th, 
-      nickname,
-      id_card_number,
-      current_company_id,
-      user_id,
-      STATUS,
-      avatar_url
-    } = req.body;
-
-    if (!employee_code || !firstname_th || !lastname_th || !current_company_id) {
-      return res.status(400).json({ message: 'กรุณาส่งข้อมูลบังคับให้ครบถ้วน' });
-    }
-
-    const [result] = await db.query(
-      `INSERT INTO employees 
-      (employee_code, firstname_th, lastname_th, nickname, id_card_number, current_company_id, user_id, STATUS, avatar_url) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        employee_code, 
-        firstname_th, 
-        lastname_th, 
-        nickname || null, 
-        id_card_number || null, 
-        current_company_id, 
-        user_id || null, 
-        STATUS || 'Active',
-        avatar_url || null
-      ]
-    );
-
-    res.status(201).json({ 
-      message: 'เพิ่มพนักงานสำเร็จ!', 
-      insertId: result.insertId 
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'บันทึกข้อมูลไม่สำเร็จ', error: err.message });
-  }
-};
-
-// ==========================================
-// 3. ดึงข้อมูลพนักงานรายบุคคล (GET by ID)
-// ==========================================
-exports.getEmployeeById = async (req, res) => {
-  try {
-    const { id } = req.params; 
-    
-    // ดึงข้อมูลและ Map ชื่อคอลัมน์ให้ตรงกันเผื่อนำไปแสดงในหน้า Profile
-    const query = `
-      SELECT 
-        e.id,
-        COALESCE(e.employee_code, '') AS employeeCode,
-        e.firstname_th,
-        e.lastname_th,
-        e.nickname,
-        e.id_card_number,
-        COALESCE(p.name_th, 'ไม่ระบุ') AS position,
-        COALESCE(d.name_th, 'ไม่ระบุ') AS department,
-        e.current_company_id AS companyId,
-        e.STATUS,
-        e.avatar_url AS avatar
-      FROM employees e
-      LEFT JOIN positions p ON e.position_id = p.title_th
-      LEFT JOIN departments d ON e.department_id = d.id
-      WHERE e.id = ?
-    `;
-    
-    const [rows] = await db.query(query, [id]);
-    
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'ไม่พบข้อมูลพนักงาน' });
-    }
-    
-    res.status(200).json(rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูล', error: err.message });
-  }
-};
-  
-  // ==========================================
-  // 4. อัปเดตข้อมูล/ย้ายบริษัทพนักงาน (PUT)
-  // ==========================================
-  exports.updateEmployee = async (req, res) => {
     try {
-      const { id } = req.params;
-      // รับข้อมูลที่ต้องการอัปเดต (ส่งมาแค่อันที่ต้องการเปลี่ยนก็ได้)
-      const { 
-        firstname_th, 
-        lastname_th, 
-        nickname,
-        current_company_id,
-        STATUS 
-      } = req.body;
-  
-      // ใช้ COALESCE ของ SQL เพื่ออัปเดตเฉพาะค่าที่ส่งมา ถ้าไม่ส่งมาให้ใช้ค่าเดิม
-      const [result] = await db.query(
-        `UPDATE employees 
-         SET firstname_th = COALESCE(?, firstname_th), 
-             lastname_th = COALESCE(?, lastname_th), 
-             nickname = COALESCE(?, nickname), 
-             current_company_id = COALESCE(?, current_company_id), 
-             STATUS = COALESCE(?, STATUS)
-         WHERE id = ?`,
-        [firstname_th, lastname_th, nickname, current_company_id, STATUS, id]
-      );
-  
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'ไม่พบพนักงานที่ต้องการอัปเดต' });
-      }
-  
-      res.status(200).json({ message: 'อัปเดตข้อมูลพนักงานสำเร็จ!' });
-  
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'อัปเดตข้อมูลไม่สำเร็จ', error: err.message });
+        // 1. แกะข้อมูลสิทธิ์ที่ได้จาก Token (authMiddleware ส่งมาให้ใน req.user)
+        const { user_id, role_level, company_id } = req.user;
+
+        // 2. สร้างคำสั่ง SQL พื้นฐาน (Join ตารางเพื่อเอาชื่อบริษัท แผนก ตำแหน่ง มาโชว์สวยๆ)
+        let sql = `
+            SELECT 
+                e.id, 
+                e.employee_code, 
+                e.firstname_th, 
+                e.lastname_th, 
+                e.status,
+                c.name_th AS company_name, 
+                d.name_th AS department_name, 
+                p.title_th AS position_name
+            FROM employees e
+            LEFT JOIN companies c ON e.company_id = c.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            LEFT JOIN positions p ON e.position_id = p.id
+            WHERE 1=1
+        `;
+        
+        const params = [];
+
+        // 3. ⭐️ หัวใจหลัก: กรองข้อมูลตามสิทธิ์ (Data Isolation)
+        if (role_level >= 80) {
+            // Super Admin (99) และ Central HR (80) -> ไม่ต้องเติม WHERE เพิ่ม (ดึงได้หมดทุกบริษัท)
+        } 
+        else if (role_level === 50) {
+            // HR Company (50) -> ล็อคให้ดูได้แค่บริษัทของตัวเอง
+            sql += ` AND e.company_id = ?`;
+            params.push(company_id);
+        } 
+        else if (role_level === 20) {
+            // Manager (20) -> ล็อคให้ดูได้เฉพาะคนที่มี manager_id ตรงกับรหัสพนักงานของตัวเอง
+            // (ต้องแปลงจาก user_id เป็น employee_id ของ Manager ก่อน)
+            sql += ` AND e.manager_id = (SELECT id FROM employees WHERE user_id = ?)`;
+            params.push(user_id);
+        } 
+        else {
+            // Employee (1) -> ดูได้แค่ข้อมูลของตัวเองเท่านั้น
+            sql += ` AND e.user_id = ?`;
+            params.push(user_id);
+        }
+
+        // 4. รันคำสั่ง SQL
+        const [employees] = await db.query(sql, params);
+
+        res.status(200).json({
+            message: 'ดึงข้อมูลพนักงานสำเร็จ',
+            count: employees.length,
+            data: employees
+        });
+
+    } catch (error) {
+        console.error('Get Employees Error:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลพนักงาน' });
     }
-  };
+};

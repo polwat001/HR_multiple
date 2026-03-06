@@ -1,75 +1,88 @@
-const db = require('../config/db');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const db = require('../config/db'); // ไฟล์เชื่อมต่อฐานข้อมูล MySQL ของคุณ
 
 exports.login = async (req, res) => {
-  try {
-    const { username, password } = req.body;
+    try {
+        const { username, password } = req.body;
 
-    // 1. ค้นหาผู้ใช้จาก Database
-    let [users] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
-    
-    // 🛠️ AUTO-CREATE: ถ้าไม่มี user "admin" ให้สร้างอัตโนมัติ
-    if (users.length === 0 && username === 'admin' && password === '123456') {
-      console.log("🛠️ ระบบกำลัง Auto-Create: สร้าง User admin ใหม่...");
-      const realHash = await bcrypt.hash('123456', 10);
-      const [result] = await db.query(
-        'INSERT INTO users (username, password_hash, is_super_admin) VALUES (?, ?, ?)',
-        [username, realHash, 1]
-      );
-      console.log("✅ สร้าง User admin สำเร็จ!");
-      // ดึง user ที่เพิ่งสร้างมา
-      [users] = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
-    }
+        // 1. ตรวจสอบว่ากรอกข้อมูลมาครบไหม
+        if (!username || !password) {
+            return res.status(400).json({ message: 'กรุณากรอก Username และ Password' });
+        }
 
-    if (users.length === 0) {
-      return res.status(401).json({ message: 'ชื่อผู้ใช้ หรือ รหัสผ่านไม่ถูกต้อง' });
-    }
+        // 2. ค้นหา User พร้อมกับดึงสิทธิ์ (Role) และขอบเขตข้อมูล (Company/Department)
+        const sql = `
+            SELECT 
+                u.id AS user_id, 
+                u.username, 
+                u.password_hash, 
+                u.status,
+                ur.company_id, 
+                ur.department_id,
+                r.role_name, 
+                r.role_level
+            FROM users u
+            LEFT JOIN user_roles ur ON u.id = ur.user_id
+            LEFT JOIN roles r ON ur.role_id = r.id
+            WHERE u.username = ?
+        `;
+        
+        const [users] = await db.query(sql, [username]);
 
-    const user = users[0];
+        // 3. เช็คว่าเจอ User ไหม และสถานะถูกล็อคอยู่หรือเปล่า
+        if (users.length === 0) {
+            return res.status(401).json({ message: 'Username หรือ Password ไม่ถูกต้อง' });
+        }
 
-    // 2. ตรวจสอบรหัสผ่าน
-    let isMatch = await bcrypt.compare(password, user.password_hash);
-    
-    // 🛠️ AUTO-FIX: ซ่อมรหัสผ่านจำลองให้เป็นของจริง!
-    // ถ้าเทียบไม่ผ่าน แต่รหัสที่พิมพ์มาคือ 123456 ระบบจะสร้าง Hash ใหม่ที่ถูกต้องแล้วเซฟลง DB ให้เลย
-    if (!isMatch && password === '123456') {
-      console.log("🛠️ ระบบกำลัง Auto-Fix: สร้างรหัส Hash ของจริงบันทึกลง Database...");
-      const realHash = await bcrypt.hash('123456', 10);
-      await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [realHash, user.id]);
-      isMatch = true; // บังคับให้ผ่านรอบนี้ไปเลย
-      console.log("✅ ซ่อมฐานข้อมูลเสร็จสมบูรณ์!");
-    }
+        const user = users[0];
 
-    if (!isMatch) {
-      return res.status(401).json({ message: 'ชื่อผู้ใช้ หรือ รหัสผ่านไม่ถูกต้อง' });
-    }
+        if (user.status !== 'active') {
+            return res.status(403).json({ message: 'บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อ HR' });
+        }
 
-    // 3. สร้าง Payload 
-    const payload = {
-      user: {
-        id: user.id,
-        is_super_admin: user.is_super_admin
-      }
-    };
+        // 4. ตรวจสอบรหัสผ่าน (Password Hashing)
+        // หมายเหตุ: กรณี Mock Data ที่ผมให้ไปเป็น Hash ปลอม ถ้าคุณจะทดสอบตอนแรก 
+        // อาจจะแก้บรรทัดนี้เป็นการเช็ค string ธรรมดาก่อนได้ (เช่น password === '123456')
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Username หรือ Password ไม่ถูกต้อง' });
+        }
 
-    // 4. เซ็นออก Token
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET || 'my_super_secret_key_hr_system_2026',
-      { expiresIn: '1d' },
-      (err, token) => {
-        if (err) throw err;
+        // 5. สร้าง JWT Payload (ข้อมูลที่จะฝังไปใน Token) ⭐️ หัวใจสำคัญของระบบสิทธิ์!
+        const payload = {
+            user_id: user.user_id,
+            role_level: user.role_level,       // เช่น 99, 80, 50, 20
+            role_name: user.role_name,         // เช่น 'Manager', 'HR Company'
+            company_id: user.company_id,       // ระบุบริษัท (ถ้าเป็น NULL คือดูได้หมด)
+            department_id: user.department_id  // ระบุแผนก (ถ้าเป็น NULL คือดูได้หมด)
+        };
+
+        // 6. สร้าง Token (ตั้งอายุไว้ที่ 1 วัน)
+        const token = jwt.sign(
+            payload, 
+            process.env.JWT_SECRET || 'your_super_secret_key', 
+            { expiresIn: '1d' }
+        );
+
+        // 7. ส่ง Token และข้อมูลเบื้องต้นกลับไปให้หน้าบ้าน (React)
         res.status(200).json({
-          message: 'เข้าสู่ระบบสำเร็จ',
-          token: token,
-          userData: payload.user
+            message: 'เข้าสู่ระบบสำเร็จ',
+            token: token,
+            user: {
+                user_id: user.user_id,
+                username: user.username,
+                role: user.role_name,
+                company_id: user.company_id
+            }
         });
-      }
-    );
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์', error: err.message });
-  }
+        // อัปเดตเวลาเข้าสู่ระบบล่าสุด (Optional)
+        await db.query(`UPDATE users SET last_login = NOW() WHERE id = ?`, [user.user_id]);
+
+    } catch (error) {
+        console.error('Login Error:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' });
+    }
 };

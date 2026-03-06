@@ -1,13 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const contractController = require('../controllers/contractController');
-const { verifyToken } = require('../middleware/authMiddleware'); // ดึงยามมาเฝ้า
+const authMiddleware = require('../middleware/authMiddleware');
 
-// ดึงสัญญาทั้งหมด (GET)
-router.get('/', verifyToken, contractController.getAllContracts);
+router.use(authMiddleware);
+router.get('/', contractController.getContracts);
 
-// สร้างสัญญาใหม่ (POST)
-router.post('/', verifyToken, contractController.createContract);
-
-// 👇 บรรทัดนี้สำคัญมาก! ถ้าไม่มีบรรทัดนี้ server.js จะพังทันที
 module.exports = router;

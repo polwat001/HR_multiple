@@ -1,15 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const leaveController = require('../controllers/leaveController');
-const { verifyToken } = require('../middleware/authMiddleware'); // ดึงยามมาเฝ้า
+const authMiddleware = require('../middleware/authMiddleware');
+const roleMiddleware = require('../middleware/roleMiddleware'); // 🆕 เอาไว้ล็อคสิทธิ์
 
-// ดึงรายการใบลากลับมาดู
-router.get('/requests', verifyToken, leaveController.getAllLeaves);
+router.use(authMiddleware);
 
-// ส่งใบลาใหม่
-router.post('/request', verifyToken, leaveController.requestLeave);
+// Routes เดิม
+router.get('/requests', leaveController.getLeaveRequests);
+router.get('/balances', leaveController.getLeaveBalances);
 
-// อัปเดตสถานะใบลา (อนุมัติ/ประจืน) เช่น PUT /api/leaves/1/status
-router.put('/:id/status', verifyToken, leaveController.updateLeaveStatus);
+// 🆕 Route ใหม่: ยื่นใบลา (ทุกคนทำได้)
+router.post('/request', leaveController.createLeaveRequest);
+
+// 🆕 Route ใหม่: อนุมัติ/ปฏิเสธใบลา (เฉพาะ Manager ขึ้นไป)
+router.put('/:id/status', roleMiddleware(['Super Admin', 'Central HR', 'HR Company', 'Manager']), leaveController.updateLeaveStatus);
 
 module.exports = router;

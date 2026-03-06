@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const reportController = require('../controllers/reportController');
-const { verifyToken } = require('../middleware/authMiddleware');
+// บรรทัดนี้ต้องชี้ไปที่ไฟล์ controller ถูกต้อง
+const reportController = require('../controllers/reportController'); 
+const authMiddleware = require('../middleware/authMiddleware');
 
-// เส้นทางสำหรับดึงรายงานต่างๆ
+router.use(authMiddleware);
 
-router.get('/employee-summary', verifyToken, reportController.getEmployeeSummary);
-router.get('/attendance-daily', verifyToken, reportController.getDailyAttendanceReport);
+// สังเกตตรงนี้: ต้องเป็น reportController.getDashboardStats (ไม่มีวงเล็บต่อท้าย)
+router.get('/dashboard', reportController.getDashboardStats);
 
 module.exports = router;

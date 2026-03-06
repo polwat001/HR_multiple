@@ -16,6 +16,7 @@ import ContractManagement from "@/routes/ContractManagement";
 import Reports from "@/routes/Reports";
 import UserPermissions from "@/routes/UserPermission";
 import NotFound from "@/routes/NotFound";
+import Login from "@/routes/Login";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +29,8 @@ const App = () => (
         <BrowserRouter>
           <AppLayout>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Login />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/organization" element={<OrganizationStructure />} />
               <Route path="/positions" element={<PositionMaster />} />
               <Route path="/employees" element={<EmployeeList />} />
@@ -38,7 +40,6 @@ const App = () => (
               <Route path="/contracts" element={<ContractManagement />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/permissions" element={<UserPermissions />} />
-              <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>
         </BrowserRouter>

@@ -1,14 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const orgController = require('../controllers/orgController');
-const { verifyToken } = require('../middleware/authMiddleware'); // ดึงยามมาเฝ้าประตู
+const authMiddleware = require('../middleware/authMiddleware');
 
-// เส้นทางสำหรับแผนก (Departments)
-router.get('/departments', verifyToken, orgController.getDepartments);
-router.post('/departments', verifyToken, orgController.createDepartment);
+// 🛡️ ทุกเส้นทางต้องผ่านการเช็ค Token (Login แล้วเท่านั้น)
+router.use(authMiddleware);
 
-// เส้นทางสำหรับตำแหน่ง (Positions)
-router.get('/positions', verifyToken, orgController.getPositions);
-router.post('/positions', verifyToken, orgController.createPosition);
+// Route: GET /api/organization/companies
+router.get('/companies', orgController.getCompanies);
+
+// Route: GET /api/organization/departments
+router.get('/departments', orgController.getDepartments);
+
+// Route: GET /api/organization/positions
+router.get('/positions', orgController.getPositions);
 
 module.exports = router;

@@ -1,12 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const scheduleController = require('../controllers/scheduleController');
-const { verifyToken } = require('../middleware/authMiddleware'); // ดึงยามมาเฝ้า
+const authMiddleware = require('../middleware/authMiddleware');
 
-// ดึงตารางงานทั้งหมด (GET)
-router.get('/', verifyToken, scheduleController.getAllSchedules);
-
-// จัดตารางงานใหม่ (POST)
-router.post('/', verifyToken, scheduleController.createSchedule);
+router.use(authMiddleware);
+router.get('/', scheduleController.getSchedules);
 
 module.exports = router;

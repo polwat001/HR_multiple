@@ -1,117 +1,34 @@
 const db = require('../config/db');
 
-let _scheduleTablePromise;
-let _scheduleColumnsPromise;
+exports.getSchedules = async (req, res) => {
+    try {
+        const { role_level, company_id } = req.user;
+        
+        let sql = `
+            SELECT 
+                ws.id, 
+                ws.shift_name, 
+                ws.time_in, 
+                ws.time_out, 
+                ws.grace_period_mins,
+                c.name_th AS company_name
+            FROM work_schedules ws
+            JOIN companies c ON ws.company_id = c.id
+            WHERE 1=1
+        `;
+        const params = [];
 
-async function resolveScheduleTable() {
-  if (_scheduleTablePromise) return _scheduleTablePromise;
+        // กะการทำงานจะผูกกับบริษัท (พนักงานดูได้แค่กะของบริษัทตัวเอง)
+        if (role_level < 80) {
+            sql += ` AND ws.company_id = ?`;
+            params.push(company_id);
+        }
 
-  _scheduleTablePromise = (async () => {
-    const candidates = ['schedules', 'schedule', 'work_schedules', 'employee_schedules', 'shift_schedules'];
+        const [schedules] = await db.query(sql, params);
+        res.status(200).json({ message: 'ดึงข้อมูลกะการทำงานสำเร็จ', data: schedules });
 
-    for (const name of candidates) {
-      const [rows] = await db.query(
-        `SELECT 1
-         FROM information_schema.tables
-         WHERE table_schema = DATABASE() AND table_name = ?
-         LIMIT 1`,
-        [name]
-      );
-      if (rows.length > 0) return name;
+    } catch (error) {
+        console.error('Get Schedules Error:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลตารางเวลา' });
     }
-
-    const [likeRows] = await db.query(
-      `SELECT table_name
-       FROM information_schema.tables
-       WHERE table_schema = DATABASE() AND table_name LIKE '%schedule%'
-       ORDER BY table_name ASC
-       LIMIT 1`
-    );
-
-    if (likeRows.length > 0) return likeRows[0].table_name;
-
-    throw new Error("ไม่พบตาราง schedule (ลองสร้างตารางชื่อ 'schedules' หรือแก้ candidates ใน scheduleController)");
-  })();
-
-  return _scheduleTablePromise;
-}
-
-async function resolveScheduleColumns(tableName) {
-  if (_scheduleColumnsPromise) return _scheduleColumnsPromise;
-
-  _scheduleColumnsPromise = (async () => {
-    const [rows] = await db.query(
-      `SELECT column_name
-       FROM information_schema.columns
-       WHERE table_schema = DATABASE() AND table_name = ?`,
-      [tableName]
-    );
-
-    return rows.map((r) => r.column_name);
-  })();
-
-  return _scheduleColumnsPromise;
-}
-
-function pickInsertableColumns(allColumns, payload) {
-  const disallowed = new Set(['id', 'created_at', 'updated_at']);
-  const payloadKeys = Object.keys(payload || {});
-  return payloadKeys.filter((k) => allColumns.includes(k) && !disallowed.has(k));
-}
-
-// ==========================================
-// 1) ดึงตารางงานทั้งหมด (GET)
-// ==========================================
-exports.getAllSchedules = async (req, res) => {
-  try {
-    const tableName = await resolveScheduleTable();
-    const columns = await resolveScheduleColumns(tableName);
-
-    const hasId = columns.includes('id');
-    const sql = hasId ? `SELECT * FROM \`${tableName}\` ORDER BY id DESC` : `SELECT * FROM \`${tableName}\``;
-
-    const [rows] = await db.query(sql);
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'ดึงตารางงานไม่สำเร็จ', error: err.message });
-  }
-};
-
-// ==========================================
-// 2) จัดตารางงานใหม่ (POST)
-// ==========================================
-exports.createSchedule = async (req, res) => {
-  try {
-    const tableName = await resolveScheduleTable();
-    const columns = await resolveScheduleColumns(tableName);
-
-    const insertCols = pickInsertableColumns(columns, req.body);
-
-    if (insertCols.length === 0) {
-      return res.status(400).json({
-        message:
-          'ไม่พบฟิลด์ที่ insert ได้จาก payload (ตรวจชื่อคอลัมน์ให้ตรงกับตาราง schedule ใน DB)',
-        availableColumns: columns
-      });
-    }
-
-    const values = insertCols.map((c) => (req.body[c] === undefined ? null : req.body[c]));
-
-    const colIdents = insertCols.map(() => '??').join(', ');
-    const valPlaceholders = insertCols.map(() => '?').join(', ');
-
-    const sql = `INSERT INTO ?? (${colIdents}) VALUES (${valPlaceholders})`;
-    const params = [tableName, ...insertCols, ...values];
-
-    const [result] = await db.query(sql, params);
-
-    res.status(201).json({
-      message: 'สร้างตารางงานสำเร็จ!',
-      scheduleId: result.insertId ?? null
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'บันทึกตารางงานไม่สำเร็จ', error: err.message });
-  }
 };

@@ -1,34 +1,28 @@
 const jwt = require('jsonwebtoken');
 
-const verifyToken = function(req, res, next) {
-  // 1. รับ Token จาก Header (รูปแบบคือ Authorization: Bearer <token>)
-  const authHeader = req.header('Authorization');
-  
-  // ถ้าไม่มีการส่ง Header นี้มาเลย
-  if (!authHeader) {
-    return res.status(401).json({ message: 'ไม่มี Token ปฏิเสธการเข้าถึง (Access Denied)' });
-  }
+const authMiddleware = (req, res, next) => {
+    // 1. ดึง Token จาก Header
+    const authHeader = req.header('Authorization');
 
-  // แยกคำว่า Bearer ออก เอาเฉพาะก้อน Token
-  const token = authHeader.split(' ')[1];
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'ปฏิเสธการเข้าถึง: ไม่พบ Token หรือรูปแบบไม่ถูกต้อง' });
+    }
 
-  if (!token) {
-    return res.status(401).json({ message: 'รูปแบบ Token ไม่ถูกต้อง' });
-  }
+    const token = authHeader.split(' ')[1];
 
-  try {
-    // 2. ตรวจสอบและถอดรหัส Token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'my_super_secret_key_hr_system_2026');
-    
-    // 3. เอาข้อมูล user (id, role, company_id) ไปแปะไว้ใน req 
-    // เพื่อให้ API ดึงข้อมูลรู้ว่า "ใคร" กำลังเรียกใช้งาน และอยู่บริษัทไหน
-    req.user = decoded.user; 
-    
-    // 4. ให้ผ่านด่านไปทำงานฟังก์ชันถัดไปได้
-    next(); 
-  } catch (err) {
-    res.status(401).json({ message: 'Token ไม่ถูกต้อง หรือ หมดอายุแล้ว' });
-  }
+    try {
+        const secretKey = process.env.JWT_SECRET || 'super_secret_key_for_hr_system_2026';
+        const decoded = jwt.verify(token, secretKey);
+        
+        req.user = decoded; // เอาข้อมูลไปแปะไว้ให้ roleMiddleware ใช้ต่อ
+        next();
+    } catch (error) {
+        console.error('Token Verification Error:', error.message);
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Token หมดอายุ กรุณาเข้าสู่ระบบใหม่' });
+        }
+        return res.status(403).json({ message: 'Token ไม่ถูกต้อง' });
+    }
 };
 
-module.exports = { verifyToken };
+module.exports = authMiddleware;

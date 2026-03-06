@@ -1,40 +1,40 @@
 const db = require('../config/db');
 
-// ดึงข้อมูลผู้ใช้งานปัจจุบัน (Current User)
-exports.getCurrentUser = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const query = `
-      SELECT u.id, u.username, u.email, r.NAME as role
-      FROM users u
-      LEFT JOIN user_company_roles ucr ON u.id = ucr.user_id
-      LEFT JOIN roles r ON ucr.role_id = r.id
-      WHERE u.id = ?
-      LIMIT 1
-    `;
-    const [rows] = await db.query(query, [userId]);
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'ไม่พบข้อมูลผู้ใช้งาน' });
-    }
-    res.status(200).json(rows[0]);
-  } catch (err) {
-    res.status(500).json({ message: 'ดึงข้อมูลผู้ใช้งานปัจจุบันไม่สำเร็จ', error: err.message });
-  }
-};
+exports.getUsers = async (req, res) => {
+    try {
+        const { role_level, company_id } = req.user;
 
-// ดึงรายชื่อผู้ใช้งานทั้งหมด พร้อมสิทธิ์ (Role)
-exports.getAllUsers = async (req, res) => {
-  try {
-    const query = `
-      SELECT u.id, u.username, u.email, r.NAME as role_name
-      FROM users u
-      LEFT JOIN user_company_roles ucr ON u.id = ucr.user_id
-      LEFT JOIN roles r ON ucr.role_id = r.id
-      WHERE ucr.company_id = ?
-    `;
-    const [rows] = await db.query(query, [req.user.company_id]);
-    res.status(200).json(rows);
-  } catch (err) {
-    res.status(500).json({ message: 'ดึงข้อมูลผู้ใช้งานไม่สำเร็จ', error: err.message });
-  }
+        // บล็อคไม่ให้ Manager และ Employee เข้าถึงเมนูตั้งค่า Users
+        if (role_level < 50) {
+            return res.status(403).json({ message: 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลบัญชีผู้ใช้งาน' });
+        }
+
+        let sql = `
+            SELECT 
+                u.id, 
+                u.username, 
+                u.status, 
+                r.role_name, 
+                c.name_th AS company_name
+            FROM users u
+            LEFT JOIN user_roles ur ON u.id = ur.user_id
+            LEFT JOIN roles r ON ur.role_id = r.id
+            LEFT JOIN companies c ON ur.company_id = c.id
+            WHERE 1=1
+        `;
+        const params = [];
+
+        // HR Company เห็นเฉพาะบัญชีในบริษัทตัวเอง
+        if (role_level === 50) {
+            sql += ` AND ur.company_id = ?`;
+            params.push(company_id);
+        }
+
+        const [users] = await db.query(sql, params);
+        res.status(200).json({ message: 'ดึงข้อมูลบัญชีผู้ใช้งานสำเร็จ', data: users });
+
+    } catch (error) {
+        console.error('Get Users Error:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้งาน' });
+    }
 };

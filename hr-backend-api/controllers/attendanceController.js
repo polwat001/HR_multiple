@@ -1,119 +1,64 @@
 const db = require('../config/db');
 
-// ==========================================
-// 🕒 1. ดึงประวัติการเข้า-ออกงานทั้งหมด
-// ==========================================
-exports.getAttendanceLogs = async (req, res) => {
-  try {
-    const query = `
-      SELECT a.*, e.firstname_th, e.lastname_th, e.employee_code 
-      FROM attendance_logs a
-      JOIN employees e ON a.employee_id = e.id
-      ORDER BY a.\`DATE\` DESC, a.check_in_time DESC
-    `;
-    const [rows] = await db.query(query);
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'ดึงข้อมูลเวลาเข้างานไม่สำเร็จ', error: err.message });
-  }
-};
+// ดึงข้อมูลประวัติการลงเวลาเข้า-ออกงาน
+exports.getAttendances = async (req, res) => {
+    try {
+        const { user_id, role_level, company_id } = req.user;
+        
+        // 1. สร้างคำสั่ง SQL พื้นฐาน (Join ตารางเพื่อเอาชื่อ-นามสกุลมาแสดง)
+        let sql = `
+            SELECT 
+                a.id, 
+                a.work_date, 
+                a.check_in_time, 
+                a.check_out_time, 
+                a.status,
+                e.employee_code, 
+                e.firstname_th, 
+                e.lastname_th,
+                d.name_th AS department_name
+            FROM attendances a
+            JOIN employees e ON a.employee_id = e.id
+            LEFT JOIN departments d ON e.department_id = d.id
+            WHERE 1=1
+        `;
+        
+        const params = [];
 
-// ==========================================
-// ⏱️ 2. บันทึกเวลาเข้างาน (Check-in)
-// ==========================================
-exports.recordAttendance = async (req, res) => {
-  try {
-    const { employee_id, company_id, DATE, check_in_time, STATUS, late_minutes } = req.body;
+        // 2. ⭐️ กรองข้อมูลตามสิทธิ์ (RBAC)
+        if (role_level >= 80) {
+            // Super Admin (99) & Central HR (80) -> ดูได้หมดทุกคน
+        } 
+        else if (role_level === 50) {
+            // HR Company (50) -> ดูได้ทุกคน "แต่เฉพาะในบริษัทตัวเอง"
+            sql += ` AND e.company_id = ?`;
+            params.push(company_id);
+        } 
+        else if (role_level === 20) {
+            // Manager (20) -> ดูได้เฉพาะ "ตัวเอง" และ "ลูกทีมของตัวเอง"
+            sql += ` AND (e.user_id = ? OR e.manager_id = (SELECT id FROM employees WHERE user_id = ?))`;
+            params.push(user_id, user_id);
+        } 
+        else {
+            // Employee (1) -> ดูได้เฉพาะข้อมูลสแกนนิ้วของ "ตัวเอง" เท่านั้น
+            sql += ` AND e.user_id = ?`;
+            params.push(user_id);
+        }
 
-    // เช็คข้อมูลบังคับตามตารางจริงของคุณ
-    if (!employee_id || !company_id || !DATE) {
-      return res.status(400).json({ message: 'กรุณาส่ง employee_id, company_id และ DATE ให้ครบ' });
+        // เรียงลำดับจากวันที่ล่าสุดก่อน และจำกัดแค่ 100 รายการเพื่อไม่ให้โหลดช้า
+        sql += ` ORDER BY a.work_date DESC LIMIT 100`;
+
+        // 3. รันคำสั่ง
+        const [attendances] = await db.query(sql, params);
+
+        res.status(200).json({ 
+            message: 'ดึงข้อมูลการลงเวลาสำเร็จ',
+            count: attendances.length,
+            data: attendances 
+        });
+
+    } catch (error) {
+        console.error('Get Attendances Error:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลลงเวลา' });
     }
-
-    const [result] = await db.query(
-      `INSERT INTO attendance_logs 
-      (employee_id, company_id, \`DATE\`, check_in_time, STATUS, late_minutes) 
-      VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        employee_id, 
-        company_id, 
-        DATE, 
-        check_in_time || null, 
-        STATUS || 'present', 
-        late_minutes || 0
-      ]
-    );
-
-    res.status(201).json({
-      message: 'บันทึกเวลาเข้างานสำเร็จ!',
-      logId: result.insertId
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'บันทึกเวลาไม่สำเร็จ', error: err.message });
-  }
-};
-
-// ==========================================
-// ⏱️ 3. บันทึกเวลาออกงาน (Check-out)
-// ==========================================
-exports.checkOut = async (req, res) => {
-  try {
-    const { id, employee_id, company_id, DATE, check_out_time, STATUS, ot_hours } = req.body;
-
-    if (!id && (!employee_id || !company_id || !DATE)) {
-      return res.status(400).json({
-        message: 'กรุณาส่ง id หรือ (employee_id, company_id, DATE) สำหรับระบุแถวที่จะอัปเดต'
-      });
-    }
-
-    const fieldsToUpdate = [];
-    const values = [];
-
-    if (check_out_time !== undefined) {
-      fieldsToUpdate.push('check_out_time = ?');
-      values.push(check_out_time);
-    }
-
-    if (STATUS !== undefined) {
-      fieldsToUpdate.push('STATUS = ?');
-      values.push(STATUS);
-    }
-
-    if (ot_hours !== undefined) {
-      fieldsToUpdate.push('ot_hours = ?');
-      values.push(ot_hours);
-    }
-
-    if (fieldsToUpdate.length === 0) {
-      return res.status(400).json({
-        message: 'กรุณาส่งข้อมูลที่ต้องการอัปเดตอย่างน้อย 1 ฟิลด์ (เช่น check_out_time, STATUS, ot_hours)'
-      });
-    }
-
-    let whereClause = '';
-    const whereValues = [];
-
-    if (id) {
-      whereClause = 'id = ?';
-      whereValues.push(id);
-    } else {
-      whereClause = 'employee_id = ? AND company_id = ? AND `DATE` = ?';
-      whereValues.push(employee_id, company_id, DATE);
-    }
-
-    const sql = `UPDATE attendance_logs SET ${fieldsToUpdate.join(', ')} WHERE ${whereClause}`;
-    const [result] = await db.query(sql, [...values, ...whereValues]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'ไม่พบข้อมูลที่ต้องการอัปเดตเวลาออกงาน' });
-    }
-
-    res.status(200).json({ message: 'บันทึกเวลาออกงานสำเร็จ!' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'บันทึกเวลาออกงานไม่สำเร็จ', error: err.message });
-  }
 };
