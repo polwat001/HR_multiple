@@ -10,12 +10,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiPost } from "@/lib/api";
 import { Building2, Lock, User } from "lucide-react";
 
+// 💡 ปรับ Interface ให้ตรงกับที่ Node.js ของเราส่งมา
 interface LoginResponse {
   message: string;
   token: string;
-  userData: {
-    id: number;
-    is_super_admin: number;
+  user: {
+    user_id: number;
+    username: string;
+    role: string;
+    company_id: number | null;
   };
 }
 
@@ -38,15 +41,15 @@ const Login = () => {
         throw new Error("กรุณากรอก username และ password");
       }
 
-      // เรียก API login
+      // 💡 เรียก API ไปที่เส้น Login ของเรา (คาดหวังว่าใน lib/api มีการตั้งค่า Base URL ไว้แล้ว)
       const response = await apiPost<LoginResponse>("/auth/login", {
         username,
         password,
       });
 
-      // บันทึก token ลงใน localStorage
+      // 💡 บันทึก token และข้อมูล user ลงใน localStorage
       localStorage.setItem("token", response.token);
-      localStorage.setItem("userData", JSON.stringify(response.userData));
+      localStorage.setItem("userData", JSON.stringify(response.user)); 
 
       setSuccess(true);
       setUsername("");
@@ -56,9 +59,10 @@ const Login = () => {
       setTimeout(() => {
         router.push("/");
       }, 1000);
-    } catch (err) {
+    } catch (err: any) {
+      // 💡 ดึงข้อความ Error จาก Backend มาแสดงผลถ้ามี
       const errorMessage =
-        err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ";
+        err?.response?.data?.message || err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -153,7 +157,7 @@ const Login = () => {
               📝 ทดสอบด้วย:
             </p>
             <p className="text-xs text-blue-800">
-              Username: <code className="bg-white px-2 py-1 rounded">admin</code>
+              Username: <code className="bg-white px-2 py-1 rounded">admin_central</code>
             </p>
             <p className="text-xs text-blue-800">
               Password: <code className="bg-white px-2 py-1 rounded">123456</code>

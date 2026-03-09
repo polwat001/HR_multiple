@@ -9,11 +9,14 @@ exports.getUsers = async (req, res) => {
             return res.status(403).json({ message: 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลบัญชีผู้ใช้งาน' });
         }
 
+        // 💡 แก้ไขเพิ่มเติม: ดึง last_login และ created_at มาด้วย (อ้างอิงจากภาพตาราง users)
         let sql = `
             SELECT 
                 u.id, 
                 u.username, 
                 u.status, 
+                u.last_login,
+                u.created_at,
                 r.role_name, 
                 c.name_th AS company_name
             FROM users u

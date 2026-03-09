@@ -25,8 +25,20 @@ export async function apiCall<T>(
       headers,
     });
 
+    // 🚨 อัปเดตส่วนนี้: เพื่อดึงข้อความ Error จาก Backend มาแสดงผล
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        // พยายามแกะ JSON ที่ Backend ส่งมา (เช่น { message: "รหัสผ่านผิด" })
+        const errorData = await response.json();
+        if (errorData && errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (parseError) {
+        // ถ้า Backend ไม่ได้ส่ง JSON กลับมา ก็ปล่อยเป็น error status ไป
+        console.error("Failed to parse error response");
+      }
+      throw new Error(errorMessage); // โยน Error ข้อความภาษาไทยออกไป
     }
 
     const data: T = await response.json();
