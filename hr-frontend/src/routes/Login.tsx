@@ -30,6 +30,13 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  const testAccounts = [
+    { role: "Central HR", username: "admin_central", password: "123456" },
+    { role: "HR Company", username: "hr_tech", password: "123456" },
+    { role: "Manager", username: "manager_it", password: "123456" },
+    { role: "Employee", username: "emp_somchai", password: "123456" },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -43,8 +50,8 @@ const Login = () => {
 
       // 💡 เรียก API ไปที่เส้น Login ของเรา (คาดหวังว่าใน lib/api มีการตั้งค่า Base URL ไว้แล้ว)
       const response = await apiPost<LoginResponse>("/auth/login", {
-        username,
-        password,
+        username: username.trim(),
+        password: password.trim(),
       });
 
       // 💡 บันทึก token และข้อมูล user ลงใน localStorage
@@ -57,12 +64,12 @@ const Login = () => {
 
       // Redirect ไปยัง Dashboard หลังจาก 1 วินาที
       setTimeout(() => {
-        router.push("/");
+        router.push("/dashboard");
       }, 1000);
     } catch (err: any) {
       // 💡 ดึงข้อความ Error จาก Backend มาแสดงผลถ้ามี
       const errorMessage =
-        err?.response?.data?.message || err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ";
+        err?.response?.data?.message || (err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ");
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -152,16 +159,25 @@ const Login = () => {
           </form>
 
           {/* Test Account Info */}
-          <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs font-medium text-blue-900 mb-1">
-              📝 ทดสอบด้วย:
-            </p>
-            <p className="text-xs text-blue-800">
-              Username: <code className="bg-white px-2 py-1 rounded">admin_central</code>
-            </p>
-            <p className="text-xs text-blue-800">
-              Password: <code className="bg-white px-2 py-1 rounded">123456</code>
-            </p>
+          <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+            <p className="text-xs font-medium text-blue-900">Test Accounts (ทุก role)</p>
+            <div className="space-y-1">
+              {testAccounts.map((acc) => (
+                <button
+                  key={acc.username}
+                  type="button"
+                  className="w-full text-left text-xs text-blue-800 bg-white/80 hover:bg-white px-2 py-1.5 rounded border border-blue-100"
+                  onClick={() => {
+                    setUsername(acc.username);
+                    setPassword(acc.password);
+                    setError("");
+                  }}
+                >
+                  {acc.role}: <code className="bg-blue-50 px-1.5 py-0.5 rounded">{acc.username}</code>
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-blue-700">Password ทุกบัญชี: <code className="bg-white px-1.5 py-0.5 rounded">123456</code></p>
           </div>
         </CardContent>
       </Card>

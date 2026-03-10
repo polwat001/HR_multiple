@@ -3,47 +3,46 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCompany } from "@/contexts/CompanyContexts";
-// สมมติว่าคุณสร้างไฟล์ api.ts ไว้ที่ src/lib/api.ts แล้ว
-// import { apiCall } from "@/lib/api"; 
+import { useAuth } from "@/contexts/AuthContext";
+import { Permission, UserRole } from "@/types/roles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Plus } from "lucide-react";
+import { apiDelete, apiGet } from "@/lib/api";
 
 // 1. Interface
 interface Employee {
   id: string;
-  employeeCode: string;
+  employee_code: string;
   firstname_th: string;
   lastname_th: string;
-  position: string;
-  department: string;
-  companyId: string;
-  STATUS: string;
-  avatar: string;
-}
-
-interface Company {
-  id: string;
-  name: string;
-  shortName: string;
-  logo: string;
+  position_name?: string;
+  department_name?: string;
+  company_name?: string;
+  status?: string;
 }
 
 const statusStyles: Record<string, string> = {
   active: "bg-success/10 text-success border-success/20",
   probation: "bg-warning/10 text-warning border-warning/20",
+  resigned: "bg-destructive/10 text-destructive border-destructive/20",
   inactive: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const EmployeeList = () => {
   const { selectedCompany } = useCompany();
+  const { hasPermission, hasRole } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const canManageEmployees =
+    hasPermission(Permission.MANAGE_COMPANY_EMPLOYEES) ||
+    hasPermission(Permission.MANAGE_ALL_EMPLOYEES);
+  const canTransferCrossCompany = hasRole(UserRole.CENTRAL_HR);
   
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -52,21 +51,8 @@ const EmployeeList = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const headers = { "Authorization": `Bearer ${token}` };
-
-        // ใช้ Promise.all เพื่อดึงข้อมูลพร้อมกัน
-        const [empRes, compRes] = await Promise.all([
-          fetch("http://localhost:5000/api/employees", { headers }),
-          fetch("http://localhost:5000/api/companies", { headers })
-        ]);
-
-        if (empRes.ok && compRes.ok) {
-          setEmployees(await empRes.json());
-          setCompanies(await compRes.json());
-        } else {
-          console.error("Failed to fetch data", { empStatus: empRes.status, compStatus: compRes.status });
-        }
+        const empData = await apiGet<any>("/employees");
+        setEmployees(Array.isArray(empData) ? empData : empData?.data || []);
       } catch (error) {
         console.error("Fetch error:", error);
       } finally {
@@ -81,20 +67,19 @@ const EmployeeList = () => {
 
   const filtered = useMemo(() => {
     return employees.filter((emp) => {
-      const empCompId = String(emp.companyId);
+      const empCompId = String((emp as any).company_id || (emp as any).companyId || "");
       const targetCompId = String(companyFilter).replace("company-", "");
       
-      if (companyFilter !== "all" && empCompId !== targetCompId) return false;
-      if (deptFilter !== "all" && emp.department !== deptFilter) return false;
+      if (companyFilter !== "all" && empCompId && empCompId !== targetCompId) return false;
+      if (deptFilter !== "all" && emp.department_name !== deptFilter) return false;
       
       if (search) {
         const q = search.toLowerCase();
         return (
-          // ดักจับค่า undefined ด้วย Optional Chaining เพื่อป้องกัน Error
           (emp.firstname_th?.toLowerCase().includes(q) ?? false) ||
           (emp.lastname_th?.toLowerCase().includes(q) ?? false) ||
-          (emp.employeeCode?.toLowerCase().includes(q) ?? false) ||
-          (emp.position?.toLowerCase().includes(q) ?? false)
+          (emp.employee_code?.toLowerCase().includes(q) ?? false) ||
+          (emp.position_name?.toLowerCase().includes(q) ?? false)
         );
       }
       return true;
@@ -103,8 +88,21 @@ const EmployeeList = () => {
 
   // ดึงรายชื่อแผนกที่ไม่ซ้ำกัน
   const departments = useMemo(() => {
-    return [...new Set(employees.map((e) => e.department))].filter(Boolean);
+    return [...new Set(employees.map((e) => e.department_name))].filter((d): d is string => Boolean(d));
   }, [employees]);
+
+  const handleDeleteEmployee = async (id: string) => {
+    if (!canManageEmployees) return;
+    if (!window.confirm("ต้องการลบข้อมูลพนักงานนี้หรือไม่?")) return;
+
+    try {
+      await apiDelete(`/employees/${id}`);
+      setEmployees((prev) => prev.filter((e) => String(e.id) !== String(id)));
+    } catch (error) {
+      console.error("Delete employee failed:", error);
+      alert("ยังไม่สามารถลบพนักงานได้ในระบบปัจจุบัน");
+    }
+  };
 
   if (isLoading) return <div className="p-8 text-center animate-pulse text-muted-foreground">กำลังโหลดข้อมูลพนักงาน...</div>;
 
@@ -142,6 +140,12 @@ const EmployeeList = () => {
             <div className="text-sm text-muted-foreground ml-auto">
               พบ {filtered.length} รายชื่อ
             </div>
+
+            {canManageEmployees && (
+              <Button size="sm" className="gap-1.5" onClick={() => router.push("/employees/new")}>
+                <Plus className="h-4 w-4" /> Add Employee
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -162,51 +166,54 @@ const EmployeeList = () => {
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">แผนก</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">ตำแหน่ง</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">สถานะ</th>
+                  {(canManageEmployees || canTransferCrossCompany) && <th className="text-left px-4 py-3 font-medium text-muted-foreground">จัดการ</th>}
                 </tr>
               </thead>
               <tbody>
                 {filtered.length > 0 ? (
                   filtered.map((emp) => {
-                    const company = companies.find((c) => String(c.id) === String(emp.companyId));
                     return (
                       <tr
                         key={emp.id}
                         className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors"
                         onClick={() => router.push(`/employees/${emp.id}`)}
                       >
-                        <td className="px-4 py-3 font-mono text-xs">{emp.employeeCode || "N/A"}</td>
+                        <td className="px-4 py-3 font-mono text-xs">{emp.employee_code || "N/A"}</td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">
-                              {emp.avatar?.startsWith("http") ? (
-                                <img src={emp.avatar} className="w-6 h-6 rounded-full object-cover" alt="avatar" />
-                              ) : (
-                                emp.avatar || "👤"
-                              )}
-                            </span>
-                            <span className="font-medium text-foreground">
-                              {emp.firstname_th} {emp.lastname_th}
-                            </span>
-                          </div>
+                          <span className="font-medium text-foreground">{emp.firstname_th} {emp.lastname_th}</span>
                         </td>
                         <td className="px-4 py-3">
                           <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                            {company?.logo} {company?.shortName || "N/A"}
+                            {emp.company_name || "N/A"}
                           </span>
                         </td>
-                        <td className="px-4 py-3">{emp.department || "N/A"}</td>
-                        <td className="px-4 py-3">{emp.position || "N/A"}</td>
+                        <td className="px-4 py-3">{emp.department_name || "N/A"}</td>
+                        <td className="px-4 py-3">{emp.position_name || "N/A"}</td>
                         <td className="px-4 py-3">
-                          <Badge variant="outline" className={statusStyles[emp.STATUS?.toLowerCase()] || ""}>
-                            {emp.STATUS || "N/A"}
+                          <Badge variant="outline" className={statusStyles[emp.status?.toLowerCase() || ""] || ""}>
+                            {emp.status || "N/A"}
                           </Badge>
                         </td>
+                        {(canManageEmployees || canTransferCrossCompany) && (
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex gap-2">
+                              {canManageEmployees ? (
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => router.push(`/employees/${emp.id}`)}>Edit</Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleDeleteEmployee(String(emp.id))}>Delete</Button>
+                                </>
+                              ) : (
+                                <Button size="sm" variant="outline">Transfer Company</Button>
+                              )}
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-muted-foreground">ไม่พบข้อมูลพนักงาน</td>
+                    <td colSpan={(canManageEmployees || canTransferCrossCompany) ? 7 : 6} className="p-8 text-center text-muted-foreground">ไม่พบข้อมูลพนักงาน</td>
                   </tr>
                 )}
               </tbody>

@@ -1,51 +1,125 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import {
   LayoutDashboard, Users, Building, Clock, CalendarDays,
-  FileText, BarChart3, Shield, ChevronLeft, ChevronRight, Briefcase, LogOut,
+  FileText, BarChart3, Shield, ChevronLeft, ChevronRight, Briefcase, LogOut, Settings, ClipboardList, CalendarCheck2,
 } from "lucide-react";
 import CompanySwitcher from "@/components/CompanySwitcher";
+import { useAuth } from "@/contexts/AuthContext";
+import { Permission, UserRole } from "@/types/roles";
 import { cn } from "@/lib/utils";
-import { logout, apiGet } from "@/lib/api";
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Building, label: "Organization", path: "/organization" },
-  { icon: Briefcase, label: "Position Master", path: "/positions" },
-  { icon: Users, label: "Employee", path: "/employees" },
-  { icon: Clock, label: "Time & Attendance", path: "/attendance" },
-  { icon: CalendarDays, label: "Leave", path: "/leave" },
-  { icon: FileText, label: "Contract", path: "/contracts" },
-  { icon: BarChart3, label: "Reports", path: "/reports" },
-  { icon: Shield, label: "User & Permission", path: "/permissions" },
+interface NavItem {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  path: string;
+  permissions?: Permission[];
+  roles?: UserRole[];
+}
+
+const navItems: NavItem[] = [
+  { 
+    icon: LayoutDashboard, 
+    label: "Dashboard", 
+    path: "/dashboard",
+    permissions: [Permission.VIEW_OWN_DASHBOARD, Permission.VIEW_COMPANY_DASHBOARD, Permission.VIEW_HOLDING_DASHBOARD]
+  },
+  { 
+    icon: Building, 
+    label: "Organization", 
+    path: "/organization",
+    permissions: [Permission.VIEW_COMPANY_ORGANIZATION, Permission.VIEW_ALL_ORGANIZATION, Permission.MANAGE_ORGANIZATION]
+  },
+  { 
+    icon: Briefcase, 
+    label: "Position Master", 
+    path: "/positions",
+    roles: [UserRole.HR_COMPANY, UserRole.CENTRAL_HR, UserRole.SUPER_ADMIN]
+  },
+  { 
+    icon: Users, 
+    label: "Employee", 
+    path: "/employees",
+    permissions: [Permission.VIEW_OWN_PROFILE, Permission.VIEW_DEPARTMENT_EMPLOYEES, Permission.VIEW_COMPANY_EMPLOYEES, Permission.VIEW_ALL_EMPLOYEES]
+  },
+  { 
+    icon: Clock, 
+    label: "Time & Attendance", 
+    path: "/attendance",
+    permissions: [Permission.VIEW_OWN_ATTENDANCE, Permission.VIEW_DEPARTMENT_ATTENDANCE, Permission.VIEW_COMPANY_ATTENDANCE, Permission.MANAGE_ATTENDANCE]
+  },
+  { 
+    icon: CalendarDays, 
+    label: "Leave", 
+    path: "/leave",
+    permissions: [Permission.REQUEST_LEAVE, Permission.APPROVE_DEPARTMENT_LEAVE, Permission.MANAGE_COMPANY_LEAVE, Permission.MANAGE_ALL_LEAVE]
+  },
+  { 
+    icon: FileText, 
+    label: "Contract", 
+    path: "/contracts",
+    permissions: [Permission.VIEW_COMPANY_CONTRACTS, Permission.MANAGE_COMPANY_CONTRACTS, Permission.MANAGE_CONTRACT_TEMPLATES]
+  },
+  {
+    icon: CalendarCheck2,
+    label: "Holiday",
+    path: "/holidays",
+    permissions: [Permission.VIEW_HOLIDAYS, Permission.MANAGE_COMPANY_HOLIDAYS, Permission.MANAGE_ALL_HOLIDAYS],
+  },
+  { 
+    icon: BarChart3, 
+    label: "Reports", 
+    path: "/reports",
+    permissions: [Permission.VIEW_DEPARTMENT_REPORTS, Permission.VIEW_COMPANY_REPORTS, Permission.VIEW_CONSOLIDATED_REPORTS]
+  },
+  { 
+    icon: Shield, 
+    label: "User & Permission", 
+    path: "/permissions",
+    roles: [UserRole.SUPER_ADMIN]
+  },
+  {
+    icon: Settings,
+    label: "System Settings",
+    path: "/system-settings",
+    permissions: [Permission.MANAGE_SYSTEM_SETTINGS],
+  },
+  {
+    icon: ClipboardList,
+    label: "Transaction Log",
+    path: "/audit-log",
+    permissions: [Permission.VIEW_AUDIT_LOGS],
+  },
 ];
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { user, logout: authLogout, hasAnyPermission, hasRole } = useAuth();
   const router = useRouter();
   const location = router.pathname;
-
-  // Fetch current user
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const userData = await apiGet<any>("/users/current");
-        setCurrentUser(userData);
-      } catch (error) {
-        console.error("Failed to fetch current user:", error);
-      }
-    };
-
-    fetchCurrentUser();
-  }, []);
+  const canSwitchCompany = hasAnyPermission([
+    Permission.VIEW_HOLDING_DASHBOARD,
+    Permission.VIEW_CONSOLIDATED_REPORTS,
+  ]);
 
   const handleLogout = () => {
     if (confirm("ต้องการออกจากระบบหรือไม่?")) {
-      logout();
+      authLogout();
+      router.push("/login");
     }
   };
+
+  // Filter nav items based on user permissions
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.roles && item.roles.length > 0) {
+      return item.roles.some((role) => hasRole(role));
+    }
+    if (item.permissions && item.permissions.length > 0) {
+      return hasAnyPermission(item.permissions);
+    }
+    return true;
+  });
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -70,7 +144,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Nav */}
         <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = location === item.path || 
               (item.path !== "/" && location.startsWith(item.path));
             return (
@@ -117,21 +191,27 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 shrink-0">
           <div>
             <h1 className="text-lg font-semibold text-foreground">
-              {navItems.find(i => 
+              {visibleNavItems.find(i => 
                 location === i.path || 
                 (i.path !== "/" && location.startsWith(i.path))
               )?.label || "Dashboard"}
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <CompanySwitcher />
+            {canSwitchCompany ? (
+              <CompanySwitcher />
+            ) : (
+              <div className="text-xs px-3 py-2 rounded-md border border-border bg-muted/30 text-muted-foreground">
+                Company Scoped Access
+              </div>
+            )}
             <div className="flex items-center gap-2 pl-4 border-l border-border">
               <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium">
-                {currentUser?.username?.[0]?.toUpperCase() || "U"}
+                {user?.username?.[0]?.toUpperCase() || "U"}
               </div>
               <div className="text-sm">
-                <div className="font-medium text-foreground">{currentUser?.username || "User"}</div>
-                <div className="text-xs text-muted-foreground">{currentUser?.role || "Employee"}</div>
+                <div className="font-medium text-foreground">{user?.display_name || user?.username || "User"}</div>
+                <div className="text-xs text-muted-foreground">{user?.position_name || user?.role || "Employee"}</div>
               </div>
             </div>
           </div>

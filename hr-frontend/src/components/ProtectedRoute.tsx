@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,24 +12,22 @@ interface ProtectedRouteProps {
  */
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    setMounted(true);
+  }, []);
 
-    if (!token) {
-      // ไม่มี token ส่งไปหน้า login
+  useEffect(() => {
+    if (!mounted || loading) return;
+
+    if (!isAuthenticated) {
       router.push("/login");
-    } else {
-      // มี token ให้เข้าได้
-      setIsAuthenticated(true);
     }
+  }, [isAuthenticated, loading, mounted, router]);
 
-    setIsLoading(false);
-  }, [router]);
-
-  if (isLoading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
@@ -47,3 +46,4 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 };
 
 export default ProtectedRoute;
+

@@ -1,5 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/types/roles";
 
 const positions = [
   { id: 1, title: "HR Director", level: "Executive", companies: ["ABC", "XYZ", "DEF"], status: "active" },
@@ -14,11 +18,18 @@ const positions = [
   { id: 10, title: "Sales Executive", level: "Staff", companies: ["XYZ"], status: "inactive" },
 ];
 
-const PositionMaster = () => (
+const PositionMaster = () => {
+  const { hasRole } = useAuth();
+  const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
+
+  return (
   <div className="space-y-6 animate-fade-in">
     <Card className="shadow-card overflow-hidden">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Position Master</CardTitle>
+        {isSuperAdmin && (
+          <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Add New Position</Button>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -58,6 +69,7 @@ const PositionMaster = () => (
       </CardContent>
     </Card>
   </div>
-);
+  );
+};
 
 export default PositionMaster;

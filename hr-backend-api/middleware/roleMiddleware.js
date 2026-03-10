@@ -9,9 +9,14 @@ const roleMiddleware = (allowedRoles) => {
         }
 
         // 2. ตรวจสอบว่า Role ของ User อยู่ในสิทธิ์ที่อนุญาตหรือไม่
-        if (!allowedRoles.includes(user.role_name)) {
+        const userRoles = Array.isArray(user.roles) && user.roles.length > 0
+            ? user.roles
+            : [user.role_name];
+        const isAllowed = userRoles.some((r) => allowedRoles.includes(r));
+
+        if (!isAllowed) {
             return res.status(403).json({ 
-                message: `ปฏิเสธการเข้าถึง: สิทธิ์ '${user.role_name}' ของคุณไม่สามารถใช้งานฟังก์ชันนี้ได้` 
+                message: `ปฏิเสธการเข้าถึง: สิทธิ์ '${userRoles.join(', ')}' ของคุณไม่สามารถใช้งานฟังก์ชันนี้ได้` 
             });
         }
 

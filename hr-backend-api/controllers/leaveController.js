@@ -4,6 +4,7 @@ const db = require('../config/db');
 exports.getLeaveRequests = async (req, res) => {
     try {
         const { user_id, role_level, company_id } = req.user;
+        const leaveApprovalScope = req.user?.module_scopes?.leave_approval_scope;
         
         let sql = `
             SELECT 
@@ -27,7 +28,11 @@ exports.getLeaveRequests = async (req, res) => {
         const params = [];
 
         // ⭐️ กรองข้อมูลตามสิทธิ์ (RBAC)
-        if (role_level >= 80) {
+        if (leaveApprovalScope === 'manager') {
+            // Overlapping role demo: if user is both HR Company + Manager, use manager scope for leave approval queue.
+            sql += ` AND (e.user_id = ? OR e.manager_id = (SELECT id FROM employees WHERE user_id = ?))`;
+            params.push(user_id, user_id);
+        } else if (role_level >= 80) {
             // Super Admin & Central HR ดูได้หมด
         } else if (role_level === 50) {
             // HR Company ดูได้เฉพาะคนในบริษัทตัวเอง
@@ -155,10 +160,27 @@ exports.updateLeaveStatus = async (req, res) => {
         const { id } = req.params; // ID ของใบลา
         const { status } = req.body; // 'approved' หรือ 'rejected'
         const { role_level, user_id } = req.user;
+        const leaveApprovalScope = req.user?.module_scopes?.leave_approval_scope;
 
         // ตรวจสอบสิทธิ์ว่ามีสิทธิ์อนุมัติไหม (ต้องเป็น Manager ขึ้นไป)
         if (role_level < 20) {
             return res.status(403).json({ message: 'คุณไม่มีสิทธิ์อนุมัติวันลา' });
+        }
+
+        // For overlapping role (Manager + HR Company), enforce manager-only approval scope.
+        if (leaveApprovalScope === 'manager') {
+            const [scopeRows] = await db.query(
+                `SELECT lr.id
+                 FROM leave_requests lr
+                 JOIN employees e ON lr.employee_id = e.id
+                 WHERE lr.id = ?
+                   AND (e.user_id = ? OR e.manager_id = (SELECT id FROM employees WHERE user_id = ?))`,
+                [id, user_id, user_id]
+            );
+
+            if (scopeRows.length === 0) {
+                return res.status(403).json({ message: 'คุณไม่มีสิทธิ์อนุมัติคำร้องนี้นอกเหนือจากทีมของคุณ' });
+            }
         }
 
         // หา ID ของพนักงานที่กดอนุมัติ

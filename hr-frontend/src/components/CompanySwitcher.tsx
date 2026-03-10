@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useCompany } from "@/contexts/CompanyContexts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Permission } from "@/types/roles";
 
 // สร้าง Interface ให้ตรงกับที่ API ส่งออกมา
 interface Company {
@@ -25,8 +27,12 @@ const ALL_COMPANIES_OPTION: Company = {
 
 const CompanySwitcher = () => {
   const { selectedCompany, setSelectedCompany } = useCompany();
+  const { hasPermission } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const canSeeAllCompanies =
+    hasPermission(Permission.VIEW_HOLDING_DASHBOARD) ||
+    hasPermission(Permission.VIEW_CONSOLIDATED_REPORTS);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -44,14 +50,19 @@ const CompanySwitcher = () => {
         }
 
         const data = await response.json();
+        const apiCompanies = Array.isArray(data) ? data : data?.data || [];
         
-        // 2. นำ "บริษัททั้งหมด" ไปต่อหน้าข้อมูลที่ได้จาก API
-        const companiesWithAll = [ALL_COMPANIES_OPTION, ...data];
-        setCompanies(companiesWithAll);
+        // Holding-level users can switch across companies; company-scoped users cannot.
+        const normalizedCompanies = canSeeAllCompanies
+          ? [ALL_COMPANIES_OPTION, ...apiCompanies]
+          : apiCompanies;
+        setCompanies(normalizedCompanies);
 
-        // ถ้ายังไม่ได้เลือกบริษัท ให้เลือก "บริษัททั้งหมด" เป็นค่าเริ่มต้น (index 0)
-        if (companiesWithAll.length > 0 && !selectedCompany.id) {
-          setSelectedCompany(companiesWithAll[0]);
+        if (normalizedCompanies.length > 0) {
+          const hasCurrent = normalizedCompanies.some((c: Company) => c.id === selectedCompany.id);
+          if (!selectedCompany.id || !hasCurrent || (!canSeeAllCompanies && selectedCompany.id === "all")) {
+            setSelectedCompany(normalizedCompanies[0]);
+          }
         }
       } catch (error) {
         console.error("Fetch error:", error);
@@ -61,7 +72,7 @@ const CompanySwitcher = () => {
     };
 
     fetchCompanies();
-  }, [setSelectedCompany, selectedCompany.id]);
+  }, [setSelectedCompany, selectedCompany.id, canSeeAllCompanies]);
 
   if (isLoading) return <div className="w-[220px] h-10 bg-muted animate-pulse rounded-md" />;
 

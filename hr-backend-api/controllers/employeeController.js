@@ -9,6 +9,7 @@ exports.getAllEmployees = async (req, res) => {
         let sql = `
             SELECT 
                 e.id, 
+                e.user_id,
                 e.employee_code, 
                 e.firstname_th, 
                 e.lastname_th, 
