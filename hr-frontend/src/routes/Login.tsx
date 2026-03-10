@@ -1,7 +1,4 @@
-"use client";
-
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +20,6 @@ interface LoginResponse {
 }
 
 const Login = () => {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -62,9 +58,9 @@ const Login = () => {
       setUsername("");
       setPassword("");
 
-      // Redirect ไปยัง Dashboard หลังจาก 1 วินาที
+      // Redirect แบบ hard navigation เพื่อให้ AuthProvider โหลด token ใหม่ทันที
       setTimeout(() => {
-        router.push("/dashboard");
+        window.location.replace("/dashboard");
       }, 1000);
     } catch (err: any) {
       // 💡 ดึงข้อความ Error จาก Backend มาแสดงผลถ้ามี

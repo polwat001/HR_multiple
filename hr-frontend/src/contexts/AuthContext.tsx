@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, UserPermissions, UserRole, Permission } from "@/types/roles";
 import { calculatePermissions, hasPermission, hasAnyPermission, hasAllPermissions } from "@/lib/permissions";
-import { apiGet } from "@/lib/api";
+import { apiGet, clearAuthStorage } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
@@ -108,11 +108,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userData");
+    clearAuthStorage();
     setUser(null);
     setUserPermissions(null);
     setIsAuthenticated(false);
+
+    // Force full page reload to ensure all in-memory app state is reset
+    if (typeof window !== "undefined") {
+      window.location.replace("/login");
+    }
   };
 
   const value: AuthContextType = {

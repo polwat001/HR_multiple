@@ -1,5 +1,12 @@
 const API_BASE_URL = "http://localhost:5000/api";
 
+export function clearAuthStorage(): void {
+  localStorage.removeItem("token");
+  localStorage.removeItem("userData");
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("userData");
+}
+
 /**
  * API Fetch Wrapper - อัตโนมัติเพิ่ม Authorization header
  * @param endpoint - เส้น API ไม่รวม base URL (เช่น /organization/departments)
@@ -27,6 +34,11 @@ export async function apiCall<T>(
 
     // 🚨 อัปเดตส่วนนี้: เพื่อดึงข้อความ Error จาก Backend มาแสดงผล
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        // Token invalid/expired -> clear stale auth state immediately
+        clearAuthStorage();
+      }
+
       let errorMessage = `HTTP error! status: ${response.status}`;
       try {
         // พยายามแกะ JSON ที่ Backend ส่งมา (เช่น { message: "รหัสผ่านผิด" })
@@ -93,7 +105,6 @@ export function apiDelete<T>(endpoint: string): Promise<T> {
  * Logout - ลบ token จาก localStorage
  */
 export function logout(): void {
-  localStorage.removeItem("token");
-  localStorage.removeItem("userData");
+  clearAuthStorage();
   window.location.href = "/login";
 }

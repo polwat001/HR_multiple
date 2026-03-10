@@ -106,7 +106,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const handleLogout = () => {
     if (confirm("ต้องการออกจากระบบหรือไม่?")) {
       authLogout();
-      router.push("/login");
     }
   };
 
