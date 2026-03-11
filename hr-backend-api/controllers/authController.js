@@ -12,6 +12,35 @@ const roleLevelMap = {
 
 const DEFAULT_JWT_SECRET = 'super_secret_key_for_hr_system_2026';
 
+async function appendAuditLog({ user_id, username, action, target, ip_address, metadata }) {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NULL,
+                username VARCHAR(255) NULL,
+                action VARCHAR(100) NOT NULL,
+                target VARCHAR(255) NULL,
+                ip_address VARCHAR(64) NULL,
+                metadata_json JSON NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                KEY idx_action (action),
+                KEY idx_created_at (created_at),
+                KEY idx_username (username),
+                KEY idx_ip (ip_address)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `);
+
+        await db.query(
+            `INSERT INTO audit_logs (user_id, username, action, target, ip_address, metadata_json)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [user_id || null, username || null, action, target || null, ip_address || null, JSON.stringify(metadata || {})]
+        );
+    } catch (error) {
+        console.error('Append Audit Log Error:', error.message);
+    }
+}
+
 function buildUserRoleContexts(rows) {
     return rows
         .filter((r) => r.role_name)
@@ -139,6 +168,14 @@ exports.login = async (req, res) => {
         });
 
         await db.query('UPDATE users SET last_login = NOW() WHERE id = ?', [user.user_id]);
+        await appendAuditLog({
+            user_id: user.user_id,
+            username: user.username,
+            action: 'LOGIN',
+            target: 'System',
+            ip_address: req.ip || req.connection?.remoteAddress || null,
+            metadata: { role: highestRole.role_name },
+        });
     } catch (error) {
         console.error('Login Error:', error);
         res.status(500).json({ message: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' });

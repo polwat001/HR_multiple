@@ -57,7 +57,16 @@ const ContractManagement = () => {
   const canManageCompanyContracts = hasPermission(Permission.MANAGE_COMPANY_CONTRACTS);
   const canManageTemplates = hasPermission(Permission.MANAGE_CONTRACT_TEMPLATES);
   const [contracts, setContracts] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateContract, setShowCreateContract] = useState(false);
+  const [newContractForm, setNewContractForm] = useState({
+    employeeId: "",
+    contractType: "yearly",
+    startDate: "",
+    endDate: "",
+    salary: "",
+  });
   const [selectedTemplateId, setSelectedTemplateId] = useState<number>(templates[0].id);
   const [templateDraft, setTemplateDraft] = useState({
     name: "",
@@ -70,8 +79,12 @@ const ContractManagement = () => {
     const fetchContracts = async () => {
       try {
         setLoading(true);
-        const data = await apiGet<any>("/contracts");
-        setContracts(Array.isArray(data) ? data : data?.data || []);
+        const [contractData, employeeData] = await Promise.all([
+          apiGet<any>("/contracts"),
+          apiGet<any>("/employees"),
+        ]);
+        setContracts(Array.isArray(contractData) ? contractData : contractData?.data || []);
+        setEmployees(Array.isArray(employeeData) ? employeeData : employeeData?.data || []);
       } catch (error) {
         console.error("Failed to fetch contracts:", error);
       } finally {
@@ -106,6 +119,21 @@ const ContractManagement = () => {
   const selectedTemplate = useMemo(
     () => templates.find((tpl) => tpl.id === selectedTemplateId) || templates[0],
     [selectedTemplateId],
+  );
+
+  const employeeOptions = useMemo(() => {
+    return (employees || []).map((e: any) => ({
+      id: String(e.id),
+      name: `${e.firstname_th || ""} ${e.lastname_th || ""}`.trim() || e.employee_code || "-",
+      employeeCode: e.employee_code || "-",
+      position: e.position_name || "-",
+      company: e.company_name || "-",
+    }));
+  }, [employees]);
+
+  const selectedEmployee = useMemo(
+    () => employeeOptions.find((e) => e.id === newContractForm.employeeId) || null,
+    [employeeOptions, newContractForm.employeeId],
   );
 
   const handleGeneratePdf = (contract: any) => {
@@ -170,6 +198,75 @@ const ContractManagement = () => {
     setTemplateDraft({ name: "", company: "ABC", logoUrl: "", content: "" });
   };
 
+  const handleCreateContractPdf = () => {
+    if (!selectedEmployee || !newContractForm.startDate || !newContractForm.endDate) {
+      alert("กรุณาเลือกพนักงานและช่วงวันที่สัญญา");
+      return;
+    }
+
+    const adHocContract = {
+      employee: `${selectedEmployee.name} (${selectedEmployee.employeeCode})`,
+      contractType: contractTypeLabel[newContractForm.contractType] || newContractForm.contractType,
+      status: "draft",
+      start: newContractForm.startDate,
+      end: newContractForm.endDate,
+      company: selectedEmployee.company,
+      salary: newContractForm.salary || "-",
+      position: selectedEmployee.position,
+    };
+
+    const templateText = selectedTemplate.content
+      .replaceAll("{{employee_name}}", adHocContract.employee || "-")
+      .replaceAll("{{position}}", adHocContract.position || "-")
+      .replaceAll("{{salary}}", adHocContract.salary || "-")
+      .replaceAll("{{start_date}}", adHocContract.start || "-")
+      .replaceAll("{{end_date}}", adHocContract.end || "-")
+      .replaceAll("{{company_name}}", adHocContract.company || "-");
+
+    const html = `
+      <html>
+        <head>
+          <title>Create Contract - ${adHocContract.employee}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 32px; color: #111827; }
+            .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+            .logo { height: 40px; }
+            .meta { font-size: 12px; color: #6b7280; }
+            h1 { font-size: 22px; margin: 0 0 8px 0; }
+            .badge { display: inline-block; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; margin-right: 6px; }
+            .content { line-height: 1.7; margin-top: 20px; }
+            .sign { margin-top: 72px; display: flex; justify-content: space-between; }
+            .sign div { width: 40%; border-top: 1px solid #111827; padding-top: 8px; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img class="logo" src="${selectedTemplate.logoUrl}" alt="logo" />
+            <div class="meta">Generated at ${new Date().toLocaleString()}</div>
+          </div>
+          <h1>Employment Contract</h1>
+          <div>
+            <span class="badge">${adHocContract.contractType}</span>
+            <span class="badge">DRAFT</span>
+          </div>
+          <div class="content">${templateText}</div>
+          <div class="sign">
+            <div>Employee Signature</div>
+            <div>Company Signature</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const popup = window.open("", "_blank", "width=900,height=700");
+    if (!popup) return;
+    popup.document.open();
+    popup.document.write(html);
+    popup.document.close();
+    popup.focus();
+    popup.print();
+  };
+
   return (
   <div className="space-y-6 animate-fade-in">
     <Tabs defaultValue="list">
@@ -183,10 +280,43 @@ const ContractManagement = () => {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Contract Management (Company Scoped)</CardTitle>
             {canManageCompanyContracts && (
-              <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Create Contract</Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setShowCreateContract((v) => !v)}><Plus className="h-4 w-4" /> สร้างสัญญา</Button>
             )}
           </CardHeader>
           <CardContent className="p-0">
+            {canManageCompanyContracts && showCreateContract && (
+              <div className="p-4 border-b bg-muted/20 space-y-3">
+                <p className="text-sm font-medium">สร้างสัญญาใหม่ (ระบบจะเติมข้อมูลพนักงานลงฟอร์ม PDF ให้พิมพ์/บันทึก)</p>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                  <select
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={newContractForm.employeeId}
+                    onChange={(e) => setNewContractForm((p) => ({ ...p, employeeId: e.target.value }))}
+                  >
+                    <option value="">เลือกพนักงาน</option>
+                    {employeeOptions.map((e) => (
+                      <option key={e.id} value={e.id}>{e.employeeCode} - {e.name}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={newContractForm.contractType}
+                    onChange={(e) => setNewContractForm((p) => ({ ...p, contractType: e.target.value }))}
+                  >
+                    <option value="probation">ทดลองงาน</option>
+                    <option value="yearly">รายปี</option>
+                    <option value="permanent">ประจำ</option>
+                  </select>
+                  <Input type="date" value={newContractForm.startDate} onChange={(e) => setNewContractForm((p) => ({ ...p, startDate: e.target.value }))} />
+                  <Input type="date" value={newContractForm.endDate} onChange={(e) => setNewContractForm((p) => ({ ...p, endDate: e.target.value }))} />
+                  <Input type="number" placeholder="เงินเดือน" value={newContractForm.salary} onChange={(e) => setNewContractForm((p) => ({ ...p, salary: e.target.value }))} />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleCreateContractPdf}>สร้างเอกสาร PDF (Print/Save)</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowCreateContract(false)}>ปิด</Button>
+                </div>
+              </div>
+            )}
             {loading ? (
               <div className="p-6 text-sm text-muted-foreground">Loading contracts...</div>
             ) : (

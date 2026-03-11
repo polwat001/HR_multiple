@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,19 +6,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Shield, Plus, Users, ClipboardList, UserCog } from "lucide-react";
+import { apiGet, apiPut } from "@/lib/api";
 
 const rolesCatalog = [
   {
     id: 1, name: "Super Admin", description: "Full access to all modules and companies",
   },
   {
-    id: 2, name: "HR Manager", description: "Manage HR operations for assigned companies",
+    id: 2, name: "Central HR", description: "Manage cross-company HR governance",
   },
   {
-    id: 3, name: "Line Manager", description: "Approve team requests, view team data",
+    id: 3, name: "HR Company", description: "Manage HR operations in assigned company",
   },
   {
-    id: 4, name: "Employee (Self-Service)", description: "View own data, submit leave/OT",
+    id: 4, name: "Manager", description: "Approve team requests, view team data",
+  },
+  {
+    id: 5, name: "Employee", description: "View own data, submit leave/OT",
   },
 ];
 
@@ -71,12 +75,12 @@ const modules = [
 const initialPermissionMatrix = modules.reduce((acc, moduleName) => {
   acc[moduleName] = {
     view: true,
+    create: moduleName !== "dashboard" && moduleName !== "reports" && moduleName !== "audit_log",
     edit: moduleName !== "dashboard" && moduleName !== "reports",
-    approve: ["attendance", "leave", "contract"].includes(moduleName),
     delete: ["employee", "contract", "permissions"].includes(moduleName),
   };
   return acc;
-}, {} as Record<string, { view: boolean; edit: boolean; approve: boolean; delete: boolean }>);
+}, {} as Record<string, { view: boolean; create: boolean; edit: boolean; delete: boolean }>);
 
 const transactionLogs = [
   {
@@ -107,6 +111,9 @@ const UserPermissions = () => {
   const [users, setUsers] = useState(initialUsers);
   const [assignments, setAssignments] = useState(initialAssignments);
   const [matrix, setMatrix] = useState(initialPermissionMatrix);
+  const [matrixLoading, setMatrixLoading] = useState(false);
+  const [matrixSaving, setMatrixSaving] = useState(false);
+  const [matrixMessage, setMatrixMessage] = useState<string | null>(null);
   const [newAssignment, setNewAssignment] = useState({
     userId: String(initialUsers[0].id),
     role: rolesCatalog[0].name,
@@ -120,13 +127,35 @@ const UserPermissions = () => {
     return map;
   }, [users]);
 
+  const selectedRoleName = rolesCatalog[selectedRole]?.name;
+
+  useEffect(() => {
+    const fetchMatrix = async () => {
+      if (!selectedRoleName) return;
+      try {
+        setMatrixLoading(true);
+        setMatrixMessage(null);
+        const res = await apiGet<any>(`/admin/permission-matrix?role=${encodeURIComponent(selectedRoleName)}`);
+        setMatrix(res?.data || initialPermissionMatrix);
+      } catch (error) {
+        console.error("Failed to load permission matrix:", error);
+        setMatrix(initialPermissionMatrix);
+        setMatrixMessage("โหลด Permission Matrix ไม่สำเร็จ กำลังใช้ค่าเริ่มต้น");
+      } finally {
+        setMatrixLoading(false);
+      }
+    };
+
+    fetchMatrix();
+  }, [selectedRoleName]);
+
   const toggleUserStatus = (id: number) => {
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: u.status === "active" ? "locked" : "active" } : u)));
   };
 
   const handlePermissionToggle = (
     moduleName: string,
-    key: "view" | "edit" | "approve" | "delete",
+    key: "view" | "create" | "edit" | "delete",
   ) => {
     setMatrix((prev) => ({
       ...prev,
@@ -147,6 +176,21 @@ const UserPermissions = () => {
       },
       ...prev,
     ]);
+  };
+
+  const handleSaveMatrix = async () => {
+    if (!selectedRoleName) return;
+    try {
+      setMatrixSaving(true);
+      await apiPut(`/admin/permission-matrix/${encodeURIComponent(selectedRoleName)}`, { matrix });
+      setMatrixMessage(`บันทึก Permission Matrix ของ role ${selectedRoleName} สำเร็จ`);
+    } catch (error: any) {
+      console.error("Failed to save permission matrix:", error);
+      const msg = error instanceof Error ? error.message : "บันทึก Permission Matrix ไม่สำเร็จ";
+      setMatrixMessage(msg);
+    } finally {
+      setMatrixSaving(false);
+    }
   };
 
   return (
@@ -231,23 +275,25 @@ const UserPermissions = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {matrixMessage ? <p className="text-xs mb-3 text-muted-foreground">{matrixMessage}</p> : null}
                 <table className="w-full text-sm">
                   <thead><tr className="border-b bg-muted/40">
                     <th className="text-left px-4 py-2 font-medium text-muted-foreground">Module</th>
                     <th className="text-center px-4 py-2 font-medium text-muted-foreground">View</th>
+                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">Create</th>
                     <th className="text-center px-4 py-2 font-medium text-muted-foreground">Edit</th>
-                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">Approve</th>
                     <th className="text-center px-4 py-2 font-medium text-muted-foreground">Delete</th>
                   </tr></thead>
                   <tbody>
                     {modules.map((m) => {
                       const row = matrix[m];
+                      if (!row) return null;
                       return (
                         <tr key={m} className="border-b last:border-b-0">
                           <td className="px-4 py-2.5 capitalize font-medium">{m.replaceAll("_", " ")}</td>
                           <td className="text-center px-4 py-2.5"><Checkbox checked={row.view} onCheckedChange={() => handlePermissionToggle(m, "view")} /></td>
+                          <td className="text-center px-4 py-2.5"><Checkbox checked={row.create} onCheckedChange={() => handlePermissionToggle(m, "create")} /></td>
                           <td className="text-center px-4 py-2.5"><Checkbox checked={row.edit} onCheckedChange={() => handlePermissionToggle(m, "edit")} /></td>
-                          <td className="text-center px-4 py-2.5"><Checkbox checked={row.approve} onCheckedChange={() => handlePermissionToggle(m, "approve")} /></td>
                           <td className="text-center px-4 py-2.5"><Checkbox checked={row.delete} onCheckedChange={() => handlePermissionToggle(m, "delete")} /></td>
                         </tr>
                       );
@@ -255,7 +301,9 @@ const UserPermissions = () => {
                   </tbody>
                 </table>
                 <div className="mt-4 flex justify-end">
-                  <Button size="sm">Save Permission Matrix</Button>
+                  <Button size="sm" onClick={handleSaveMatrix} disabled={matrixSaving || matrixLoading}>
+                    {matrixLoading ? "Loading..." : matrixSaving ? "Saving..." : "Save Permission Matrix"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

@@ -27,6 +27,7 @@ const Login = () => {
   const [success, setSuccess] = useState(false);
 
   const testAccounts = [
+    { role: "Super Admin", username: "Super_Admin", password: "123456" },
     { role: "Central HR", username: "admin_central", password: "123456" },
     { role: "HR Company", username: "hr_tech", password: "123456" },
     { role: "Manager", username: "manager_it", password: "123456" },
@@ -139,16 +140,13 @@ const Login = () => {
                   className="pl-10"
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                * Default password: 123456
-              </p>
             </div>
 
             {/* Login Button */}
             <Button
               type="submit"
               disabled={loading}
-              className="w-full mt-6 bg-primary hover:bg-primary/90"
+              className="w-full mt-6 bg-primary  bg-blue-500 hover:bg-blue-600 text-white hover:bg-primary/90"
             >
               {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
             </Button>
@@ -173,7 +171,7 @@ const Login = () => {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-blue-700">Password ทุกบัญชี: <code className="bg-white px-1.5 py-0.5 rounded">123456</code></p>
+            <p className="text-[11px] text-blue-700">Password ทุกบัญชี: <code className="bg-blue-50 px-1.5 py-0.5 rounded">123456</code></p>
           </div>
         </CardContent>
       </Card>

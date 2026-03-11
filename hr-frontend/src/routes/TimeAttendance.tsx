@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload, Check, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Permission, UserRole } from "@/types/roles";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 
 const shiftData = [
   { id: 1, shiftName: "กะเช้า (Morning)", timeIn: "08:00", timeOut: "17:00", graceMinutes: 15, employees: 62 },
@@ -15,58 +16,16 @@ const shiftData = [
   { id: 3, shiftName: "กะดึก (Night)", timeIn: "22:00", timeOut: "07:00", graceMinutes: 20, employees: 12 },
 ];
 
-const attendanceLog = [
-  {
-    id: 1,
-    workDate: "2026-03-10",
-    code: "A-0001",
-    name: "สมชาย วงศ์สวัสดิ์",
-    timeIn: "07:55",
-    timeOut: "17:32",
-    status: "present",
-    gps: "13.7563,100.5018",
-  },
-  {
-    id: 2,
-    workDate: "2026-03-10",
-    code: "A-0002",
-    name: "สมหญิง ใจดี",
-    timeIn: "08:12",
-    timeOut: "18:05",
-    status: "late",
-    gps: "13.7446,100.5329",
-  },
-  {
-    id: 3,
-    workDate: "2026-03-10",
-    code: "A-0003",
-    name: "ประสิทธิ์ แก้วมณี",
-    timeIn: "-",
-    timeOut: "-",
-    status: "absent",
-    gps: "-",
-  },
-  {
-    id: 4,
-    workDate: "2026-03-10",
-    code: "B-0001",
-    name: "วิชัย พงษ์ทอง",
-    timeIn: "08:01",
-    timeOut: "-",
-    status: "missing_scan",
-    gps: "13.7317,100.5686",
-  },
-  {
-    id: 5,
-    workDate: "2026-03-09",
-    code: "B-0002",
-    name: "นภา สุขสันต์",
-    timeIn: "07:57",
-    timeOut: "17:14",
-    status: "present",
-    gps: "13.7500,100.5160",
-  },
-];
+const toUiAttendanceRow = (row: any) => ({
+  id: Number(row.id),
+  workDate: row.work_date || "-",
+  code: row.employee_code || "-",
+  name: `${row.firstname_th || ""} ${row.lastname_th || ""}`.trim() || "-",
+  timeIn: row.check_in_time || "-",
+  timeOut: row.check_out_time || "-",
+  status: String(row.status || "present").toLowerCase(),
+  gps: row.gps || "-",
+});
 
 const otRequests = [
   {
@@ -104,6 +63,18 @@ const otRequests = [
   },
 ];
 
+const toUiOtRow = (row: any) => ({
+  id: Number(row.id),
+  employeeName: `${row.firstname_th || ""} ${row.lastname_th || ""}`.trim() || row.employee_code || "-",
+  requestDate: row.request_date || "-",
+  startTime: row.start_time || "-",
+  endTime: row.end_time || "-",
+  totalHours: Number(row.total_hours || 0),
+  reason: row.reason || "-",
+  approverName: row.approver_name || "รอผู้อนุมัติ",
+  status: String(row.status || "pending").toLowerCase(),
+});
+
 const statusBadge: Record<string, string> = {
   present: "bg-success/10 text-success",
   late: "bg-warning/10 text-warning",
@@ -123,9 +94,14 @@ const TimeAttendance = () => {
   const canApproveOt = !isCentralHr && (hasPermission(Permission.APPROVE_DEPARTMENT_OT) || hasPermission(Permission.MANAGE_COMPANY_OT) || hasPermission(Permission.MANAGE_ALL_OT));
   const canEditTeamShift = canApproveOt || hasPermission(Permission.MANAGE_ATTENDANCE);
   const canRunOtPayrollPrep = hasPermission(Permission.MANAGE_COMPANY_OT) || hasPermission(Permission.MANAGE_ALL_OT);
+  const isEmployeeOnly =
+    hasPermission(Permission.VIEW_OWN_ATTENDANCE) &&
+    !hasPermission(Permission.VIEW_DEPARTMENT_ATTENDANCE) &&
+    !hasPermission(Permission.VIEW_COMPANY_ATTENDANCE) &&
+    !hasPermission(Permission.MANAGE_ATTENDANCE);
 
   const [scheduleRows, setScheduleRows] = useState(shiftData);
-  const [attendanceRows] = useState(attendanceLog);
+  const [attendanceRows, setAttendanceRows] = useState<any[]>([]);
   const [otRows, setOtRows] = useState(otRequests);
   const [newOt, setNewOt] = useState({
     requestDate: "",
@@ -133,6 +109,44 @@ const TimeAttendance = () => {
     endTime: "",
     reason: "",
   });
+  const [isSubmittingOt, setIsSubmittingOt] = useState(false);
+  const [showEmployeeOtForm, setShowEmployeeOtForm] = useState(false);
+  const [employeeOtRows, setEmployeeOtRows] = useState<Array<{
+    id: number;
+    requestDate: string;
+    startTime: string;
+    endTime: string;
+    totalHours: number;
+    reason: string;
+    status: "pending" | "approved";
+  }>>([]);
+
+  useEffect(() => {
+    const fetchOt = async () => {
+      try {
+        const res = await apiGet<any>("/ot/requests");
+        const rows = Array.isArray(res) ? res : res?.data || [];
+        setOtRows(rows.map(toUiOtRow));
+      } catch (error) {
+        console.error("Failed to fetch OT requests:", error);
+      }
+    };
+
+    const fetchAttendance = async () => {
+      try {
+        const res = await apiGet<any>("/attendance");
+        const rows = Array.isArray(res) ? res : res?.data || [];
+        setAttendanceRows(rows.map(toUiAttendanceRow));
+      } catch (error) {
+        console.error("Failed to fetch attendance logs:", error);
+      }
+    };
+
+    fetchOt();
+    fetchAttendance();
+  }, []);
+
+  const visibleScheduleRows = isEmployeeOnly ? scheduleRows.slice(0, 1) : scheduleRows;
 
   const computedHours = useMemo(() => {
     if (!newOt.startTime || !newOt.endTime) return 0;
@@ -146,7 +160,7 @@ const TimeAttendance = () => {
     return Math.round((diff / 60) * 10) / 10;
   }, [newOt.endTime, newOt.startTime]);
 
-  const handleSubmitOt = () => {
+  const handleSubmitOt = async () => {
     if (!newOt.requestDate || !newOt.startTime || !newOt.endTime || !newOt.reason) {
       alert("กรุณากรอกข้อมูล OT Request ให้ครบ");
       return;
@@ -156,26 +170,67 @@ const TimeAttendance = () => {
       return;
     }
 
-    setOtRows((prev) => [
-      {
-        id: Date.now(),
-        employeeName: "ผู้ใช้งานปัจจุบัน",
-        requestDate: newOt.requestDate,
-        startTime: newOt.startTime,
-        endTime: newOt.endTime,
-        totalHours: computedHours,
+    try {
+      setIsSubmittingOt(true);
+      await apiPost<any>("/ot/request", {
+        request_date: newOt.requestDate,
+        start_time: newOt.startTime,
+        end_time: newOt.endTime,
         reason: newOt.reason,
-        approverName: "รอผู้อนุมัติ",
-        status: "pending",
-      },
-      ...prev,
-    ]);
+      });
 
-    setNewOt({ requestDate: "", startTime: "", endTime: "", reason: "" });
+      if (isEmployeeOnly) {
+        setEmployeeOtRows((prev) => [
+          {
+            id: Date.now(),
+            requestDate: newOt.requestDate,
+            startTime: newOt.startTime,
+            endTime: newOt.endTime,
+            totalHours: computedHours,
+            reason: newOt.reason,
+            status: "pending",
+          },
+          ...prev,
+        ]);
+      }
+
+      setOtRows((prev) => [
+        {
+          id: Date.now(),
+          employeeName: "ผู้ใช้งานปัจจุบัน",
+          requestDate: newOt.requestDate,
+          startTime: newOt.startTime,
+          endTime: newOt.endTime,
+          totalHours: computedHours,
+          reason: newOt.reason,
+          approverName: "รอผู้อนุมัติ",
+          status: "pending",
+        },
+        ...prev,
+      ]);
+
+      setNewOt({ requestDate: "", startTime: "", endTime: "", reason: "" });
+      setShowEmployeeOtForm(false);
+      alert("ส่งคำขอ OT เรียบร้อยแล้ว");
+    } catch (error) {
+      console.error("Create OT request failed:", error);
+      alert("ไม่สามารถส่งคำขอ OT ได้");
+    } finally {
+      setIsSubmittingOt(false);
+    }
   };
 
   const handleUpdateOtStatus = (id: number, status: "approved" | "rejected") => {
-    setOtRows((prev) => prev.map((row) => (row.id === id ? { ...row, status } : row)));
+    const run = async () => {
+      try {
+        await apiPut(`/ot/${id}/status`, { status });
+        setOtRows((prev) => prev.map((row) => (row.id === id ? { ...row, status } : row)));
+      } catch (error) {
+        console.error("Failed to update OT status:", error);
+        alert("ไม่สามารถอัปเดตสถานะ OT ได้");
+      }
+    };
+    run();
   };
 
   const handleGracePeriodChange = (id: number, value: string) => {
@@ -184,23 +239,120 @@ const TimeAttendance = () => {
     setScheduleRows((prev) => prev.map((row) => (row.id === id ? { ...row, graceMinutes: next } : row)));
   };
 
+  if (isEmployeeOnly) {
+    const myShift = visibleScheduleRows[0];
+
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-center gap-3 text-sm">
+          <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-3 py-1 font-medium">พนักงาน</span>
+          <span className="text-muted-foreground">ดูเฉพาะตารางของคุณ</span>
+        </div>
+
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-base">ตารางงานของคุณ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg bg-muted/40 border border-border px-6 py-4 text-center">
+              <p className="font-semibold text-foreground">{myShift?.shiftName || "-"}</p>
+              <p className="text-3xl font-bold text-primary mt-1">{myShift?.timeIn || "-"} - {myShift?.timeOut || "-"}</p>
+              <p className="text-sm text-muted-foreground mt-1">พัก 12:00 - 13:00</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-card">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">คำขอ OT ของคุณ</CardTitle>
+            <Button size="sm" onClick={() => setShowEmployeeOtForm((v) => !v)}>
+              + ขอ OT
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {showEmployeeOtForm && (
+              <div className="space-y-4 border border-border rounded-lg p-4 bg-muted/20">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">วันที่ขอทำ OT</p>
+                    <Input type="date" value={newOt.requestDate} onChange={(e) => setNewOt((p) => ({ ...p, requestDate: e.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">เวลาเริ่มต้น</p>
+                      <Input type="time" value={newOt.startTime} onChange={(e) => setNewOt((p) => ({ ...p, startTime: e.target.value }))} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">เวลาสิ้นสุด</p>
+                      <Input type="time" value={newOt.endTime} onChange={(e) => setNewOt((p) => ({ ...p, endTime: e.target.value }))} />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">เหตุผลที่ขอ OT</p>
+                  <Textarea value={newOt.reason} onChange={(e) => setNewOt((p) => ({ ...p, reason: e.target.value }))} />
+                </div>
+                <div className="text-sm text-muted-foreground">จำนวนชั่วโมงรวม: <span className="font-semibold text-foreground">{computedHours} ชั่วโมง</span></div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSubmitOt} disabled={isSubmittingOt}>{isSubmittingOt ? "กำลังส่ง..." : "ยืนยันส่งคำขอ"}</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowEmployeeOtForm(false)}>ยกเลิก</Button>
+                </div>
+              </div>
+            )}
+
+            {employeeOtRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">ดูคำขอ OT ได้ที่หน้า Self-Service</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">วันที่</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">เวลา</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">ชั่วโมง</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employeeOtRows.map((r) => (
+                    <tr key={r.id} className="border-b last:border-b-0">
+                      <td className="px-3 py-2">{r.requestDate}</td>
+                      <td className="px-3 py-2">{r.startTime} - {r.endTime}</td>
+                      <td className="px-3 py-2">{r.totalHours} ชม.</td>
+                      <td className="px-3 py-2">
+                        <Badge variant="outline" className={otStatusBadge[r.status] || ""}>{r.status}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Tabs defaultValue="shifts">
         <TabsList>
           <TabsTrigger value="shifts">Work Schedule</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance Log</TabsTrigger>
+          {!isEmployeeOnly && <TabsTrigger value="attendance">Attendance Log</TabsTrigger>}
           {!isCentralHr && <TabsTrigger value="ot-request">OT Request</TabsTrigger>}
-          {canApproveOt && <TabsTrigger value="ot-approval">OT Approval</TabsTrigger>}
+          {canApproveOt && <TabsTrigger value="ot-approval">คำร้องของลูกทีม (OT)</TabsTrigger>}
         </TabsList>
 
       <TabsContent value="shifts" className="mt-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {scheduleRows.map((s) => (
+          {visibleScheduleRows.map((s) => (
             <Card key={s.id} className="shadow-card">
               <CardContent className="p-5 space-y-2">
                 <p className="font-semibold">{s.shiftName}</p>
-                <p className="text-sm text-muted-foreground">พนักงานในกะ: {s.employees} คน</p>
+                {isEmployeeOnly ? (
+                  <p className="text-sm text-muted-foreground">กะการทำงานของฉัน</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">พนักงานในกะ: {s.employees} คน</p>
+                )}
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <p className="text-muted-foreground mb-1">Time In</p>
@@ -229,6 +381,7 @@ const TimeAttendance = () => {
         </div>
       </TabsContent>
 
+      {!isEmployeeOnly && (
       <TabsContent value="attendance" className="mt-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -269,6 +422,7 @@ const TimeAttendance = () => {
           </CardContent>
         </Card>
       </TabsContent>
+      )}
 
       {!isCentralHr && (
       <TabsContent value="ot-request" className="mt-4">
@@ -297,7 +451,7 @@ const TimeAttendance = () => {
                 <Textarea value={newOt.reason} onChange={(e) => setNewOt((p) => ({ ...p, reason: e.target.value }))} />
               </div>
               <div className="text-sm text-muted-foreground">จำนวนชั่วโมงรวม: <span className="font-semibold text-foreground">{computedHours} ชั่วโมง</span></div>
-              <Button size="sm" onClick={handleSubmitOt}>Create OT Request</Button>
+              <Button size="sm" onClick={handleSubmitOt} disabled={isSubmittingOt}>{isSubmittingOt ? "กำลังส่ง..." : "Create OT Request"}</Button>
             </div>
           </CardContent>
         </Card>
@@ -308,9 +462,9 @@ const TimeAttendance = () => {
         <TabsContent value="ot-approval" className="mt-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">OT Approval</CardTitle>
+            <CardTitle className="text-base">คำร้องของลูกทีม (OT)</CardTitle>
             {canRunOtPayrollPrep && (
-              <Button size="sm" variant="outline">Calculate OT for Payroll</Button>
+              <Button size="sm" variant="outline">คำนวณสรุป OT เพื่อส่ง Payroll</Button>
             )}
           </CardHeader>
           <CardContent className="p-0">
@@ -340,8 +494,8 @@ const TimeAttendance = () => {
                     <td className="px-4 py-3">
                       {o.status === "pending" ? (
                         <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-success" onClick={() => handleUpdateOtStatus(o.id, "approved")}><Check className="h-4 w-4" /></Button>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => handleUpdateOtStatus(o.id, "rejected")}><X className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-success bg-success/10 hover:bg-success/20" onClick={() => handleUpdateOtStatus(o.id, "approved")}><Check className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive bg-destructive/10 hover:bg-destructive/20" onClick={() => handleUpdateOtStatus(o.id, "rejected")}><X className="h-4 w-4" /></Button>
                         </div>
                       ) : (
                         <Badge variant="secondary" className="text-xs capitalize">{o.status}</Badge>

@@ -6,8 +6,6 @@ import { UserRole, Permission } from "@/types/roles";
  */
 export const rolePermissions: Record<UserRole, Permission[]> = {
   [UserRole.EMPLOYEE]: [
-    Permission.VIEW_OWN_DASHBOARD,
-    Permission.VIEW_OWN_PROFILE,
     Permission.VIEW_OWN_ATTENDANCE,
     Permission.REQUEST_OT,
     Permission.REQUEST_LEAVE,

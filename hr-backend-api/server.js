@@ -20,6 +20,8 @@ const companyRoutes = require('./routes/companyRoutes');
 const shiftRoutes = require('./routes/shiftRoutes');
 const approvalsRoutes = require('./routes/approvalsRoutes');
 const holidaysRoutes = require('./routes/holidaysRoutes');
+const otRoutes = require('./routes/otRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 // หมายเหตุ: ถ้าคุณแยกไฟล์ companyRoutes.js และ shiftRoutes.js จริงๆ 
 // ให้เอาคอมเมนต์ 2 บรรทัดด้านล่างนี้ออกนะครับ แต่ถ้าทำตามสเต็ปที่ผมแนะนำไปก่อนหน้า ไม่ต้องเอาออกครับ
@@ -54,6 +56,8 @@ app.use('/api/companies', companyRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/holidays', holidaysRoutes);
+app.use('/api/ot', otRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 

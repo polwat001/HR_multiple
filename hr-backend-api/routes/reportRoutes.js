@@ -8,5 +8,7 @@ router.use(authMiddleware);
 
 // สังเกตตรงนี้: ต้องเป็น reportController.getDashboardStats (ไม่มีวงเล็บต่อท้าย)
 router.get('/dashboard', reportController.getDashboardStats);
+router.get('/attendance', reportController.getAttendanceReport);
+router.get('/ot', reportController.getOtReport);
 
 module.exports = router;

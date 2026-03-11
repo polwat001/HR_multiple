@@ -2,27 +2,24 @@ import { useState, useEffect } from "react";
 import { useCompany } from "@/contexts/CompanyContexts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Users, FileWarning, Clock, TrendingUp, UserCheck, LogOut, AlertCircle, Calendar,
+  Users, FileWarning, Clock, UserCheck, LogOut, AlertCircle, Calendar,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend,
+  PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { Permission } from "@/types/roles";
-
-const ATTENDANCE_COLORS = [
-  "hsl(145 60% 42%)", "hsl(38 92% 50%)", "hsl(0 72% 55%)", "hsl(205 80% 55%)",
-];
+import { Permission, UserRole } from "@/types/roles";
 
 const Dashboard = () => {
   const { selectedCompany } = useCompany();
-  const { hasPermission, user: authUser } = useAuth();
+  const { hasPermission, hasRole, user: authUser } = useAuth();
+  const authRoleLevel = Number((authUser as any)?.role_level || 0);
   const isAll = selectedCompany.id === "all";
   const isEmployeeDashboard =
+    (hasRole(UserRole.EMPLOYEE) || authRoleLevel === 1) &&
     hasPermission(Permission.VIEW_OWN_DASHBOARD) &&
     !hasPermission(Permission.VIEW_COMPANY_DASHBOARD) &&
     !hasPermission(Permission.VIEW_HOLDING_DASHBOARD);
@@ -38,14 +35,13 @@ const Dashboard = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
-  const [otCostData, setOtCostData] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [publicHolidays, setPublicHolidays] = useState<any[]>([]);
   const [leaveBalances, setLeaveBalances] = useState<any[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [otSummary, setOtSummary] = useState<any>({ total_hours: 0 });
   
   // Filters
   const [selectedDept, setSelectedDept] = useState("all");
@@ -116,27 +112,17 @@ const Dashboard = () => {
           console.error("Failed to fetch leave requests:", error);
         }
 
+        // ดึงสรุป OT ตาม scope role ปัจจุบัน
+        try {
+          const otSummaryRes = await apiGet<any>(`/ot/summary?month=${selectedMonth}`);
+          setOtSummary(otSummaryRes?.data || { total_hours: 0 });
+        } catch (error) {
+          console.error("Failed to fetch OT summary:", error);
+        }
+
         // คำนวณ departments จาก employees
         const deptList = [...new Set((empArray || []).map((e: any) => e.department_name).filter(Boolean))];
         setDepartments(deptList);
-
-        // ดึง attendance (mock สำหรับตอนนี้)
-        setAttendanceData([
-          { name: "Present", value: 150 },
-          { name: "Late", value: 25 },
-          { name: "Absent", value: 10 },
-          { name: "WFH", value: 65 },
-        ]);
-
-        // ดึง OT Cost (mock สำหรับตอนนี้)
-        setOtCostData([
-          { month: "Sep", amount: 85000 },
-          { month: "Oct", amount: 92000 },
-          { month: "Nov", amount: 78000 },
-          { month: "Dec", amount: 110000 },
-          { month: "Jan", amount: 98000 },
-          { month: "Feb", amount: 105000 },
-        ]);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -145,7 +131,7 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, []);
+  }, [selectedMonth]);
 
   // Filter data by selected company and department
   const filteredEmployees = isCompanyDashboard
@@ -159,9 +145,9 @@ const Dashboard = () => {
     : filteredEmployees.filter((e: any) => (e.department || e.department_name) === selectedDept);
 
   const filteredContracts = (contracts || []).filter((c) => {
-    const emp = (employees || []).find((e) => e.id === c.employeeId);
+    const emp = (employees || []).find((e: any) => e.id === c.employee_id || e.id === c.employeeId);
     if (isAll) return true;
-    return emp?.companyId === selectedCompany.id;
+    return String(emp?.company_id || emp?.companyId || "") === String(selectedCompany.id);
   });
 
   // Calculate metrics
@@ -169,20 +155,22 @@ const Dashboard = () => {
   
   const currentDate = new Date(selectedMonth);
   const newJoiners = deptFilteredEmployees.filter((e: any) => {
-    if (!e.joinedDate) return false;
-    const joinedDate = new Date(e.joinedDate);
+    const joinedValue = e.joined_date || e.joinedDate || e.hire_date;
+    if (!joinedValue) return false;
+    const joinedDate = new Date(joinedValue);
     return joinedDate.getMonth() === currentDate.getMonth() && 
            joinedDate.getFullYear() === currentDate.getFullYear();
   }).length;
 
   const resigned = deptFilteredEmployees.filter((e: any) => {
-    if (!e.resignedDate) return false;
-    const resignedDate = new Date(e.resignedDate);
+    const resignedValue = e.resigned_date || e.resignedDate;
+    if (!resignedValue) return String(e.status || "").toLowerCase() === "resigned";
+    const resignedDate = new Date(resignedValue);
     return resignedDate.getMonth() === currentDate.getMonth() && 
            resignedDate.getFullYear() === currentDate.getFullYear();
   }).length;
 
-  const totalOtHours = 150; // Mock data - should fetch from API
+  const totalOtHours = Number(otSummary?.total_hours || 0);
   
   // Department distribution for donut chart
   const deptDistribution = Array.from(
@@ -200,18 +188,27 @@ const Dashboard = () => {
 
   // Contracts expiring in 30/60 days
   const expiringContracts = filteredContracts.filter((c: any) => {
-    if (!c.expiryDate) return false;
-    const expiryDate = new Date(c.expiryDate);
+    const expiryValue = c.end_date || c.expiryDate;
+    if (!expiryValue) return false;
+    const expiryDate = new Date(expiryValue);
     const daysUntilExpiry = Math.floor((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     return daysUntilExpiry > 0 && daysUntilExpiry <= 60;
-  }).sort((a: any, b: any) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime());
+  }).sort((a: any, b: any) => {
+    const aExpiry = new Date(a.end_date || a.expiryDate).getTime();
+    const bExpiry = new Date(b.end_date || b.expiryDate).getTime();
+    return aExpiry - bExpiry;
+  });
 
   // Attendance data by status
+  const monthAttendanceLogs = (attendanceLogs || []).filter((row: any) =>
+    String(row?.work_date || "").startsWith(`${selectedMonth}-`)
+  );
+
   const attendanceByStatus = [
-    { name: "Present", value: 150, color: "hsl(145 60% 42%)" },
-    { name: "Late", value: 25, color: "hsl(38 92% 50%)" },
-    { name: "Absent", value: 10, color: "hsl(0 72% 55%)" },
-    { name: "WFH", value: 65, color: "hsl(205 80% 55%)" },
+    { name: "Present", value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "present").length, color: "hsl(145 60% 42%)" },
+    { name: "Late", value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "late").length, color: "hsl(38 92% 50%)" },
+    { name: "Absent", value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "absent").length, color: "hsl(0 72% 55%)" },
+    { name: "Leave", value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "leave").length, color: "hsl(205 80% 55%)" },
   ];
 
   // Upcoming holidays (next 30 days)
@@ -224,12 +221,12 @@ const Dashboard = () => {
     .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const statCards = [
-    { label: "Total Headcount", value: totalHeadcount, icon: Users, color: "text-primary" },
-    { label: "New Joiners", value: newJoiners, icon: UserCheck, color: "text-success" },
-    { label: "Resigned", value: resigned, icon: LogOut, color: "text-destructive" },
-    { label: "Total OT Hours", value: totalOtHours, icon: Clock, color: "text-warning" },
-    { label: "Contracts Expiring", value: expiringContracts.length, icon: FileWarning, color: "text-orange-600" },
-    { label: "Pending Approvals", value: (pendingApprovals || []).length, icon: AlertCircle, color: "text-info" },
+    { key: "total_headcount", label: "Total Headcount", value: totalHeadcount, icon: Users, color: "text-primary" },
+    { key: "new_joiners", label: "New Joiners", value: newJoiners, icon: UserCheck, color: "text-success" },
+    { key: "resigned", label: "Resigned", value: resigned, icon: LogOut, color: "text-destructive" },
+    { key: "total_ot", label: "Total OT Hours", value: totalOtHours, icon: Clock, color: "text-warning" },
+    { key: "contracts_expiring", label: "Contracts Expiring", value: expiringContracts.length, icon: FileWarning, color: "text-orange-600" },
+    { key: "pending_approvals", label: "Pending Approvals", value: (pendingApprovals || []).length, icon: AlertCircle, color: "text-info" },
   ];
 
   const ownLeaveBalance = (leaveBalances || []).reduce(
@@ -248,14 +245,36 @@ const Dashboard = () => {
   }, 0);
 
   const latestScan = (attendanceLogs || [])[0] || null;
+  const ownPendingLeaves = (leaveRequests || []).filter(
+    (row: any) => String(row?.status || "").toLowerCase() === "pending"
+  ).length;
+  const ownLateThisMonth = (attendanceLogs || []).filter((row: any) => {
+    if (!row?.work_date) return false;
+    const workDate = new Date(row.work_date);
+    if (workDate.getMonth() !== currentMonth || workDate.getFullYear() !== currentYear) return false;
+    return String(row.status || "").toLowerCase() === "late";
+  }).length;
   const currentUserId = currentUser?.user_id || authUser?.user_id;
   const myEmployeeRecord = (employees || []).find((e: any) => String(e.user_id) === String(currentUserId));
   const displayName = currentUser?.display_name || currentUser?.name || currentUser?.username || authUser?.display_name || authUser?.username || "User";
   const displayPosition = currentUser?.position_name || myEmployeeRecord?.position_name || "-";
   const todayStr = new Date().toISOString().split("T")[0];
-  const teamPresentToday = (attendanceLogs || []).filter((row: any) => row.work_date === todayStr && ["present", "late"].includes(String(row.status || "").toLowerCase())).length;
-  const teamAbsentToday = (attendanceLogs || []).filter((row: any) => row.work_date === todayStr && String(row.status || "").toLowerCase() === "absent").length;
+  const managerUserId = String(currentUser?.user_id || authUser?.user_id || "");
+  const teamMembers = (employees || []).filter((e: any) => String(e.user_id || "") !== managerUserId);
+  const teamEmployeeCodes = new Set(teamMembers.map((e: any) => String(e.employee_code || "")).filter(Boolean));
+  const teamUserIds = new Set(teamMembers.map((e: any) => String(e.user_id || "")).filter(Boolean));
+
+  const teamAttendanceToday = (attendanceLogs || []).filter((row: any) => {
+    if (row.work_date !== todayStr) return false;
+    return teamEmployeeCodes.has(String(row.employee_code || ""));
+  });
+
+  const teamLateToday = teamAttendanceToday.filter((row: any) => String(row.status || "").toLowerCase() === "late").length;
+  const teamAbsentToday = teamAttendanceToday.filter((row: any) => String(row.status || "").toLowerCase() === "absent").length;
+  const teamPresentToday = teamAttendanceToday.filter((row: any) => String(row.status || "").toLowerCase() === "present").length;
+
   const teamLeaveToday = (leaveRequests || []).filter((lr: any) => {
+    if (!teamEmployeeCodes.has(String(lr.employee_code || ""))) return false;
     if (String(lr.status || "").toLowerCase() !== "approved") return false;
     if (!lr.start_date || !lr.end_date) return false;
     const start = new Date(lr.start_date);
@@ -269,12 +288,120 @@ const Dashboard = () => {
     (attendanceLogs || []).forEach((row: any) => {
       const status = String(row.status || "").toLowerCase();
       if (!row.work_date || !status.includes("ot")) return;
+      if (!teamEmployeeCodes.has(String(row.employee_code || ""))) return;
       const day = new Date(row.work_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
       grouped.set(day, (grouped.get(day) || 0) + 1);
     });
     const entries = Array.from(grouped.entries()).map(([day, count]) => ({ day, ot: count }));
     return entries.length > 0 ? entries.slice(-7) : [{ day: "No Data", ot: 0 }];
   })();
+
+  const teamPendingRequests = (pendingApprovals || []).filter((item: any) =>
+    teamUserIds.has(String(item.requester_id || item.requested_by || ""))
+  );
+
+  const pendingLeaveRequestsFromTeam = (leaveRequests || []).filter((lr: any) => {
+    if (!teamEmployeeCodes.has(String(lr.employee_code || ""))) return false;
+    return String(lr.status || "").toLowerCase() === "pending";
+  });
+
+  const resolvedRoleName = String(
+    currentUser?.role_name || (authUser as any)?.role_name || currentUser?.roles?.[0] || authUser?.roles?.[0] || ""
+  ).toLowerCase();
+  const isSuperAdminRole = resolvedRoleName.includes("super");
+  const isCentralHrRole = !isSuperAdminRole && (resolvedRoleName.includes("central") || resolvedRoleName.includes("center"));
+  const isHrCompanyRole = !isSuperAdminRole && !isCentralHrRole && isCompanyDashboard;
+
+  const roleViewKey = isEmployeeDashboard
+    ? "employee"
+    : isManagerDashboard
+      ? "manager"
+      : isSuperAdminRole
+        ? "super_admin"
+        : isCentralHrRole
+          ? "central_hr"
+          : isHrCompanyRole
+            ? "hr_company"
+            : "default";
+
+  const roleTheme = {
+    employee: {
+      label: "Employee",
+      badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      cardClass: "border-emerald-200 bg-emerald-50/40",
+      priorityClass: "ring-2 ring-emerald-300 border-emerald-300",
+    },
+    manager: {
+      label: "Manager",
+      badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
+      cardClass: "border-amber-200 bg-amber-50/40",
+      priorityClass: "ring-2 ring-amber-300 border-amber-300",
+    },
+    hr_company: {
+      label: "HR Company",
+      badgeClass: "bg-blue-100 text-blue-800 border-blue-300",
+      cardClass: "border-blue-200 bg-blue-50/40",
+      priorityClass: "ring-2 ring-blue-300 border-blue-300",
+    },
+    central_hr: {
+      label: "Central HR",
+      badgeClass: "bg-indigo-100 text-indigo-800 border-indigo-300",
+      cardClass: "border-indigo-200 bg-indigo-50/40",
+      priorityClass: "ring-2 ring-indigo-300 border-indigo-300",
+    },
+    super_admin: {
+      label: "Super Admin",
+      badgeClass: "bg-rose-100 text-rose-800 border-rose-300",
+      cardClass: "border-rose-200 bg-rose-50/40",
+      priorityClass: "ring-2 ring-rose-300 border-rose-300",
+    },
+    default: {
+      label: "Dashboard",
+      badgeClass: "bg-slate-100 text-slate-800 border-slate-300",
+      cardClass: "border-border",
+      priorityClass: "ring-2 ring-slate-300 border-slate-300",
+    },
+  }[roleViewKey];
+
+  const companyScopeLabel = selectedCompany.id === "all" ? "All Companies" : selectedCompany.shortName;
+  const generalDashboardHeader = (() => {
+    if (isSuperAdminRole) {
+      return {
+        title: currentUser ? `Welcome back, ${displayName} (Super Admin)` : "Super Admin Dashboard",
+        subtitle: "ภาพรวมเชิงกลยุทธ์ทั้งระบบ พร้อมจุดที่ต้องตัดสินใจทันที",
+      };
+    }
+    if (isCentralHrRole) {
+      return {
+        title: currentUser ? `Welcome back, ${displayName} (Central HR)` : "Central HR Dashboard",
+        subtitle: "ภาพรวมข้ามบริษัท เน้นอนุมัติและกำลังคนระดับองค์กร",
+      };
+    }
+    if (isHrCompanyRole) {
+      return {
+        title: currentUser ? `Welcome back, ${displayName} (HR Company)` : "HR Company Dashboard",
+        subtitle: `ภาพรวมบริษัท ${companyScopeLabel} เน้นการอนุมัติและสถานะพนักงาน`,
+      };
+    }
+    return {
+      title: currentUser ? `Welcome back, ${displayName}` : "Welcome to Dashboard",
+      subtitle: companyScopeLabel,
+    };
+  })();
+
+  const priorityOrder = (() => {
+    if (isSuperAdminRole || isCentralHrRole) {
+      return ["pending_approvals", "total_headcount", "new_joiners", "resigned", "contracts_expiring", "total_ot"];
+    }
+    if (isHrCompanyRole) {
+      return ["pending_approvals", "contracts_expiring", "total_headcount", "new_joiners", "resigned", "total_ot"];
+    }
+    return ["total_headcount", "new_joiners", "resigned", "total_ot", "contracts_expiring", "pending_approvals"];
+  })();
+
+  const prioritizedStatCards = priorityOrder
+    .map((key) => statCards.find((c) => c.key === key))
+    .filter(Boolean) as typeof statCards;
 
   if (loading) {
     return <div className="p-6 text-center">Loading dashboard...</div>;
@@ -284,60 +411,57 @@ const Dashboard = () => {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">
-            {currentUser ? `Welcome back, ${displayName}` : "Welcome"}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Personal Dashboard</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-gray-900">
+              {currentUser ? `Welcome back, ${displayName}` : "Employee Dashboard"}
+            </h1>
+            <Badge variant="outline" className={roleTheme.badgeClass}>{roleTheme.label}</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">สรุปข้อมูลสำคัญของคุณ</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="shadow-card hover:shadow-card-hover transition-shadow">
-            <CardContent className="p-5">
-              <p className="text-sm text-muted-foreground">วันลาคงเหลือ</p>
-              <p className="text-2xl font-bold mt-1">{ownLeaveBalance} วัน</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card hover:shadow-card-hover transition-shadow">
-            <CardContent className="p-5">
-              <p className="text-sm text-muted-foreground">สรุป OT เดือนนี้</p>
-              <p className="text-2xl font-bold mt-1">{ownOtThisMonth} รายการ</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card hover:shadow-card-hover transition-shadow">
-            <CardContent className="p-5">
-              <p className="text-sm text-muted-foreground">เวลาสแกนเข้า-ออกล่าสุด</p>
-              <p className="text-base font-semibold mt-1">
-                {latestScan
-                  ? `${latestScan.check_in_time || "-"} / ${latestScan.check_out_time || "-"}`
-                  : "- / -"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {latestScan?.work_date ? new Date(latestScan.work_date).toLocaleDateString() : "ยังไม่มีข้อมูล"}
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className={`shadow-card ${roleTheme.cardClass} ${roleTheme.priorityClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">วันลาคงเหลือ</p><p className="text-2xl font-bold mt-1">{ownLeaveBalance}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">คำขอลาที่รออนุมัติ</p><p className="text-2xl font-bold mt-1">{ownPendingLeaves}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">มาสายเดือนนี้</p><p className="text-2xl font-bold mt-1">{ownLateThisMonth}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">OT เดือนนี้</p><p className="text-2xl font-bold mt-1">{ownOtThisMonth}</p></CardContent></Card>
         </div>
 
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">ข้อมูลพนักงานของฉัน</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {employees.length === 0 ? (
-              <p className="text-sm text-muted-foreground">ไม่พบข้อมูลพนักงาน</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">รหัสพนักงาน:</span> {employees[0]?.employee_code || "-"}</div>
-                <div><span className="text-muted-foreground">ชื่อ:</span> {myEmployeeRecord?.firstname_th || currentUser?.display_name || "-"} {myEmployeeRecord?.lastname_th || ""}</div>
-                <div><span className="text-muted-foreground">ตำแหน่ง:</span> {displayPosition}</div>
-                <div><span className="text-muted-foreground">แผนก:</span> {myEmployeeRecord?.department_name || "-"}</div>
-                <div><span className="text-muted-foreground">สถานะ:</span> {myEmployeeRecord?.status || "-"}</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">ข้อมูลการลงเวลาล่าสุด</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-2">
+                <p className="text-sm"><span className="text-muted-foreground">วันที่:</span> {latestScan?.work_date || "-"}</p>
+                <p className="text-sm"><span className="text-muted-foreground">Check-in:</span> {latestScan?.check_in_time || "-"}</p>
+                <p className="text-sm"><span className="text-muted-foreground">Check-out:</span> {latestScan?.check_out_time || "-"}</p>
+                <p className="text-sm"><span className="text-muted-foreground">สถานะ:</span> {latestScan?.status || "-"}</p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">วันหยุดที่กำลังจะมาถึง</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-72 overflow-y-auto">
+                {upcomingHolidays.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">ไม่มีวันหยุดในช่วง 30 วันถัดไป</p>
+                ) : (
+                  upcomingHolidays.slice(0, 5).map((holiday: any) => (
+                    <div key={holiday.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                      <p className="text-sm font-medium">{holiday.name}</p>
+                      <Badge variant="outline">{new Date(holiday.date).toLocaleDateString()}</Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -346,17 +470,22 @@ const Dashboard = () => {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">
-            {currentUser ? `Welcome back, ${displayName}` : "Department Dashboard"}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-gray-900">
+              {currentUser ? `Welcome back, ${displayName}` : "Department Dashboard"}
+            </h1>
+            <Badge variant="outline" className={roleTheme.badgeClass}>{roleTheme.label}</Badge>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">ภาพรวมแผนก/ทีมของคุณ</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="shadow-card"><CardContent className="p-5"><p className="text-sm text-muted-foreground">วันนี้ใครมาทำงาน</p><p className="text-2xl font-bold mt-1">{teamPresentToday}</p></CardContent></Card>
-          <Card className="shadow-card"><CardContent className="p-5"><p className="text-sm text-muted-foreground">วันนี้ใครขาด</p><p className="text-2xl font-bold mt-1">{teamAbsentToday}</p></CardContent></Card>
-          <Card className="shadow-card"><CardContent className="p-5"><p className="text-sm text-muted-foreground">วันนี้ใครลา</p><p className="text-2xl font-bold mt-1">{teamLeaveToday}</p></CardContent></Card>
-          <Card className="shadow-card"><CardContent className="p-5"><p className="text-sm text-muted-foreground">สมาชิกในทีม</p><p className="text-2xl font-bold mt-1">{employees.length}</p></CardContent></Card>
+        <div className="grid grid-cols-0 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-0 gap-6">
+          <Card className={`shadow-card ${roleTheme.cardClass} ${roleTheme.priorityClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">คำยื่นรออนุมัติ</p><p className="text-2xl font-bold mt-1">{teamPendingRequests.length}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">ทำงาน</p><p className="text-2xl font-bold mt-1">{teamPresentToday}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">สาย</p><p className="text-2xl font-bold mt-1">{teamLateToday}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">ขาด</p><p className="text-2xl font-bold mt-1">{teamAbsentToday}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">ลา</p><p className="text-2xl font-bold mt-1">{teamLeaveToday}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">สมาชิกในทีม</p><p className="text-2xl font-bold mt-1">{teamMembers.length}</p></CardContent></Card>
         </div>
 
         <Card className="shadow-card">
@@ -375,6 +504,56 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">คำยื่นจากลูกน้อง (Pending Approval)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {teamPendingRequests.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">ไม่มีคำยื่นที่รออนุมัติ</p>
+                ) : (
+                  teamPendingRequests.slice(0, 8).map((item: any) => (
+                    <div key={item.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-muted/20">
+                      <div>
+                        <p className="text-sm font-medium">{item.requester_name || `User #${item.requested_by}`}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{item.approval_type || "request"} • {item.department_name || "-"}</p>
+                        <p className="text-xs text-muted-foreground">{item.request_reason || "-"}</p>
+                      </div>
+                      <Badge variant="outline">รออนุมัติ</Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">คำขอลาจากลูกน้อง (ล่าสุด)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {pendingLeaveRequestsFromTeam.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">ไม่มีคำขอลาที่รออนุมัติ</p>
+                ) : (
+                  pendingLeaveRequestsFromTeam.slice(0, 8).map((lr: any) => (
+                    <div key={lr.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-muted/20">
+                      <div>
+                        <p className="text-sm font-medium">{`${lr.firstname_th || ""} ${lr.lastname_th || ""}`.trim() || lr.employee_code}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{lr.leave_type_name || "Leave"} • {lr.start_date} - {lr.end_date}</p>
+                        <p className="text-xs text-muted-foreground">{lr.reason || "-"}</p>
+                      </div>
+                      <Badge variant="outline">รออนุมัติ</Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -383,18 +562,21 @@ const Dashboard = () => {
     <div className="space-y-6 animate-fade-in">
       {/* User Welcome Header */}
       <div className="mb-4">
-        <h1 className="text-3xl font-bold text-grey-900">
-          {currentUser ? `Welcome back, ${displayName}` : "Welcome to Dashboard"}
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-grey-900">
+            {generalDashboardHeader.title}
+          </h1>
+          <Badge variant="outline" className={roleTheme.badgeClass}>{roleTheme.label}</Badge>
+        </div>
         <p className="text-sm text-grey-600 mt-1">
-          {selectedCompany.id === "all" ? "All Companies" : selectedCompany.shortName}
+          {generalDashboardHeader.subtitle}
         </p>
       </div>
 
       {/* Stat Cards - 6 columns */}
       <div className="grid grid-cols-0 sm:grid-cols-1 lg:grid-cols-3 gap-6">
-        {statCards.map((stat) => (
-          <Card key={stat.label} className="shadow-card hover:shadow-card-hover transition-shadow">
+        {prioritizedStatCards.map((stat) => (
+          <Card key={stat.label} className={`shadow-card hover:shadow-card-hover transition-shadow ${roleTheme.cardClass} ${stat.key === priorityOrder[0] ? roleTheme.priorityClass : ""}`}>
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
@@ -477,11 +659,11 @@ const Dashboard = () => {
                 expiringContracts.slice(0, 5).map((c: any) => (
                   <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border border-orange-200 bg-orange-50">
                     <div>
-                      <p className="text-sm font-medium">{c.employeeName}</p>
-                      <p className="text-xs text-muted-foreground">{c.department}</p>
+                      <p className="text-sm font-medium">{`${c.firstname_th || ""} ${c.lastname_th || ""}`.trim() || c.employee_code || "-"}</p>
+                      <p className="text-xs text-muted-foreground">{c.contract_type || "-"}</p>
                     </div>
                     <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                      {new Date(c.expiryDate).toLocaleDateString()}
+                      {new Date(c.end_date || c.expiryDate).toLocaleDateString()}
                     </Badge>
                   </div>
                 ))
@@ -506,8 +688,8 @@ const Dashboard = () => {
                 (pendingApprovals || []).slice(0, 5).map((approval: any) => (
                   <div key={approval.id} className="flex items-center justify-between p-3 rounded-lg border border-blue-200 bg-blue-50">
                     <div>
-                      <p className="text-sm font-medium">{approval.employeeName}</p>
-                      <p className="text-xs text-muted-foreground">{approval.type} - {approval.reason}</p>
+                      <p className="text-sm font-medium">{approval.requester_name || `User #${approval.requested_by}`}</p>
+                      <p className="text-xs text-muted-foreground">{approval.approval_type || "request"} - {approval.request_reason || "-"}</p>
                     </div>
                     <Badge variant="secondary" className="text-xs">
                       {approval.status}

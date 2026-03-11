@@ -37,9 +37,9 @@ exports.getAllEmployees = async (req, res) => {
         } 
         else if (role_level === 20) {
             // Manager (20) -> ล็อคให้ดูได้เฉพาะคนที่มี manager_id ตรงกับรหัสพนักงานของตัวเอง
-            // (ต้องแปลงจาก user_id เป็น employee_id ของ Manager ก่อน)
-            sql += ` AND e.manager_id = (SELECT id FROM employees WHERE user_id = ?)`;
-            params.push(user_id);
+            // และดูข้อมูลของตัวเองได้ด้วย (self + team)
+            sql += ` AND (e.user_id = ? OR e.manager_id = (SELECT id FROM employees WHERE user_id = ?))`;
+            params.push(user_id, user_id);
         } 
         else {
             // Employee (1) -> ดูได้แค่ข้อมูลของตัวเองเท่านั้น

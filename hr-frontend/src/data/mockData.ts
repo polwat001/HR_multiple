@@ -243,3 +243,40 @@ export const orgStructure = {
     }
   ]
 };
+
+export const selfServiceAttendance: AttendanceRecord[] = [
+  { date: "2026-02-01", employeeId: "emp-001", timeIn: "08:21", timeOut: "17:41", status: "present" },
+  { date: "2026-02-02", employeeId: "emp-001", timeIn: "08:24", timeOut: "17:38", status: "present" },
+  { date: "2026-02-03", employeeId: "emp-001", timeIn: "08:28", timeOut: "17:42", status: "present" },
+  { date: "2026-02-04", employeeId: "emp-001", timeIn: "08:28", timeOut: "17:50", status: "present" },
+  { date: "2026-02-05", employeeId: "emp-001", timeIn: "08:11", timeOut: "17:34", status: "present" },
+  { date: "2026-02-08", employeeId: "emp-001", timeIn: "08:11", timeOut: "17:46", status: "present" },
+  { date: "2026-02-09", employeeId: "emp-001", timeIn: "08:22", timeOut: "17:39", status: "present" },
+  { date: "2026-02-10", employeeId: "emp-001", timeIn: "08:11", timeOut: "17:30", status: "present" },
+  { date: "2026-02-11", employeeId: "emp-001", timeIn: "08:27", timeOut: "17:36", status: "present" },
+  { date: "2026-02-12", employeeId: "emp-001", timeIn: "08:26", timeOut: "17:33", status: "present" },
+  { date: "2026-02-15", employeeId: "emp-001", timeIn: "-", timeOut: "-", status: "absent" },
+  { date: "2026-02-16", employeeId: "emp-001", timeIn: "08:15", timeOut: "17:31", status: "present" },
+  { date: "2026-02-17", employeeId: "emp-001", timeIn: "08:26", timeOut: "17:46", status: "present" },
+  { date: "2026-02-18", employeeId: "emp-001", timeIn: "08:23", timeOut: "17:41", status: "present" },
+  { date: "2026-02-19", employeeId: "emp-001", timeIn: "09:20", timeOut: "17:35", status: "late" },
+  { date: "2026-02-22", employeeId: "emp-001", timeIn: "08:24", timeOut: "19:10", status: "present" },
+  { date: "2026-02-23", employeeId: "emp-001", timeIn: "08:38", timeOut: "18:54", status: "late" },
+  { date: "2026-02-24", employeeId: "emp-001", timeIn: "08:10", timeOut: "18:05", status: "present" },
+  { date: "2026-02-25", employeeId: "emp-001", timeIn: "-", timeOut: "-", status: "leave" },
+  { date: "2026-02-26", employeeId: "emp-001", timeIn: "08:26", timeOut: "17:58", status: "present" },
+];
+
+export const selfServiceLeaveQuotas: LeaveQuota[] = [
+  { type: "ลาพักร้อน", total: 10, used: 4 },
+  { type: "ลาป่วย", total: 30, used: 2 },
+  { type: "ลากิจ", total: 5, used: 1 },
+];
+
+export const selfServiceOTRecords: OTRecord[] = [
+  { id: "ot-001", employeeId: "emp-001", date: "2026-02-03", hours: 2, amount: 1200, status: "approved" },
+  { id: "ot-002", employeeId: "emp-001", date: "2026-02-07", hours: 3, amount: 1800, status: "approved" },
+  { id: "ot-003", employeeId: "emp-001", date: "2026-02-12", hours: 1.5, amount: 900, status: "approved" },
+  { id: "ot-004", employeeId: "emp-001", date: "2026-02-18", hours: 2, amount: 1200, status: "pending" },
+  { id: "ot-005", employeeId: "emp-001", date: "2026-02-24", hours: 2.5, amount: 1500, status: "pending" },
+];

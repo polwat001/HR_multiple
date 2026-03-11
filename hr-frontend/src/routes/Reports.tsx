@@ -8,6 +8,7 @@ import { FileText, Download, Users, Clock, TrendingUp, CalendarCheck2 } from "lu
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Permission } from "@/types/roles";
+import { apiGet } from "@/lib/api";
 
 const reports = [
   { id: "employee-list", name: "Employee List (ทะเบียนประวัติพนักงาน)", icon: Users, description: "รายชื่อพนักงานพร้อมข้อมูลสำคัญ" },
@@ -61,7 +62,7 @@ const Reports = () => {
 
   const exportLabel = format === "pdf" ? "Export PDF" : "Export XLSX";
 
-  const handleExport = (reportId: string, reportName: string, forcedFormat?: "excel" | "pdf") => {
+  const handleExport = async (reportId: string, reportName: string, forcedFormat?: "excel" | "pdf") => {
     const selectedFormat = forcedFormat || (format as "excel" | "pdf");
     const selectedCompany =
       isManagerReports || isCompanyReports
@@ -79,7 +80,72 @@ const Reports = () => {
       scope: isHoldingReports ? scope : "current",
     };
 
-    const content = JSON.stringify(payload, null, 2);
+    let apiRows: any[] | null = null;
+    try {
+      if (reportId === "employee-list") {
+        const res = await apiGet<any>("/employees");
+        apiRows = Array.isArray(res) ? res : res?.data || [];
+      }
+
+      if (reportId === "attendance-summary") {
+        const query = new URLSearchParams({
+          ...(dateFrom ? { date_from: dateFrom } : {}),
+          ...(dateTo ? { date_to: dateTo } : {}),
+          ...(departmentFilter ? { department: departmentFilter } : {}),
+          ...(employeeStatus ? { employee_status: employeeStatus } : {}),
+        }).toString();
+        const res = await apiGet<any>(`/reports/attendance${query ? `?${query}` : ""}`);
+        apiRows = Array.isArray(res) ? res : res?.data || [];
+      }
+
+      if (reportId === "ot-monthly") {
+        const query = new URLSearchParams({
+          ...(dateFrom ? { date_from: dateFrom } : {}),
+          ...(dateTo ? { date_to: dateTo } : {}),
+          ...(departmentFilter ? { department: departmentFilter } : {}),
+          ...(employeeStatus ? { employee_status: employeeStatus } : {}),
+        }).toString();
+        const res = await apiGet<any>(`/reports/ot${query ? `?${query}` : ""}`);
+        apiRows = Array.isArray(res) ? res : res?.data || [];
+      }
+    } catch (error) {
+      console.error("Report API export failed:", error);
+      alert("ไม่สามารถดึงรายงานจากระบบได้");
+      return;
+    }
+
+    const exportBody = {
+      ...payload,
+      rows: apiRows,
+      generatedAt: new Date().toISOString(),
+    };
+
+    if (reportId === "employee-list" && selectedFormat === "excel") {
+      const rows = apiRows || [];
+      const header = ["employee_code", "firstname_th", "lastname_th", "company_name", "department_name", "position_name", "status"];
+      const csv = [
+        header.join(","),
+        ...rows.map((r: any) =>
+          header
+            .map((key) => {
+              const value = String(r?.[key] ?? "").replaceAll('"', '""');
+              return `"${value}"`;
+            })
+            .join(",")
+        ),
+      ].join("\n");
+
+      const csvBlob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const csvUrl = URL.createObjectURL(csvBlob);
+      const csvAnchor = document.createElement("a");
+      csvAnchor.href = csvUrl;
+      csvAnchor.download = `employee-list-${new Date().toISOString().slice(0, 10)}.csv`;
+      csvAnchor.click();
+      URL.revokeObjectURL(csvUrl);
+      return;
+    }
+
+    const content = JSON.stringify(exportBody, null, 2);
     const blob = new Blob([content], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");

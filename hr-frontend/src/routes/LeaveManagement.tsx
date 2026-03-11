@@ -53,6 +53,7 @@ const LeaveManagement = () => {
   const isCentralHr = hasRole(UserRole.CENTRAL_HR);
   const canManageLeave = hasPermission(Permission.APPROVE_DEPARTMENT_LEAVE) || hasPermission(Permission.MANAGE_COMPANY_LEAVE) || hasPermission(Permission.MANAGE_ALL_LEAVE);
   const canManageHoliday = hasPermission(Permission.MANAGE_COMPANY_HOLIDAYS) || hasPermission(Permission.MANAGE_ALL_HOLIDAYS);
+  const isEmployeeOnly = hasPermission(Permission.REQUEST_LEAVE) && !canManageLeave && !isCentralHr;
   const [requests, setRequests] = useState<any[]>([]);
   const [balances, setBalances] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
@@ -68,6 +69,25 @@ const LeaveManagement = () => {
     reason: "",
     attachmentName: "",
   });
+  const [showEmployeeRequestForm, setShowEmployeeRequestForm] = useState(false);
+  const [employeeView, setEmployeeView] = useState<"history" | "request">("history");
+  const [employeeStatusFilter, setEmployeeStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+
+  const getStatusLabel = (status?: string) => {
+    const s = String(status || "").toLowerCase();
+    if (s === "approved") return "อนุมัติ";
+    if (s === "pending") return "รออนุมัติ";
+    if (s === "rejected") return "ไม่อนุมัติ";
+    return status || "-";
+  };
+
+  const getStatusClass = (status?: string) => {
+    const s = String(status || "").toLowerCase();
+    if (s === "approved") return "bg-success/10 text-success border-success/30";
+    if (s === "pending") return "bg-warning/10 text-warning border-warning/30";
+    if (s === "rejected") return "bg-destructive/10 text-destructive border-destructive/30";
+    return "";
+  };
 
   useEffect(() => {
     const fetchLeaveRequests = async () => {
@@ -125,7 +145,7 @@ const LeaveManagement = () => {
   }, [balances]);
 
   const overlapWarningByRequestId = useMemo(() => {
-    const overlapMap = new Map<number, number>();
+    const overlapMap = new Map<number, { approved: number; pending: number }>();
 
     const overlaps = (a: any, b: any) => {
       if (!a.start_date || !a.end_date || !b.start_date || !b.end_date) return false;
@@ -137,12 +157,20 @@ const LeaveManagement = () => {
     };
 
     teamPendingRequests.forEach((request: any) => {
-      const count = teamPendingRequests.filter((other: any) => other.id !== request.id && overlaps(request, other)).length;
-      overlapMap.set(request.id, count);
+      const overlapRows = requests.filter((other: any) => {
+        if (other.id === request.id) return false;
+        if (!overlaps(request, other)) return false;
+        const st = String(other.status || "").toLowerCase();
+        return st === "approved" || st === "pending";
+      });
+
+      const approved = overlapRows.filter((r: any) => String(r.status || "").toLowerCase() === "approved").length;
+      const pending = overlapRows.filter((r: any) => String(r.status || "").toLowerCase() === "pending").length;
+      overlapMap.set(request.id, { approved, pending });
     });
 
     return overlapMap;
-  }, [teamPendingRequests]);
+  }, [teamPendingRequests, requests]);
 
   const handleLeaveAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -179,6 +207,10 @@ const LeaveManagement = () => {
         reason: "",
         attachmentName: "",
       });
+      if (isEmployeeOnly) {
+        setShowEmployeeRequestForm(false);
+        setEmployeeView("history");
+      }
 
       const res = await apiGet<any>("/leaves/requests");
       const rows = Array.isArray(res) ? res : res?.data || [];
@@ -195,7 +227,21 @@ const LeaveManagement = () => {
     setPolicyRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   };
 
-  const handleUpdateLeaveStatus = async (id: number, status: "approved" | "rejected") => {
+  const handleUpdateLeaveStatus = async (request: any, status: "approved" | "rejected") => {
+    const id = Number(request?.id);
+    if (!id) return;
+
+    if (status === "approved") {
+      const warning = overlapWarningByRequestId.get(id);
+      const approvedOverlap = Number(warning?.approved || 0);
+      if (approvedOverlap > 0) {
+        const confirmApprove = window.confirm(
+          `คำเตือน: มีพนักงานในทีมลาซ้อนช่วงวันเดียวกันที่อนุมัติแล้ว ${approvedOverlap} คน\nต้องการอนุมัติต่อหรือไม่?`
+        );
+        if (!confirmApprove) return;
+      }
+    }
+
     try {
       await apiPut(`/leaves/${id}/status`, { status });
       setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
@@ -204,13 +250,194 @@ const LeaveManagement = () => {
     }
   };
 
+  const sortedMyLeaveHistory = useMemo(() => {
+    return [...myLeaveHistory].sort((a: any, b: any) => {
+      const ad = new Date(a?.created_at || a?.start_date || 0).getTime();
+      const bd = new Date(b?.created_at || b?.start_date || 0).getTime();
+      return bd - ad;
+    });
+  }, [myLeaveHistory]);
+
+  const filteredMyLeaveHistory = useMemo(() => {
+    if (employeeStatusFilter === "all") return sortedMyLeaveHistory;
+    return sortedMyLeaveHistory.filter((r: any) => String(r?.status || "").toLowerCase() === employeeStatusFilter);
+  }, [employeeStatusFilter, sortedMyLeaveHistory]);
+
+  const leaveStatusCounts = useMemo(() => {
+    const counts = { all: sortedMyLeaveHistory.length, pending: 0, approved: 0, rejected: 0 };
+    sortedMyLeaveHistory.forEach((r: any) => {
+      const s = String(r?.status || "").toLowerCase();
+      if (s === "pending") counts.pending += 1;
+      if (s === "approved") counts.approved += 1;
+      if (s === "rejected") counts.rejected += 1;
+    });
+    return counts;
+  }, [sortedMyLeaveHistory]);
+
+  if (isEmployeeOnly) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            <button
+              type="button"
+              onClick={() => setEmployeeView("request")}
+              className={`inline-flex items-center rounded-full px-3 py-1 font-medium transition-colors ${employeeView === "request" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              พนักงาน
+            </button>
+            <button
+              type="button"
+              onClick={() => setEmployeeView("history")}
+              className={`inline-flex items-center rounded-full px-3 py-1 font-medium transition-colors ${employeeView === "history" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+            >
+              ประวัติการลาของคุณ
+            </button>
+          </div>
+          <Button size="sm" onClick={() => { setShowEmployeeRequestForm((v) => !v); setEmployeeView("request"); }} className="gap-1.5">
+            <Plus className="h-4 w-4" /> ขอลา
+          </Button>
+        </div>
+
+        {(showEmployeeRequestForm || employeeView === "request") && (
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-base">คำขอลางาน</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {requestError ? <p className="text-sm text-destructive">{requestError}</p> : null}
+              {requestSuccess ? <p className="text-sm text-success">{requestSuccess}</p> : null}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">ประเภทการลา</p>
+                  <select
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                    value={leaveForm.leaveTypeId}
+                    onChange={(e) => setLeaveForm((prev) => ({ ...prev, leaveTypeId: e.target.value }))}
+                  >
+                    {leaveTypeOptions.map((item) => (
+                      <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">จำนวนวัน/ชั่วโมง</p>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={leaveForm.totalDays}
+                    onChange={(e) => setLeaveForm((prev) => ({ ...prev, totalDays: e.target.value }))}
+                    placeholder="เช่น 1 หรือ 0.5"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">วันที่เริ่มต้น</p>
+                  <Input
+                    type="date"
+                    value={leaveForm.startDate}
+                    onChange={(e) => setLeaveForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">วันที่สิ้นสุด</p>
+                  <Input
+                    type="date"
+                    value={leaveForm.endDate}
+                    onChange={(e) => setLeaveForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">เหตุผลการลา</p>
+                <Textarea
+                  value={leaveForm.reason}
+                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, reason: e.target.value }))}
+                  placeholder="ระบุเหตุผลการลา"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleCreateLeaveRequest} disabled={formLoading}>
+                  {formLoading ? "กำลังส่งคำร้อง..." : "ยืนยันส่งคำขอ"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setShowEmployeeRequestForm(false)}>
+                  ยกเลิก
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="shadow-card">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-base">ประวัติการลา</CardTitle>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-xs text-muted-foreground">
+                  ทั้งหมด {leaveStatusCounts.all} | รอ {leaveStatusCounts.pending} | อนุมัติ {leaveStatusCounts.approved} | ไม่อนุมัติ {leaveStatusCounts.rejected}
+                </span>
+                <span className="text-muted-foreground">สถานะ:</span>
+                <select
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  value={employeeStatusFilter}
+                  onChange={(e) => setEmployeeStatusFilter(e.target.value as "all" | "pending" | "approved" | "rejected")}
+                >
+                  <option value="all">ทั้งหมด</option>
+                  <option value="pending">รออนุมัติ</option>
+                  <option value="approved">อนุมัติ</option>
+                  <option value="rejected">ไม่อนุมัติ</option>
+                </select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40">
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">ประเภท</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">วันที่</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">จำนวน</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loadingRequests ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td>
+                  </tr>
+                ) : filteredMyLeaveHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">ไม่พบประวัติการลา</td>
+                  </tr>
+                ) : (
+                  filteredMyLeaveHistory.slice(0, 10).map((r: any) => (
+                    <tr key={r.id} className="border-b last:border-b-0">
+                      <td className="px-4 py-3">{r.leave_type_name || "-"}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{r.start_date} - {r.end_date}</td>
+                      <td className="px-4 py-3">{r.total_days || 0} วัน</td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className={getStatusClass(r.status)}>{getStatusLabel(r.status)}</Badge>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Tabs defaultValue="my-leave">
         <TabsList>
           <TabsTrigger value="my-leave">My Leave</TabsTrigger>
           {!isCentralHr && <TabsTrigger value="request">Request Leave</TabsTrigger>}
-          {canManageLeave && !isCentralHr && <TabsTrigger value="approval">Team Leave Approval</TabsTrigger>}
+          {canManageLeave && !isCentralHr && <TabsTrigger value="approval">คำร้องของลูกทีม</TabsTrigger>}
           {canManageLeave && !isCentralHr && <TabsTrigger value="balance-adjust">Leave Balance Adjustment</TabsTrigger>}
           {canManageLeave && !isCentralHr && <TabsTrigger value="policy">Leave Policy</TabsTrigger>}
           <TabsTrigger value="calendar">Leave Calendar</TabsTrigger>
@@ -360,7 +587,7 @@ const LeaveManagement = () => {
       <TabsContent value="approval" className="mt-4">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">อนุมัติ/ปฏิเสธคำร้องขอลางานของลูกทีม</CardTitle>
+            <CardTitle className="text-base">คำร้องของลูกทีม (Leave)</CardTitle>
           </CardHeader>
           <CardContent>
             {loadingRequests ? (
@@ -378,7 +605,8 @@ const LeaveManagement = () => {
                 </tr></thead>
                 <tbody>
                   {teamPendingRequests.map((r: any) => {
-                    const overlapCount = overlapWarningByRequestId.get(r.id) || 0;
+                    const overlap = overlapWarningByRequestId.get(r.id) || { approved: 0, pending: 0 };
+                    const overlapCount = Number(overlap.approved || 0) + Number(overlap.pending || 0);
                     return (
                       <tr key={r.id} className="border-b last:border-b-0">
                         <td className="px-4 py-3">{r.firstname_th || ""} {r.lastname_th || ""}</td>
@@ -386,17 +614,18 @@ const LeaveManagement = () => {
                         <td className="px-4 py-3 text-xs">{r.start_date} - {r.end_date} ({r.total_days} วัน)</td>
                         <td className="px-4 py-3">
                           {overlapCount > 0 ? (
-                            <Badge variant="outline" className="text-warning border-warning/40">
-                              มีคนลาซ้อน {overlapCount} คน
-                            </Badge>
+                            <div className="rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning">
+                              Warning: วันที่ลาซ้อนรวม {overlapCount} รายการ
+                              {Number(overlap.approved || 0) > 0 ? ` (อนุมัติแล้ว ${overlap.approved})` : ""}
+                            </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">ไม่มีการลาซ้อน</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Button size="sm" variant="outline" onClick={() => handleUpdateLeaveStatus(r.id, "rejected")}>Reject</Button>
-                            <Button size="sm" onClick={() => handleUpdateLeaveStatus(r.id, "approved")}>Approve</Button>
+                            <Button size="sm" variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => handleUpdateLeaveStatus(r, "rejected")}>Reject</Button>
+                            <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => handleUpdateLeaveStatus(r, "approved")}>Approve</Button>
                           </div>
                         </td>
                       </tr>

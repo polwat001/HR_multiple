@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Plus } from "lucide-react";
+import { Search, Filter, Plus, Pencil, Trash2 } from "lucide-react";
 import { apiDelete, apiGet } from "@/lib/api";
 
 // 1. Interface
@@ -143,7 +143,7 @@ const EmployeeList = () => {
 
             {canManageEmployees && (
               <Button size="sm" className="gap-1.5" onClick={() => router.push("/employees/new")}>
-                <Plus className="h-4 w-4" /> Add Employee
+                <Plus className="h-4 w-4" /> เพิ่มพนักงานใหม่
               </Button>
             )}
           </div>
@@ -199,8 +199,12 @@ const EmployeeList = () => {
                             <div className="flex gap-2">
                               {canManageEmployees ? (
                                 <>
-                                  <Button size="sm" variant="outline" onClick={() => router.push(`/employees/${emp.id}`)}>Edit</Button>
-                                  <Button size="sm" variant="destructive" onClick={() => handleDeleteEmployee(String(emp.id))}>Delete</Button>
+                                  <Button size="sm" variant="outline" className="h-8 w-8 p-0" title="แก้ไข" onClick={() => router.push(`/employees/${emp.id}`)}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="sm" variant="destructive" className="h-8 w-8 p-0" title="ลบ" onClick={() => handleDeleteEmployee(String(emp.id))}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </>
                               ) : (
                                 <Button size="sm" variant="outline">Transfer Company</Button>

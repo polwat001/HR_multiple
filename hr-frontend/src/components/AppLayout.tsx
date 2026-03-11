@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import {
   LayoutDashboard, Users, Building, Clock, CalendarDays,
-  FileText, BarChart3, Shield, ChevronLeft, ChevronRight, Briefcase, LogOut, Settings, ClipboardList, CalendarCheck2,
+  FileText, BarChart3, Shield, ChevronLeft, ChevronRight, Briefcase, LogOut, Settings, ClipboardList, CalendarCheck2, User,
 } from "lucide-react";
 import CompanySwitcher from "@/components/CompanySwitcher";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +24,17 @@ const navItems: NavItem[] = [
     label: "Dashboard", 
     path: "/dashboard",
     permissions: [Permission.VIEW_OWN_DASHBOARD, Permission.VIEW_COMPANY_DASHBOARD, Permission.VIEW_HOLDING_DASHBOARD]
+  },
+  {
+    icon: User,
+    label: "Self-Service",
+    path: "/self-service",
+    roles: [
+      UserRole.EMPLOYEE,
+      UserRole.MANAGER,
+      UserRole.CENTRAL_HR,
+      UserRole.SUPER_ADMIN,
+    ],
   },
   { 
     icon: Building, 
@@ -87,7 +98,7 @@ const navItems: NavItem[] = [
   },
   {
     icon: ClipboardList,
-    label: "Transaction Log",
+    label: "Audit Logs",
     path: "/audit-log",
     permissions: [Permission.VIEW_AUDIT_LOGS],
   },
@@ -98,10 +109,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout: authLogout, hasAnyPermission, hasRole } = useAuth();
   const router = useRouter();
   const location = router.pathname;
-  const canSwitchCompany = hasAnyPermission([
-    Permission.VIEW_HOLDING_DASHBOARD,
-    Permission.VIEW_CONSOLIDATED_REPORTS,
-  ]);
+  const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
+  const isCentralHr = hasRole(UserRole.CENTRAL_HR);
+  const canSwitchCompany = isCentralHr;
 
   const handleLogout = () => {
     if (confirm("ต้องการออกจากระบบหรือไม่?")) {
@@ -111,6 +121,10 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
   // Filter nav items based on user permissions
   const visibleNavItems = navItems.filter((item) => {
+    if (isSuperAdmin) {
+      return ["/organization", "/permissions", "/system-settings", "/audit-log"].includes(item.path);
+    }
+
     if (item.roles && item.roles.length > 0) {
       return item.roles.some((role) => hasRole(role));
     }
@@ -201,7 +215,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               <CompanySwitcher />
             ) : (
               <div className="text-xs px-3 py-2 rounded-md border border-border bg-muted/30 text-muted-foreground">
-                Company Scoped Access
+                {isSuperAdmin ? "Full Access" : "Company Scoped Access"}
               </div>
             )}
             <div className="flex items-center gap-2 pl-4 border-l border-border">
