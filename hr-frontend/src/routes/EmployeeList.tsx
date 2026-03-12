@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, Plus, Pencil, Trash2 } from "lucide-react";
 import { apiDelete, apiGet } from "@/lib/api";
+import { resolveRoleViewKey } from "@/lib/accessMatrix";
 
 // 1. Interface
 interface Employee {
@@ -34,7 +35,10 @@ const statusStyles: Record<string, string> = {
 
 const EmployeeList = () => {
   const { selectedCompany } = useCompany();
-  const { hasPermission, hasRole } = useAuth();
+  const { hasPermission, hasRole, user } = useAuth();
+  const roleViewKey = resolveRoleViewKey(user as any);
+  const isManagerView = roleViewKey === "manager";
+  const ownUserId = String((user as any)?.user_id || "");
   const searchParams = useSearchParams();
   const router = useRouter();
   const canManageEmployees =
@@ -67,6 +71,8 @@ const EmployeeList = () => {
 
   const filtered = useMemo(() => {
     return employees.filter((emp) => {
+      if (isManagerView && ownUserId && String((emp as any).user_id || "") === ownUserId) return false;
+
       const empCompId = String((emp as any).company_id || (emp as any).companyId || "");
       const targetCompId = String(companyFilter).replace("company-", "");
       
@@ -84,7 +90,7 @@ const EmployeeList = () => {
       }
       return true;
     });
-  }, [employees, companyFilter, deptFilter, search]);
+  }, [employees, companyFilter, deptFilter, isManagerView, ownUserId, search]);
 
   // ดึงรายชื่อแผนกที่ไม่ซ้ำกัน
   const departments = useMemo(() => {

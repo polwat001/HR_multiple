@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Permission, UserRole } from "@/types/roles";
+import { resolveRoleViewKey } from "@/lib/accessMatrix";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,9 +99,15 @@ const TreeNode = ({ node, level = 0 }: { node: OrgNode; level?: number }) => {
 };
 
 const OrganizationStructure = () => {
-  const { hasRole, hasPermission } = useAuth();
+  const { hasRole, hasPermission, user } = useAuth();
   const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
   const canManageOrg = hasPermission(Permission.MANAGE_ORGANIZATION) || isSuperAdmin;
+  const roleViewKey = resolveRoleViewKey(user as any);
+  const isEmployeeView = roleViewKey === "employee";
+  const canUseMasterTabs =
+    roleViewKey === "hr_company" ||
+    roleViewKey === "central_hr" ||
+    roleViewKey === "super_admin";
 
   const [data, setData] = useState<OrgNode | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -131,7 +138,7 @@ const OrganizationStructure = () => {
     department_id: "",
   });
 
-  const [activeTab, setActiveTab] = useState("companies");
+  const [activeTab, setActiveTab] = useState(isEmployeeView ? "org-chart" : "companies");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -244,6 +251,12 @@ const OrganizationStructure = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (isEmployeeView && activeTab !== "org-chart") {
+      setActiveTab("org-chart");
+    }
+  }, [activeTab, isEmployeeView]);
+
   const deptOptions = useMemo(() => departments.map((d) => ({ label: d.name_th, value: String(d.id) })), [departments]);
 
   const handleAddCompany = () => {
@@ -313,13 +326,13 @@ const OrganizationStructure = () => {
     <div className="space-y-6 animate-fade-in">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="companies">Company</TabsTrigger>
-          <TabsTrigger value="departments">Department</TabsTrigger>
-          <TabsTrigger value="positions">Position</TabsTrigger>
+          {canUseMasterTabs && <TabsTrigger value="companies">Company</TabsTrigger>}
+          {canUseMasterTabs && <TabsTrigger value="departments">Department</TabsTrigger>}
+          {canUseMasterTabs && <TabsTrigger value="positions">Position</TabsTrigger>}
           <TabsTrigger value="org-chart">Org Chart</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="companies" className="mt-4">
+        {canUseMasterTabs && <TabsContent value="companies" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">Company Information</CardTitle>
@@ -386,9 +399,9 @@ const OrganizationStructure = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="departments" className="mt-4">
+        {canUseMasterTabs && <TabsContent value="departments" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">Department Information</CardTitle>
@@ -461,9 +474,9 @@ const OrganizationStructure = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="positions" className="mt-4">
+        {canUseMasterTabs && <TabsContent value="positions" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">Position Information</CardTitle>
@@ -541,10 +554,10 @@ const OrganizationStructure = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
 
         <TabsContent value="org-chart" className="mt-4">
-          {(isSuperAdmin || companies.length > 0) && (
+          {canUseMasterTabs && (isSuperAdmin || companies.length > 0) && (
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="text-base">Organization Admin Tools</CardTitle>

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Permission, UserRole } from "@/types/roles";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
+import { resolveRoleViewKey } from "@/lib/accessMatrix";
 
 const leaveTypes = [
   { type: "Vacation (พักร้อน)", companyA: 6, companyB: 10, companyC: 8 },
@@ -49,11 +50,15 @@ const holidays = [
 ];
 
 const LeaveManagement = () => {
-  const { hasPermission, hasRole } = useAuth();
-  const isCentralHr = hasRole(UserRole.CENTRAL_HR);
+  const { hasPermission, hasRole, user } = useAuth();
+  const roleViewKey = resolveRoleViewKey(user as any);
+  const isManagerView = roleViewKey === "manager";
+  const ownUserId = Number((user as any)?.user_id || 0);
+  const canRequestLeave = hasPermission(Permission.REQUEST_LEAVE);
   const canManageLeave = hasPermission(Permission.APPROVE_DEPARTMENT_LEAVE) || hasPermission(Permission.MANAGE_COMPANY_LEAVE) || hasPermission(Permission.MANAGE_ALL_LEAVE);
+  const canManageLeavePolicy = hasPermission(Permission.MANAGE_COMPANY_LEAVE) || hasPermission(Permission.MANAGE_ALL_LEAVE);
   const canManageHoliday = hasPermission(Permission.MANAGE_COMPANY_HOLIDAYS) || hasPermission(Permission.MANAGE_ALL_HOLIDAYS);
-  const isEmployeeOnly = hasPermission(Permission.REQUEST_LEAVE) && !canManageLeave && !isCentralHr;
+  const isEmployeeOnly = canRequestLeave && !canManageLeave;
   const [requests, setRequests] = useState<any[]>([]);
   const [balances, setBalances] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
@@ -120,13 +125,21 @@ const LeaveManagement = () => {
   }, []);
 
   const myLeaveHistory = useMemo(
-    () => requests,
-    [requests]
+    () => requests.filter((r: any) => {
+      if (!ownUserId) return true;
+      return Number(r?.user_id || 0) === ownUserId;
+    }),
+    [ownUserId, requests]
   );
 
   const teamPendingRequests = useMemo(
-    () => requests.filter((r: any) => String(r.status || "").toLowerCase() === "pending"),
-    [requests]
+    () => requests.filter((r: any) => {
+      const isPending = String(r.status || "").toLowerCase() === "pending";
+      if (!isPending) return false;
+      if (!isManagerView || !ownUserId) return true;
+      return Number(r?.user_id || 0) !== ownUserId;
+    }),
+    [isManagerView, ownUserId, requests]
   );
 
   const leaveBalanceByType = useMemo(() => {
@@ -436,10 +449,10 @@ const LeaveManagement = () => {
       <Tabs defaultValue="my-leave">
         <TabsList>
           <TabsTrigger value="my-leave">My Leave</TabsTrigger>
-          {!isCentralHr && <TabsTrigger value="request">Request Leave</TabsTrigger>}
-          {canManageLeave && !isCentralHr && <TabsTrigger value="approval">คำร้องของลูกทีม</TabsTrigger>}
-          {canManageLeave && !isCentralHr && <TabsTrigger value="balance-adjust">Leave Balance Adjustment</TabsTrigger>}
-          {canManageLeave && !isCentralHr && <TabsTrigger value="policy">Leave Policy</TabsTrigger>}
+          {canRequestLeave && <TabsTrigger value="request">Request Leave</TabsTrigger>}
+          {canManageLeave && <TabsTrigger value="approval">คำร้องของลูกทีม</TabsTrigger>}
+          {canManageLeavePolicy && <TabsTrigger value="balance-adjust">Leave Balance Adjustment</TabsTrigger>}
+          {canManageLeavePolicy && <TabsTrigger value="policy">Leave Policy</TabsTrigger>}
           <TabsTrigger value="calendar">Leave Calendar</TabsTrigger>
           {canManageHoliday && <TabsTrigger value="holidays">Holiday Management</TabsTrigger>}
         </TabsList>
@@ -507,7 +520,7 @@ const LeaveManagement = () => {
         </div>
       </TabsContent>
 
-      {!isCentralHr && (
+      {canRequestLeave && (
       <TabsContent value="request" className="mt-4">
         <Card className="shadow-card">
           <CardHeader>
@@ -583,7 +596,7 @@ const LeaveManagement = () => {
       </TabsContent>
       )}
 
-      {canManageLeave && !isCentralHr && (
+      {canManageLeave && (
       <TabsContent value="approval" className="mt-4">
         <Card className="shadow-card">
           <CardHeader>
@@ -639,7 +652,7 @@ const LeaveManagement = () => {
       </TabsContent>
       )}
 
-      {canManageLeave && !isCentralHr && (
+      {canManageLeavePolicy && (
       <TabsContent value="balance-adjust" className="mt-4">
         <Card className="shadow-card">
           <CardHeader>
@@ -666,7 +679,7 @@ const LeaveManagement = () => {
       </TabsContent>
       )}
 
-      {canManageLeave && !isCentralHr && (
+      {canManageLeavePolicy && (
       <TabsContent value="policy" className="mt-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -708,7 +721,7 @@ const LeaveManagement = () => {
       </TabsContent>
       )}
 
-      {(canManageLeave || isCentralHr) && (
+      {canManageLeave && (
       <TabsContent value="calendar" className="mt-4">
         <Card className="shadow-card">
           <CardContent className="p-6">

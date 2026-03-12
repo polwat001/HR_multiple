@@ -11,25 +11,12 @@ import {
 } from "recharts";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { Permission, UserRole } from "@/types/roles";
+import { resolveRoleViewKey } from "@/lib/accessMatrix";
 
 const Dashboard = () => {
   const { selectedCompany } = useCompany();
-  const { hasPermission, hasRole, user: authUser } = useAuth();
-  const authRoleLevel = Number((authUser as any)?.role_level || 0);
+  const { user: authUser } = useAuth();
   const isAll = selectedCompany.id === "all";
-  const isEmployeeDashboard =
-    (hasRole(UserRole.EMPLOYEE) || authRoleLevel === 1) &&
-    hasPermission(Permission.VIEW_OWN_DASHBOARD) &&
-    !hasPermission(Permission.VIEW_COMPANY_DASHBOARD) &&
-    !hasPermission(Permission.VIEW_HOLDING_DASHBOARD);
-  const isManagerDashboard =
-    hasPermission(Permission.VIEW_DEPARTMENT_EMPLOYEES) &&
-    !hasPermission(Permission.VIEW_COMPANY_DASHBOARD) &&
-    !hasPermission(Permission.VIEW_HOLDING_DASHBOARD);
-  const isCompanyDashboard =
-    hasPermission(Permission.VIEW_COMPANY_DASHBOARD) &&
-    !hasPermission(Permission.VIEW_HOLDING_DASHBOARD);
 
   // States
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -48,6 +35,13 @@ const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   
   const [loading, setLoading] = useState(true);
+
+  const roleViewKey = resolveRoleViewKey((currentUser || authUser) as any);
+  const isEmployeeDashboard = roleViewKey === "employee";
+  const isManagerDashboard = roleViewKey === "manager";
+  const isHrCompanyDashboard = roleViewKey === "hr_company";
+  const isCentralHrDashboard = roleViewKey === "central_hr";
+  const isSuperAdminDashboard = roleViewKey === "super_admin";
 
   // Fetch data
   useEffect(() => {
@@ -134,7 +128,7 @@ const Dashboard = () => {
   }, [selectedMonth]);
 
   // Filter data by selected company and department
-  const filteredEmployees = isCompanyDashboard
+  const filteredEmployees = isHrCompanyDashboard
     ? employees
     : isAll
       ? employees
@@ -214,11 +208,11 @@ const Dashboard = () => {
   // Upcoming holidays (next 30 days)
   const upcomingHolidays = (publicHolidays || [])
     .filter((h: any) => {
-      const holidayDate = new Date(h.date);
+      const holidayDate = new Date(h.holiday_date || h.date);
       const daysUntilHoliday = Math.floor((holidayDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       return daysUntilHoliday > 0 && daysUntilHoliday <= 30;
     })
-    .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a: any, b: any) => new Date(a.holiday_date || a.date).getTime() - new Date(b.holiday_date || b.date).getTime());
 
   const statCards = [
     { key: "total_headcount", label: "Total Headcount", value: totalHeadcount, icon: Users, color: "text-primary" },
@@ -305,24 +299,7 @@ const Dashboard = () => {
     return String(lr.status || "").toLowerCase() === "pending";
   });
 
-  const resolvedRoleName = String(
-    currentUser?.role_name || (authUser as any)?.role_name || currentUser?.roles?.[0] || authUser?.roles?.[0] || ""
-  ).toLowerCase();
-  const isSuperAdminRole = resolvedRoleName.includes("super");
-  const isCentralHrRole = !isSuperAdminRole && (resolvedRoleName.includes("central") || resolvedRoleName.includes("center"));
-  const isHrCompanyRole = !isSuperAdminRole && !isCentralHrRole && isCompanyDashboard;
-
-  const roleViewKey = isEmployeeDashboard
-    ? "employee"
-    : isManagerDashboard
-      ? "manager"
-      : isSuperAdminRole
-        ? "super_admin"
-        : isCentralHrRole
-          ? "central_hr"
-          : isHrCompanyRole
-            ? "hr_company"
-            : "default";
+  const themeRoleKey = roleViewKey === "unknown" ? "default" : roleViewKey;
 
   const roleTheme = {
     employee: {
@@ -361,23 +338,23 @@ const Dashboard = () => {
       cardClass: "border-border",
       priorityClass: "ring-2 ring-slate-300 border-slate-300",
     },
-  }[roleViewKey];
+  }[themeRoleKey];
 
   const companyScopeLabel = selectedCompany.id === "all" ? "All Companies" : selectedCompany.shortName;
   const generalDashboardHeader = (() => {
-    if (isSuperAdminRole) {
+    if (isSuperAdminDashboard) {
       return {
         title: currentUser ? `Welcome back, ${displayName} (Super Admin)` : "Super Admin Dashboard",
         subtitle: "ภาพรวมเชิงกลยุทธ์ทั้งระบบ พร้อมจุดที่ต้องตัดสินใจทันที",
       };
     }
-    if (isCentralHrRole) {
+    if (isCentralHrDashboard) {
       return {
         title: currentUser ? `Welcome back, ${displayName} (Central HR)` : "Central HR Dashboard",
         subtitle: "ภาพรวมข้ามบริษัท เน้นอนุมัติและกำลังคนระดับองค์กร",
       };
     }
-    if (isHrCompanyRole) {
+    if (isHrCompanyDashboard) {
       return {
         title: currentUser ? `Welcome back, ${displayName} (HR Company)` : "HR Company Dashboard",
         subtitle: `ภาพรวมบริษัท ${companyScopeLabel} เน้นการอนุมัติและสถานะพนักงาน`,
@@ -390,10 +367,10 @@ const Dashboard = () => {
   })();
 
   const priorityOrder = (() => {
-    if (isSuperAdminRole || isCentralHrRole) {
+    if (isSuperAdminDashboard || isCentralHrDashboard) {
       return ["pending_approvals", "total_headcount", "new_joiners", "resigned", "contracts_expiring", "total_ot"];
     }
-    if (isHrCompanyRole) {
+    if (isHrCompanyDashboard) {
       return ["pending_approvals", "contracts_expiring", "total_headcount", "new_joiners", "resigned", "total_ot"];
     }
     return ["total_headcount", "new_joiners", "resigned", "total_ot", "contracts_expiring", "pending_approvals"];
@@ -420,7 +397,7 @@ const Dashboard = () => {
           <p className="text-sm text-muted-foreground mt-1">สรุปข้อมูลสำคัญของคุณ</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-0 md:grid-cols-4 gap-6">
           <Card className={`shadow-card ${roleTheme.cardClass} ${roleTheme.priorityClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">วันลาคงเหลือ</p><p className="text-2xl font-bold mt-1">{ownLeaveBalance}</p></CardContent></Card>
           <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">คำขอลาที่รออนุมัติ</p><p className="text-2xl font-bold mt-1">{ownPendingLeaves}</p></CardContent></Card>
           <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">มาสายเดือนนี้</p><p className="text-2xl font-bold mt-1">{ownLateThisMonth}</p></CardContent></Card>
@@ -453,8 +430,8 @@ const Dashboard = () => {
                 ) : (
                   upcomingHolidays.slice(0, 5).map((holiday: any) => (
                     <div key={holiday.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                      <p className="text-sm font-medium">{holiday.name}</p>
-                      <Badge variant="outline">{new Date(holiday.date).toLocaleDateString()}</Badge>
+                      <p className="text-sm font-medium">{holiday.holiday_name_th || holiday.name || "-"}</p>
+                      <Badge variant="outline">{new Date(holiday.holiday_date || holiday.date).toLocaleDateString()}</Badge>
                     </div>
                   ))
                 )}
@@ -717,8 +694,8 @@ const Dashboard = () => {
             ) : (
               upcomingHolidays.map((holiday: any) => (
                 <div key={holiday.id} className="p-3 rounded-lg border border-green-200 bg-green-50">
-                  <p className="text-sm font-medium text-green-900">{holiday.name}</p>
-                  <p className="text-xs text-green-700 mt-1">{new Date(holiday.date).toLocaleDateString()}</p>
+                  <p className="text-sm font-medium text-green-900">{holiday.holiday_name_th || holiday.name || "-"}</p>
+                  <p className="text-xs text-green-700 mt-1">{new Date(holiday.holiday_date || holiday.date).toLocaleDateString()}</p>
                 </div>
               ))
             )}

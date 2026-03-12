@@ -8,5 +8,7 @@ router.use(authMiddleware);
 
 // Route: GET /api/attendance
 router.get('/', attendanceController.getAttendances);
+router.post('/check-in', attendanceController.checkIn);
+router.post('/check-out', attendanceController.checkOut);
 
 module.exports = router;

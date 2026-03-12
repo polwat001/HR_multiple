@@ -1,65 +1,141 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, CalendarDays } from "lucide-react";
+import { CalendarDays, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { resolveRoleViewKey } from "@/lib/accessMatrix";
 
-const companyOptions = ["ABC", "XYZ", "DEF"];
+type HolidayItem = {
+  id: number;
+  holiday_name_th: string;
+  holiday_name_en?: string | null;
+  holiday_date: string;
+  is_paid?: number | boolean;
+  description?: string | null;
+};
 
-const initialHolidays = [
-  { id: 1, date: "2026-01-01", nameTh: "วันขึ้นปีใหม่", nameEn: "New Year's Day", applyTo: "all", companies: [] as string[] },
-  { id: 2, date: "2026-04-13", nameTh: "วันสงกรานต์", nameEn: "Songkran Festival", applyTo: "selected", companies: ["ABC", "DEF"] },
-  { id: 3, date: "2026-12-05", nameTh: "วันพ่อแห่งชาติ", nameEn: "Father's Day", applyTo: "all", companies: [] as string[] },
-];
+type HolidayFormState = {
+  holiday_name_th: string;
+  holiday_name_en: string;
+  holiday_date: string;
+  is_paid: string;
+  description: string;
+};
+
+const emptyForm: HolidayFormState = {
+  holiday_name_th: "",
+  holiday_name_en: "",
+  holiday_date: "",
+  is_paid: "1",
+  description: "",
+};
+
+const normalizeHoliday = (raw: any): HolidayItem => ({
+  id: Number(raw?.id || 0),
+  holiday_name_th: String(raw?.holiday_name_th || raw?.name_th || raw?.holiday_name || raw?.name || ""),
+  holiday_name_en: raw?.holiday_name_en || raw?.name_en || "",
+  holiday_date: String(raw?.holiday_date || raw?.date || ""),
+  is_paid: raw?.is_paid ?? raw?.paid ?? 1,
+  description: raw?.description || "",
+});
 
 const HolidayManagement = () => {
-  const [holidays, setHolidays] = useState(initialHolidays);
-  const [form, setForm] = useState({
-    date: "",
-    nameTh: "",
-    nameEn: "",
-    applyTo: "all" as "all" | "selected",
-    companies: [] as string[],
-  });
+  const { user } = useAuth();
+  const roleViewKey = resolveRoleViewKey(user as any);
+  const canManage = roleViewKey === "hr_company" || roleViewKey === "central_hr" || roleViewKey === "super_admin";
 
-  const applyToLabel = (item: { applyTo: string; companies: string[] }) => {
-    if (item.applyTo === "all") return "ทุกบริษัทในเครือ";
-    return item.companies.length > 0 ? `เฉพาะ ${item.companies.join(", ")}` : "เฉพาะบางบริษัท";
-  };
-
-  const toggleCompany = (company: string) => {
-    setForm((prev) => {
-      const exists = prev.companies.includes(company);
-      return {
-        ...prev,
-        companies: exists ? prev.companies.filter((c) => c !== company) : [...prev.companies, company],
-      };
-    });
-  };
+  const [holidays, setHolidays] = useState<HolidayItem[]>([]);
+  const [form, setForm] = useState<HolidayFormState>(emptyForm);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const canSave = useMemo(() => {
-    if (!form.date || !form.nameTh || !form.nameEn) return false;
-    if (form.applyTo === "selected" && form.companies.length === 0) return false;
+    if (!form.holiday_date || !form.holiday_name_th) return false;
     return true;
   }, [form]);
 
-  const handleAddHoliday = () => {
-    if (!canSave) return;
-    setHolidays((prev) => [
-      {
-        id: Date.now(),
-        date: form.date,
-        nameTh: form.nameTh,
-        nameEn: form.nameEn,
-        applyTo: form.applyTo,
-        companies: form.applyTo === "selected" ? form.companies : [],
-      },
-      ...prev,
-    ]);
+  const loadHolidays = async () => {
+    try {
+      setLoading(true);
+      const data = await apiGet<any>("/holidays");
+      const items = Array.isArray(data) ? data : data?.data || [];
+      setHolidays(items.map(normalizeHoliday));
+    } catch (error: any) {
+      alert(error?.message || "ไม่สามารถโหลดข้อมูลวันหยุดได้");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setForm({ date: "", nameTh: "", nameEn: "", applyTo: "all", companies: [] });
+  useEffect(() => {
+    loadHolidays();
+  }, []);
+
+  const resetForm = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+  };
+
+  const startEdit = (item: HolidayItem) => {
+    setEditingId(item.id);
+    setForm({
+      holiday_name_th: item.holiday_name_th || "",
+      holiday_name_en: item.holiday_name_en || "",
+      holiday_date: String(item.holiday_date || "").slice(0, 10),
+      is_paid: String(Number(item.is_paid ?? 1)),
+      description: item.description || "",
+    });
+  };
+
+  const handleSaveHoliday = async () => {
+    if (!canManage) {
+      alert("คุณไม่มีสิทธิ์จัดการวันหยุด");
+      return;
+    }
+    if (!canSave) return;
+
+    try {
+      setSubmitting(true);
+      const payload = {
+        holiday_name_th: form.holiday_name_th,
+        holiday_name_en: form.holiday_name_en || null,
+        date: form.holiday_date,
+        is_paid: Number(form.is_paid || 1),
+        description: form.description || null,
+      };
+
+      if (editingId) {
+        await apiPut(`/holidays/${editingId}`, payload);
+      } else {
+        await apiPost("/holidays", payload);
+      }
+
+      resetForm();
+      await loadHolidays();
+    } catch (error: any) {
+      alert(error?.message || "บันทึกวันหยุดไม่สำเร็จ");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!canManage) {
+      alert("คุณไม่มีสิทธิ์ลบวันหยุด");
+      return;
+    }
+    if (!confirm("ยืนยันการลบวันหยุดรายการนี้?")) return;
+
+    try {
+      await apiDelete(`/holidays/${id}`);
+      await loadHolidays();
+    } catch (error: any) {
+      alert(error?.message || "ลบวันหยุดไม่สำเร็จ");
+    }
   };
 
   return (
@@ -71,49 +147,71 @@ const HolidayManagement = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">วัน/เดือน/ปี</p>
-              <Input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">ชื่อวันหยุด (TH)</p>
-              <Input value={form.nameTh} onChange={(e) => setForm((p) => ({ ...p, nameTh: e.target.value }))} />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">ชื่อวันหยุด (EN)</p>
-              <Input value={form.nameEn} onChange={(e) => setForm((p) => ({ ...p, nameEn: e.target.value }))} />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Apply to</p>
-              <select
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                value={form.applyTo}
-                onChange={(e) => setForm((p) => ({ ...p, applyTo: e.target.value as "all" | "selected", companies: e.target.value === "all" ? [] : p.companies }))}
-              >
-                <option value="all">ทุกบริษัทในเครือ</option>
-                <option value="selected">เฉพาะบางบริษัท</option>
-              </select>
-            </div>
-          </div>
-
-          {form.applyTo === "selected" && (
-            <div className="rounded-md border p-3">
-              <p className="text-sm font-medium mb-2">เลือกบริษัทที่ใช้วันหยุดนี้</p>
-              <div className="flex flex-wrap gap-4">
-                {companyOptions.map((company) => (
-                  <label key={company} className="flex items-center gap-2 text-sm">
-                    <Checkbox checked={form.companies.includes(company)} onCheckedChange={() => toggleCompany(company)} />
-                    <span>{company}</span>
-                  </label>
-                ))}
-              </div>
+          {!canManage && (
+            <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              สิทธิ์ของคุณเป็นแบบดูข้อมูลเท่านั้น
             </div>
           )}
 
-          <Button className="gap-1.5" onClick={handleAddHoliday} disabled={!canSave}>
-            <Plus className="h-4 w-4" /> Add Holiday
-          </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">วัน/เดือน/ปี</p>
+              <Input
+                type="date"
+                value={form.holiday_date}
+                disabled={!canManage}
+                onChange={(e) => setForm((p) => ({ ...p, holiday_date: e.target.value }))}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">ชื่อวันหยุด (TH)</p>
+              <Input
+                value={form.holiday_name_th}
+                disabled={!canManage}
+                onChange={(e) => setForm((p) => ({ ...p, holiday_name_th: e.target.value }))}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">ชื่อวันหยุด (EN)</p>
+              <Input
+                value={form.holiday_name_en}
+                disabled={!canManage}
+                onChange={(e) => setForm((p) => ({ ...p, holiday_name_en: e.target.value }))}
+              />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">ประเภทการจ่าย</p>
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                disabled={!canManage}
+                value={form.is_paid}
+                onChange={(e) => setForm((p) => ({ ...p, is_paid: e.target.value }))}
+              >
+                <option value="1">Paid Holiday</option>
+                <option value="0">Unpaid Holiday</option>
+              </select>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">รายละเอียด</p>
+              <Input
+                value={form.description}
+                disabled={!canManage}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button className="gap-1.5" onClick={handleSaveHoliday} disabled={!canManage || !canSave || submitting}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {editingId ? "Save Changes" : "Add Holiday"}
+            </Button>
+            {editingId && (
+              <Button variant="outline" onClick={resetForm} disabled={submitting}>
+                Cancel Edit
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -128,20 +226,53 @@ const HolidayManagement = () => {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Holiday Name (TH)</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Holiday Name (EN)</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Apply to</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {holidays.map((h) => (
-                <tr key={h.id} className="border-b last:border-b-0 hover:bg-muted/30">
-                  <td className="px-4 py-3 font-mono text-xs">{h.date}</td>
-                  <td className="px-4 py-3">{h.nameTh}</td>
-                  <td className="px-4 py-3">{h.nameEn}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className="text-xs">{applyToLabel(h)}</Badge>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">Loading holidays...</td>
                 </tr>
-              ))}
+              ) : holidays.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No holiday data</td>
+                </tr>
+              ) : (
+                holidays.map((h) => (
+                  <tr key={h.id} className="border-b last:border-b-0 hover:bg-muted/30">
+                    <td className="px-4 py-3 font-mono text-xs">{String(h.holiday_date || "").slice(0, 10)}</td>
+                    <td className="px-4 py-3">{h.holiday_name_th}</td>
+                    <td className="px-4 py-3">{h.holiday_name_en || "-"}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant="outline" className="text-xs">{Number(h.is_paid ?? 1) === 1 ? "Paid" : "Unpaid"}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!canManage}
+                          className="gap-1"
+                          onClick={() => startEdit(h)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={!canManage}
+                          className="gap-1"
+                          onClick={() => handleDelete(h.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </CardContent>

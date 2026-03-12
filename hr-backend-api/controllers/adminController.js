@@ -171,8 +171,9 @@ exports.updatePermissionMatrix = async (req, res) => {
 exports.getAuditLogs = async (req, res) => {
     try {
         const { role_level } = req.user;
-        if (role_level < 99) {
-            return res.status(403).json({ message: 'เฉพาะ Super Admin เท่านั้นที่เข้าถึง Audit Logs ได้' });
+        const roleLevel = Number(role_level || 0);
+        if (roleLevel < 50) {
+            return res.status(403).json({ message: 'เฉพาะ HR Company, Central HR และ Super Admin เท่านั้นที่เข้าถึง Audit Logs ได้' });
         }
 
         await ensureAdminTables();
@@ -192,6 +193,21 @@ exports.getAuditLogs = async (req, res) => {
 
         let where = 'WHERE 1=1';
         const params = [];
+
+        if (roleLevel === 50) {
+            const companyId = req.user.company_id || req.user.companyId;
+            if (!companyId) {
+                return res.status(403).json({ message: 'ไม่สามารถกำหนดขอบเขตบริษัทของผู้ใช้งานได้' });
+            }
+
+            where += ` AND EXISTS (
+                SELECT 1
+                FROM user_roles ur
+                WHERE ur.user_id = audit_logs.user_id
+                  AND ur.company_id = ?
+            )`;
+            params.push(companyId);
+        }
 
         if (userFilter) {
             where += ' AND (username LIKE ? OR CAST(user_id AS CHAR) LIKE ?)';

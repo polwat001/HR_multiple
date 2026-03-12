@@ -1,24 +1,15 @@
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import EmployeeList from "@/routes/EmployeeList";
-import RoleGuard from "@/components/RoleGuard";
-import { Permission } from "@/types/roles";
+import ModuleAccessGuard from "@/components/ModuleAccessGuard";
 
 export default function EmployeesPage() {
   return (
     <ProtectedRoute>
       <AppLayout>
-        <RoleGuard
-          requiredPermissions={[
-            Permission.VIEW_OWN_PROFILE,
-            Permission.VIEW_DEPARTMENT_EMPLOYEES,
-            Permission.VIEW_COMPANY_EMPLOYEES,
-            Permission.VIEW_ALL_EMPLOYEES,
-          ]}
-          fallback={<div className="p-6 text-sm text-muted-foreground">คุณไม่มีสิทธิ์เข้าถึงข้อมูลพนักงาน</div>}
-        >
+        <ModuleAccessGuard moduleKey="employees" fallback={<div className="p-6 text-sm text-muted-foreground">คุณไม่มีสิทธิ์เข้าถึงข้อมูลพนักงาน</div>}>
           <EmployeeList />
-        </RoleGuard>
+        </ModuleAccessGuard>
       </AppLayout>
     </ProtectedRoute>
   );

@@ -5,10 +5,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { FileText, Download, Users, Clock, TrendingUp, CalendarCheck2 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Permission } from "@/types/roles";
 import { apiGet } from "@/lib/api";
+import { resolveRoleViewKey } from "@/lib/accessMatrix";
 
 const reports = [
   { id: "employee-list", name: "Employee List (ทะเบียนประวัติพนักงาน)", icon: Users, description: "รายชื่อพนักงานพร้อมข้อมูลสำคัญ" },
@@ -39,15 +39,13 @@ const employeeStatuses = [
 ];
 
 const Reports = () => {
-  const { hasPermission } = useAuth();
-  const isManagerReports =
-    hasPermission(Permission.VIEW_DEPARTMENT_REPORTS) &&
-    !hasPermission(Permission.VIEW_COMPANY_REPORTS) &&
-    !hasPermission(Permission.VIEW_CONSOLIDATED_REPORTS);
-  const isCompanyReports =
-    hasPermission(Permission.VIEW_COMPANY_REPORTS) &&
-    !hasPermission(Permission.VIEW_CONSOLIDATED_REPORTS);
-  const isHoldingReports = hasPermission(Permission.VIEW_CONSOLIDATED_REPORTS);
+  const { user: authUser } = useAuth();
+  const roleViewKey = resolveRoleViewKey(authUser as any);
+  const isEmployeeReports = roleViewKey === "employee";
+  const isManagerReports = roleViewKey === "manager";
+  const isCompanyReports = roleViewKey === "hr_company";
+  const isHoldingReports = roleViewKey === "central_hr" || roleViewKey === "super_admin";
+  const ownUserId = Number((authUser as any)?.user_id || 0);
   const [scope, setScope] = useState("all");
   const [format, setFormat] = useState("excel");
   const [companyFilter, setCompanyFilter] = useState("all");
@@ -55,17 +53,124 @@ const Reports = () => {
   const [employeeStatus, setEmployeeStatus] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [employeeSummaryLoading, setEmployeeSummaryLoading] = useState(false);
+  const [employeeSummary, setEmployeeSummary] = useState({
+    attendanceRecords: 0,
+    lateCount: 0,
+    absentCount: 0,
+    otHours: 0,
+    pendingLeave: 0,
+    approvedLeave: 0,
+    remainingLeave: 0,
+  });
 
-  const visibleReports = isManagerReports
+  const visibleReports = isEmployeeReports
     ? reports.filter((r) => r.id === "attendance-summary" || r.id === "ot-monthly" || r.id === "leave-usage")
-    : reports;
+    : isManagerReports
+      ? reports.filter((r) => r.id === "attendance-summary" || r.id === "ot-monthly" || r.id === "leave-usage")
+      : reports;
 
   const exportLabel = format === "pdf" ? "Export PDF" : "Export XLSX";
+
+  const filterManagerTeamRows = useCallback(
+    <T extends Record<string, any>>(rows: T[]): T[] => {
+      if (!isManagerReports || !ownUserId) return rows;
+      return rows.filter((row) => Number(row?.user_id || 0) !== ownUserId);
+    },
+    [isManagerReports, ownUserId]
+  );
+
+  const buildDateQuery = useCallback(() => {
+    const query = new URLSearchParams({
+      ...(dateFrom ? { date_from: dateFrom } : {}),
+      ...(dateTo ? { date_to: dateTo } : {}),
+    }).toString();
+    return query ? `?${query}` : "";
+  }, [dateFrom, dateTo]);
+
+  const fetchEmployeeSummary = useCallback(async () => {
+    try {
+      setEmployeeSummaryLoading(true);
+      const dateQuery = buildDateQuery();
+
+      const [attendanceRes, otRes, leaveReqRes, leaveBalanceRes] = await Promise.all([
+        apiGet<any>(`/reports/attendance${dateQuery}`),
+        apiGet<any>(`/reports/ot${dateQuery}`),
+        apiGet<any>("/leaves/requests"),
+        apiGet<any>("/leaves/balances"),
+      ]);
+
+      const attendanceRows = filterManagerTeamRows(Array.isArray(attendanceRes) ? attendanceRes : attendanceRes?.data || []);
+      const otRows = filterManagerTeamRows(Array.isArray(otRes) ? otRes : otRes?.data || []);
+      const leaveReqRows = filterManagerTeamRows(Array.isArray(leaveReqRes) ? leaveReqRes : leaveReqRes?.data || []);
+      const leaveBalanceRows = filterManagerTeamRows(Array.isArray(leaveBalanceRes) ? leaveBalanceRes : leaveBalanceRes?.data || []);
+
+      const lateCount = attendanceRows.filter((r: any) => String(r.status || "").toLowerCase() === "late").length;
+      const absentCount = attendanceRows.filter((r: any) => String(r.status || "").toLowerCase() === "absent").length;
+      const otHours = otRows.reduce((sum: number, row: any) => sum + Number(row.total_hours || 0), 0);
+      const pendingLeave = leaveReqRows.filter((r: any) => String(r.status || "").toLowerCase() === "pending").length;
+      const approvedLeave = leaveReqRows.filter((r: any) => String(r.status || "").toLowerCase() === "approved").length;
+      const remainingLeave = leaveBalanceRows.reduce((sum: number, row: any) => sum + Number(row.balance || 0), 0);
+
+      setEmployeeSummary({
+        attendanceRecords: attendanceRows.length,
+        lateCount,
+        absentCount,
+        otHours,
+        pendingLeave,
+        approvedLeave,
+        remainingLeave,
+      });
+    } catch (error) {
+      console.error("Failed to fetch employee report summary:", error);
+    } finally {
+      setEmployeeSummaryLoading(false);
+    }
+  }, [buildDateQuery]);
+
+  useEffect(() => {
+    if (!isEmployeeReports) return;
+
+    fetchEmployeeSummary();
+  }, [fetchEmployeeSummary, isEmployeeReports]);
+
+  const getSummaryBadge = (key: string, value: number) => {
+    if (key === "late") {
+      if (value >= 4) return { label: "สูง", className: "bg-red-100 text-red-700 border-red-300" };
+      if (value >= 1) return { label: "เฝ้าระวัง", className: "bg-amber-100 text-amber-700 border-amber-300" };
+      return { label: "ปกติ", className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+    }
+
+    if (key === "absent") {
+      if (value >= 2) return { label: "สูง", className: "bg-red-100 text-red-700 border-red-300" };
+      if (value === 1) return { label: "เฝ้าระวัง", className: "bg-amber-100 text-amber-700 border-amber-300" };
+      return { label: "ปกติ", className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+    }
+
+    if (key === "leavePending") {
+      if (value >= 3) return { label: "รอนาน", className: "bg-amber-100 text-amber-700 border-amber-300" };
+      return { label: "ปกติ", className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+    }
+
+    return null;
+  };
+
+  const employeeSummaryCards = useMemo(
+    () => [
+      { key: "attendance", label: "บันทึกการเข้างาน", value: employeeSummary.attendanceRecords },
+      { key: "late", label: "มาสาย", value: employeeSummary.lateCount },
+      { key: "absent", label: "ขาดงาน", value: employeeSummary.absentCount },
+      { key: "ot", label: "OT ชั่วโมงรวม", value: employeeSummary.otHours },
+      { key: "leavePending", label: "ใบลารออนุมัติ", value: employeeSummary.pendingLeave },
+      { key: "leaveRemain", label: "วันลาคงเหลือ", value: employeeSummary.remainingLeave },
+    ],
+    [employeeSummary]
+  );
 
   const handleExport = async (reportId: string, reportName: string, forcedFormat?: "excel" | "pdf") => {
     const selectedFormat = forcedFormat || (format as "excel" | "pdf");
     const selectedCompany =
-      isManagerReports || isCompanyReports
+      isEmployeeReports || isManagerReports || isCompanyReports
         ? "current"
         : companyFilter || scope;
     const payload = {
@@ -84,7 +189,7 @@ const Reports = () => {
     try {
       if (reportId === "employee-list") {
         const res = await apiGet<any>("/employees");
-        apiRows = Array.isArray(res) ? res : res?.data || [];
+        apiRows = filterManagerTeamRows(Array.isArray(res) ? res : res?.data || []);
       }
 
       if (reportId === "attendance-summary") {
@@ -95,7 +200,7 @@ const Reports = () => {
           ...(employeeStatus ? { employee_status: employeeStatus } : {}),
         }).toString();
         const res = await apiGet<any>(`/reports/attendance${query ? `?${query}` : ""}`);
-        apiRows = Array.isArray(res) ? res : res?.data || [];
+        apiRows = filterManagerTeamRows(Array.isArray(res) ? res : res?.data || []);
       }
 
       if (reportId === "ot-monthly") {
@@ -106,7 +211,37 @@ const Reports = () => {
           ...(employeeStatus ? { employee_status: employeeStatus } : {}),
         }).toString();
         const res = await apiGet<any>(`/reports/ot${query ? `?${query}` : ""}`);
-        apiRows = Array.isArray(res) ? res : res?.data || [];
+        apiRows = filterManagerTeamRows(Array.isArray(res) ? res : res?.data || []);
+      }
+
+      if (reportId === "leave-usage") {
+        const [requestRes, balanceRes] = await Promise.all([
+          apiGet<any>("/leaves/requests"),
+          apiGet<any>("/leaves/balances"),
+        ]);
+        const requestRows = filterManagerTeamRows(Array.isArray(requestRes) ? requestRes : requestRes?.data || []);
+        const balanceRows = filterManagerTeamRows(Array.isArray(balanceRes) ? balanceRes : balanceRes?.data || []);
+        const requestPayload = requestRows.map((row: any) => ({
+          user_id: row.user_id,
+          type: "request",
+          leave_type_name: row.leave_type_name,
+          start_date: row.start_date,
+          end_date: row.end_date,
+          total_days: row.total_days,
+          status: row.status,
+          reason: row.reason,
+        }));
+        const balancePayload = balanceRows.map((row: any) => ({
+          user_id: row.user_id,
+            type: "balance",
+            leave_type_name: row.leave_type_name,
+            quota: row.quota,
+            used: row.used,
+            pending: row.pending,
+            balance: row.balance,
+          }));
+
+        apiRows = [...requestPayload, ...balancePayload];
       }
     } catch (error) {
       console.error("Report API export failed:", error);
@@ -155,6 +290,96 @@ const Reports = () => {
     URL.revokeObjectURL(url);
   };
 
+  if (isEmployeeReports) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Card className="shadow-card border-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">My Reports Dashboard</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">สรุปรายงานเฉพาะข้อมูลส่วนตัวของคุณ</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">Employee Scope</Badge>
+              <Button variant="outline" size="sm" onClick={fetchEmployeeSummary} disabled={employeeSummaryLoading}>
+                {employeeSummaryLoading ? "Refreshing..." : "Refresh Summary"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">วันที่เริ่มต้น</p>
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">วันที่สิ้นสุด</p>
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            </div>
+            <div className="md:col-span-2 flex items-end gap-2">
+              <Button variant="outline" className="gap-1.5" onClick={() => handleExport("attendance-summary", "Attendance Summary", "excel")}>
+                <Download className="h-4 w-4" /> Export Attendance
+              </Button>
+              <Button variant="outline" className="gap-1.5" onClick={() => handleExport("ot-monthly", "OT Monthly Summary", "excel")}>
+                <Download className="h-4 w-4" /> Export OT
+              </Button>
+              <Button variant="outline" className="gap-1.5" onClick={() => handleExport("leave-usage", "Leave Usage", "excel")}>
+                <Download className="h-4 w-4" /> Export Leave
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {employeeSummaryCards.map((card) => (
+            <Card key={card.key} className="shadow-card">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm text-muted-foreground">{card.label}</p>
+                  {getSummaryBadge(card.key, Number(card.value)) ? (
+                    <Badge
+                      variant="outline"
+                      className={getSummaryBadge(card.key, Number(card.value))?.className}
+                    >
+                      {getSummaryBadge(card.key, Number(card.value))?.label}
+                    </Badge>
+                  ) : null}
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {employeeSummaryLoading ? "..." : card.value}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-base">Available Personal Reports</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {visibleReports.map((r) => (
+              <div key={r.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <r.icon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{r.name}</p>
+                    <p className="text-xs text-muted-foreground">{r.description}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => handleExport(r.id, r.name, "excel")}>Export XLSX</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleExport(r.id, r.name, "pdf")}>Export PDF</Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Card className="shadow-card">
@@ -164,7 +389,7 @@ const Reports = () => {
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           <div>
             <p className="text-xs text-muted-foreground mb-1">บริษัท</p>
-            {isManagerReports || isCompanyReports ? (
+            {isEmployeeReports || isManagerReports || isCompanyReports ? (
               <div className="h-10 rounded-md border border-input px-3 flex items-center text-sm bg-muted/30">Current Company</div>
             ) : (
               <select
@@ -181,15 +406,19 @@ const Reports = () => {
 
           <div>
             <p className="text-xs text-muted-foreground mb-1">แผนก</p>
-            <select
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-            >
-              {mockDepartments.map((item) => (
-                <option key={item.value} value={item.value}>{item.label}</option>
-              ))}
-            </select>
+            {isEmployeeReports ? (
+              <div className="h-10 rounded-md border border-input px-3 flex items-center text-sm bg-muted/30">My Department</div>
+            ) : (
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+              >
+                {mockDepartments.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
@@ -251,7 +480,11 @@ const Reports = () => {
           <CardContent className="space-y-5">
             <div>
               <p className="text-sm font-medium mb-3">Scope</p>
-              {isManagerReports ? (
+              {isEmployeeReports ? (
+                <div className="text-sm rounded-md border border-border p-3 bg-muted/30">
+                  My Data Only
+                </div>
+              ) : isManagerReports ? (
                 <div className="text-sm rounded-md border border-border p-3 bg-muted/30">
                   Team Only (Department Scope)
                 </div>

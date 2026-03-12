@@ -3,115 +3,49 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import {
   LayoutDashboard, Users, Building, Clock, CalendarDays,
-  FileText, BarChart3, Shield, ChevronLeft, ChevronRight, Briefcase, LogOut, Settings, ClipboardList, CalendarCheck2, User,
+  FileText, BarChart3, Shield, ChevronLeft, ChevronRight, Briefcase, LogOut, Settings, ClipboardList, CalendarCheck2, User, Phone, GitBranch, Landmark,
 } from "lucide-react";
 import CompanySwitcher from "@/components/CompanySwitcher";
 import { useAuth } from "@/contexts/AuthContext";
-import { Permission, UserRole } from "@/types/roles";
+import { UserRole } from "@/types/roles";
+import { MODULE_ACCESS_MATRIX, NAV_MODULE_ORDER, ModuleKey, canAccessModule } from "@/lib/accessMatrix";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   path: string;
-  permissions?: Permission[];
-  roles?: UserRole[];
+  moduleKey: ModuleKey;
 }
 
-const navItems: NavItem[] = [
-  { 
-    icon: LayoutDashboard, 
-    label: "Dashboard", 
-    path: "/dashboard",
-    permissions: [Permission.VIEW_OWN_DASHBOARD, Permission.VIEW_COMPANY_DASHBOARD, Permission.VIEW_HOLDING_DASHBOARD]
-  },
-  {
-    icon: User,
-    label: "Self-Service",
-    path: "/self-service",
-    roles: [
-      UserRole.EMPLOYEE,
-      UserRole.MANAGER,
-      UserRole.CENTRAL_HR,
-      UserRole.SUPER_ADMIN,
-    ],
-  },
-  { 
-    icon: Building, 
-    label: "Organization", 
-    path: "/organization",
-    permissions: [Permission.VIEW_COMPANY_ORGANIZATION, Permission.VIEW_ALL_ORGANIZATION, Permission.MANAGE_ORGANIZATION]
-  },
-  { 
-    icon: Briefcase, 
-    label: "Position Master", 
-    path: "/positions",
-    roles: [UserRole.HR_COMPANY, UserRole.CENTRAL_HR, UserRole.SUPER_ADMIN]
-  },
-  { 
-    icon: Users, 
-    label: "Employee", 
-    path: "/employees",
-    permissions: [Permission.VIEW_OWN_PROFILE, Permission.VIEW_DEPARTMENT_EMPLOYEES, Permission.VIEW_COMPANY_EMPLOYEES, Permission.VIEW_ALL_EMPLOYEES]
-  },
-  { 
-    icon: Clock, 
-    label: "Time & Attendance", 
-    path: "/attendance",
-    permissions: [Permission.VIEW_OWN_ATTENDANCE, Permission.VIEW_DEPARTMENT_ATTENDANCE, Permission.VIEW_COMPANY_ATTENDANCE, Permission.MANAGE_ATTENDANCE]
-  },
-  { 
-    icon: CalendarDays, 
-    label: "Leave", 
-    path: "/leave",
-    permissions: [Permission.REQUEST_LEAVE, Permission.APPROVE_DEPARTMENT_LEAVE, Permission.MANAGE_COMPANY_LEAVE, Permission.MANAGE_ALL_LEAVE]
-  },
-  { 
-    icon: FileText, 
-    label: "Contract", 
-    path: "/contracts",
-    permissions: [Permission.VIEW_COMPANY_CONTRACTS, Permission.MANAGE_COMPANY_CONTRACTS, Permission.MANAGE_CONTRACT_TEMPLATES]
-  },
-  {
-    icon: CalendarCheck2,
-    label: "Holiday",
-    path: "/holidays",
-    permissions: [Permission.VIEW_HOLIDAYS, Permission.MANAGE_COMPANY_HOLIDAYS, Permission.MANAGE_ALL_HOLIDAYS],
-  },
-  { 
-    icon: BarChart3, 
-    label: "Reports", 
-    path: "/reports",
-    permissions: [Permission.VIEW_DEPARTMENT_REPORTS, Permission.VIEW_COMPANY_REPORTS, Permission.VIEW_CONSOLIDATED_REPORTS]
-  },
-  { 
-    icon: Shield, 
-    label: "User & Permission", 
-    path: "/permissions",
-    roles: [UserRole.SUPER_ADMIN]
-  },
-  {
-    icon: Settings,
-    label: "System Settings",
-    path: "/system-settings",
-    permissions: [Permission.MANAGE_SYSTEM_SETTINGS],
-  },
-  {
-    icon: ClipboardList,
-    label: "Audit Logs",
-    path: "/audit-log",
-    permissions: [Permission.VIEW_AUDIT_LOGS],
-  },
-];
+const moduleIconMap: Record<ModuleKey, React.ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  selfService: User,
+  organization: Building,
+  positions: Briefcase,
+  employees: Users,
+  attendance: Clock,
+  leave: CalendarDays,
+  contacts: Phone,
+  contracts: FileText,
+  holidays: CalendarCheck2,
+  reports: BarChart3,
+  payroll: Landmark,
+  approvalFlow: GitBranch,
+  permissions: Shield,
+  systemSettings: Settings,
+  auditLog: ClipboardList,
+};
 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, logout: authLogout, hasAnyPermission, hasRole } = useAuth();
+  const { user, userPermissions, logout: authLogout, hasRole } = useAuth();
   const router = useRouter();
   const location = router.pathname;
   const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
   const isCentralHr = hasRole(UserRole.CENTRAL_HR);
   const canSwitchCompany = isCentralHr;
+  const roleLabel = (user as any)?.role || (user as any)?.role_name || "Employee";
 
   const handleLogout = () => {
     if (confirm("ต้องการออกจากระบบหรือไม่?")) {
@@ -119,20 +53,20 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Filter nav items based on user permissions
-  const visibleNavItems = navItems.filter((item) => {
-    if (isSuperAdmin) {
-      return ["/organization", "/permissions", "/system-settings", "/audit-log"].includes(item.path);
-    }
+  const roles = ((userPermissions?.roles || []) as UserRole[]);
+  const navItems: NavItem[] = NAV_MODULE_ORDER
+    .map((key) => {
+      const config = MODULE_ACCESS_MATRIX[key];
+      return {
+        moduleKey: key,
+        icon: moduleIconMap[key],
+        label: config.label,
+        path: config.path,
+      };
+    })
+    .filter((item) => MODULE_ACCESS_MATRIX[item.moduleKey].showInNav);
 
-    if (item.roles && item.roles.length > 0) {
-      return item.roles.some((role) => hasRole(role));
-    }
-    if (item.permissions && item.permissions.length > 0) {
-      return hasAnyPermission(item.permissions);
-    }
-    return true;
-  });
+  const visibleNavItems = navItems.filter((item) => canAccessModule(roles, item.moduleKey));
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -224,7 +158,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               </div>
               <div className="text-sm">
                 <div className="font-medium text-foreground">{user?.display_name || user?.username || "User"}</div>
-                <div className="text-xs text-muted-foreground">{user?.position_name || user?.role || "Employee"}</div>
+                <div className="text-xs text-muted-foreground">{roleLabel}{user?.position_name ? ` • ${user.position_name}` : ""}</div>
               </div>
             </div>
           </div>

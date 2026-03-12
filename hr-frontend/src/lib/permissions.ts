@@ -6,9 +6,13 @@ import { UserRole, Permission } from "@/types/roles";
  */
 export const rolePermissions: Record<UserRole, Permission[]> = {
   [UserRole.EMPLOYEE]: [
+    Permission.VIEW_OWN_DASHBOARD,
+    Permission.VIEW_OWN_PROFILE,
+    Permission.EDIT_OWN_PROFILE,
     Permission.VIEW_OWN_ATTENDANCE,
     Permission.REQUEST_OT,
     Permission.REQUEST_LEAVE,
+
   ],
 
   [UserRole.MANAGER]: [
@@ -64,21 +68,33 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     // Employees
     Permission.VIEW_OWN_PROFILE,
     Permission.VIEW_ALL_EMPLOYEES,
+    Permission.MANAGE_ALL_EMPLOYEES,
     // Attendance
     Permission.VIEW_COMPANY_ATTENDANCE,
+    Permission.MANAGE_ATTENDANCE,
+    // OT
+    Permission.REQUEST_OT,
+    Permission.MANAGE_ALL_OT,
+    // Leave
+    Permission.REQUEST_LEAVE,
+    Permission.MANAGE_ALL_LEAVE,
     // Contracts
+    Permission.MANAGE_COMPANY_CONTRACTS,
     Permission.MANAGE_CONTRACT_TEMPLATES,
     // Organization
     Permission.VIEW_ALL_ORGANIZATION,
+    Permission.MANAGE_ORGANIZATION,
     // Reports
     Permission.VIEW_CONSOLIDATED_REPORTS,
     // Holidays
     Permission.VIEW_HOLIDAYS,
     Permission.MANAGE_ALL_HOLIDAYS,
+    // Audit
+    Permission.VIEW_AUDIT_LOGS,
   ],
 
   [UserRole.SUPER_ADMIN]: [
-    // All permissions
+    // System-wide visibility
     Permission.VIEW_OWN_DASHBOARD,
     Permission.VIEW_COMPANY_DASHBOARD,
     Permission.VIEW_HOLDING_DASHBOARD,
@@ -93,26 +109,26 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     Permission.VIEW_DEPARTMENT_ATTENDANCE,
     Permission.VIEW_COMPANY_ATTENDANCE,
     Permission.MANAGE_ATTENDANCE,
-    Permission.REQUEST_OT,
-    Permission.APPROVE_DEPARTMENT_OT,
-    Permission.MANAGE_COMPANY_OT,
-    Permission.MANAGE_ALL_OT,
-    Permission.REQUEST_LEAVE,
-    Permission.APPROVE_DEPARTMENT_LEAVE,
-    Permission.MANAGE_COMPANY_LEAVE,
-    Permission.MANAGE_ALL_LEAVE,
+
+    // Contract & organization master data
     Permission.VIEW_COMPANY_CONTRACTS,
     Permission.MANAGE_COMPANY_CONTRACTS,
     Permission.MANAGE_CONTRACT_TEMPLATES,
     Permission.VIEW_COMPANY_ORGANIZATION,
     Permission.VIEW_ALL_ORGANIZATION,
     Permission.MANAGE_ORGANIZATION,
+
+    // Reports
     Permission.VIEW_DEPARTMENT_REPORTS,
     Permission.VIEW_COMPANY_REPORTS,
     Permission.VIEW_CONSOLIDATED_REPORTS,
+
+    // Holidays
     Permission.VIEW_HOLIDAYS,
     Permission.MANAGE_COMPANY_HOLIDAYS,
     Permission.MANAGE_ALL_HOLIDAYS,
+
+    // Security & governance
     Permission.MANAGE_USERS,
     Permission.MANAGE_ROLES,
     Permission.MANAGE_SYSTEM_SETTINGS,

@@ -95,6 +95,7 @@ exports.getAttendanceReport = async (req, res) => {
         let sql = `
             SELECT
                 a.work_date,
+                e.user_id,
                 e.employee_code,
                 e.firstname_th,
                 e.lastname_th,
@@ -148,6 +149,7 @@ exports.getOtReport = async (req, res) => {
         let sql = `
             SELECT
                 ot.request_date,
+                e.user_id,
                 e.employee_code,
                 e.firstname_th,
                 e.lastname_th,

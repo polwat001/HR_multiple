@@ -16,6 +16,7 @@ exports.getLeaveRequests = async (req, res) => {
                 lr.status, 
                 lr.created_at,
                 lt.name AS leave_type_name,
+                e.user_id,
                 e.employee_code, 
                 e.firstname_th, 
                 e.lastname_th
@@ -79,6 +80,7 @@ exports.getLeaveBalances = async (req, res) => {
                 lb.pending, 
                 lb.balance,
                 lt.name AS leave_type_name,
+                e.user_id,
                 e.firstname_th, 
                 e.lastname_th
             FROM leave_balances lb

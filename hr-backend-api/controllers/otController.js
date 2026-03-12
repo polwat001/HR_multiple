@@ -52,6 +52,7 @@ exports.getOtRequests = async (req, res) => {
                 ot.status,
                 ot.created_at,
                 ROUND(COALESCE(ot.total_hours, 0) * ?, 2) AS amount,
+                e.user_id,
                 e.employee_code,
                 e.firstname_th,
                 e.lastname_th,
