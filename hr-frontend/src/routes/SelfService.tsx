@@ -9,19 +9,13 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Clock, CalendarDays, Briefcase, User, Building, Timer } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const statusColors: Record<string, string> = {
   present: "bg-emerald-500",
   late: "bg-amber-400",
   absent: "bg-red-400",
   leave: "bg-blue-400",
-};
-
-const statusLabels: Record<string, string> = {
-  present: "มาทำงาน",
-  late: "สาย",      
-  absent: "ขาด",
-  leave: "ลา",
 };
 
 const LEAVE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--info))"];
@@ -78,6 +72,13 @@ const normalizeText = (value?: string | null) => String(value || "").trim().toLo
 
 const SelfService = () => {
   const { user: authUser } = useAuth();
+  const { language, t } = useLanguage();
+  const statusLabels: Record<string, string> = {
+    present: t("selfService.attendance.present"),
+    late: t("selfService.attendance.late"),
+    absent: t("selfService.attendance.absent"),
+    leave: t("selfService.attendance.leave"),
+  };
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthString);
   const [initialLoading, setInitialLoading] = useState(true);
   const [monthLoading, setMonthLoading] = useState(false);
@@ -209,8 +210,8 @@ const SelfService = () => {
     const years = now.getFullYear() - hire.getFullYear();
     const months = now.getMonth() - hire.getMonth();
     const totalMonths = years * 12 + months;
-    return `${Math.floor(totalMonths / 12)} ปี ${totalMonths % 12} เดือน`;
-  }, [joinedDate]);
+    return `${Math.floor(totalMonths / 12)} ${t("selfService.yearUnit")} ${totalMonths % 12} ${t("selfService.monthUnit")}`;
+  }, [joinedDate, t]);
 
   const calendarData = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
@@ -233,22 +234,22 @@ const SelfService = () => {
   const monthTitle = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
     const d = new Date((Number.isFinite(y) ? y : new Date().getFullYear()), (Number.isFinite(m) ? m : new Date().getMonth() + 1) - 1, 1);
-    return d.toLocaleDateString("th-TH", { month: "long", year: "numeric" });
-  }, [selectedMonth]);
+    return d.toLocaleDateString(language === "th" ? "th-TH" : "en-US", { month: "long", year: "numeric" });
+  }, [language, selectedMonth]);
 
   const otTotal = otSummary.total_hours;
   const otAmount = otSummary.estimated_total_amount;
 
   if (initialLoading) {
-    return <div className="p-6 text-center text-muted-foreground">Loading self-service...</div>;
+    return <div className="p-6 text-center text-muted-foreground">{t("selfService.loading")}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <h2 className="text-2xl font-bold text-foreground">Self-Service</h2>
+        <h2 className="text-2xl font-bold text-foreground">{t("selfService.title")}</h2>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">เดือนข้อมูล:</span>
+          <span className="text-sm text-muted-foreground">{t("selfService.monthData")}</span>
           <Input
             type="month"
             value={selectedMonth}
@@ -262,7 +263,7 @@ const SelfService = () => {
             onClick={() => setSelectedMonth(getCurrentMonthString())}
             disabled={selectedMonth === getCurrentMonthString()}
           >
-            เดือนนี้
+            {t("selfService.thisMonth")}
           </Button>
         </div>
       </div>
@@ -280,7 +281,7 @@ const SelfService = () => {
               <span className="flex items-center gap-1"><Briefcase className="h-4 w-4" />{profile?.position_name || authUser?.position_name || "-"}</span>
               <span className="flex items-center gap-1"><Building className="h-4 w-4" />{profile?.department_name || "-"} - {profile?.company_name || "-"}</span>
               <span className="flex items-center gap-1"><User className="h-4 w-4" />{profile?.employee_code || "-"}</span>
-              <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />อายุงาน {tenure}</span>
+              <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />{t("selfService.jobInfo.tenure")} {tenure}</span>
             </div>
           </div>
           <Badge variant={profile?.status === "active" ? "default" : "secondary"}>{profile?.status || "-"}</Badge>
@@ -290,7 +291,7 @@ const SelfService = () => {
       <div className="grid grid-cols-0 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">โควต้าวันลา</CardTitle>
+            <CardTitle className="text-base">{t("selfService.leaveQuota")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {monthLoading && (
@@ -322,8 +323,8 @@ const SelfService = () => {
               <>
                 {leaveBalances.map((lq, i) => {
                   const pieData = [
-                    { name: "ใช้แล้ว", value: lq.used },
-                    { name: "คงเหลือ", value: lq.quota - lq.used },
+                    { name: t("selfService.used"), value: lq.used },
+                    { name: t("selfService.remaining"), value: lq.quota - lq.used },
                   ];
                   return (
                     <div key={lq.id} className="flex items-center gap-4">
@@ -341,13 +342,13 @@ const SelfService = () => {
                       <div className="flex-1">
                         <div className="text-sm font-medium text-foreground">{lq.leave_type_name}</div>
                         <div className="text-xs text-muted-foreground">
-                          ใช้ {lq.used} / {lq.quota} วัน - เหลือ {Math.max(0, lq.quota - lq.used)} วัน
+                          {t("selfService.used")} {lq.used} / {lq.quota} {t("selfService.dayUnit")} - {t("selfService.remaining")} {Math.max(0, lq.quota - lq.used)} {t("selfService.dayUnit")}
                         </div>
                       </div>
                     </div>
                   );
                 })}
-                {leaveBalances.length === 0 && <p className="text-sm text-muted-foreground">ไม่พบข้อมูลโควต้าวันลา</p>}
+                {leaveBalances.length === 0 && <p className="text-sm text-muted-foreground">{t("selfService.noLeaveQuota")}</p>}
               </>
             )}
           </CardContent>
@@ -356,12 +357,12 @@ const SelfService = () => {
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4" /> ปฏิทินเข้างาน - {monthTitle}
+              <Clock className="h-4 w-4" /> {t("selfService.attendance.title")} - {monthTitle}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-7 gap-1 text-center text-xs mb-1">
-              {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((d) => (
+              {(language === "th" ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]).map((d) => (
                 <div key={d} className="font-medium text-muted-foreground py-1">{d}</div>
               ))}
             </div>
@@ -375,7 +376,7 @@ const SelfService = () => {
                     className="rounded-md border border-border p-1 text-center min-h-[56px] flex flex-col items-center justify-center"
                     title={
                       cell.record
-                        ? `${statusLabels[String(cell.record.status || "present")] || "มาทำงาน"} ${cell.record.check_in_time || "-"} - ${cell.record.check_out_time || "-"}`
+                        ? `${statusLabels[String(cell.record.status || "present")] || t("selfService.attendance.present")} ${cell.record.check_in_time || "-"} - ${cell.record.check_out_time || "-"}`
                         : undefined
                     }
                   >
@@ -408,27 +409,27 @@ const SelfService = () => {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <Timer className="h-4 w-4" /> สรุป OT เดือนนี้
+            <Timer className="h-4 w-4" /> {t("selfService.otSummary")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-6 mb-4">
             <div className="bg-primary/10 rounded-lg px-4 py-3 text-center">
               <div className="text-2xl font-bold text-primary">{otTotal}</div>
-              <div className="text-xs text-muted-foreground">ชั่วโมง</div>
+              <div className="text-xs text-muted-foreground">{t("selfService.otHours")}</div>
             </div>
             <div className="bg-primary/10 rounded-lg px-4 py-3 text-center">
               <div className="text-2xl font-bold text-primary">฿{otAmount.toLocaleString()}</div>
-              <div className="text-xs text-muted-foreground">ค่า OT</div>
+              <div className="text-xs text-muted-foreground">{t("selfService.otValue")}</div>
             </div>
           </div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>วันที่</TableHead>
-                <TableHead>ชั่วโมง</TableHead>
-                <TableHead>จำนวนเงิน</TableHead>
-                <TableHead>สถานะ</TableHead>
+                <TableHead>{t("selfService.otTable.date")}</TableHead>
+                <TableHead>{t("selfService.otTable.hours")}</TableHead>
+                <TableHead>{t("selfService.otTable.amount")}</TableHead>
+                <TableHead>{t("selfService.otTable.status")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -459,18 +460,18 @@ const SelfService = () => {
               {otRecords.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>{r.request_date}</TableCell>
-                  <TableCell>{r.hours} ชม.</TableCell>
+                  <TableCell>{r.hours} {t("selfService.hourAbbr")}</TableCell>
                   <TableCell>฿{r.amount.toLocaleString()}</TableCell>
                   <TableCell>
                     <Badge variant={r.status === "approved" ? "default" : "secondary"}>
-                      {r.status === "approved" ? "อนุมัติ" : r.status === "pending" ? "รออนุมัติ" : "ปฏิเสธ"}
+                      {r.status === "approved" ? t("selfService.otStatus.approved") : r.status === "pending" ? t("selfService.otStatus.pending") : t("selfService.otStatus.rejected")}
                     </Badge>
                   </TableCell>
                 </TableRow>
               ))}
               {otRecords.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-4">ยังไม่มีข้อมูล OT</TableCell>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground py-4">{t("selfService.noOtData")}</TableCell>
                 </TableRow>
               )}
                 </>

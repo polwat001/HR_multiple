@@ -10,6 +10,7 @@ import { Permission, UserRole } from "@/types/roles";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type ShiftRow = {
   id: number;
@@ -38,7 +39,7 @@ const toUiAttendanceRow = (row: any) => ({
   code: row.employee_code || "-",
   name: `${row.firstname_th || ""} ${row.lastname_th || ""}`.trim() || "-",
   shiftId: row.shift_id ? Number(row.shift_id) : null,
-  shiftName: row.shift_name || "Unassigned Shift",
+  shiftName: row.shift_name || "",
   shiftTimeIn: row.shift_time_in || "-",
   shiftTimeOut: row.shift_time_out || "-",
   timeIn: row.check_in_time || "-",
@@ -47,41 +48,7 @@ const toUiAttendanceRow = (row: any) => ({
   gps: row.gps || "-",
 });
 
-const otRequests = [
-  {
-    id: 1,
-    employeeName: "สมหญิง ใจดี",
-    requestDate: "2026-03-10",
-    startTime: "18:30",
-    endTime: "21:00",
-    totalHours: 2.5,
-    reason: "ปิดงาน Payroll ประจำเดือน",
-    approverName: "วิชัย พงษ์ทอง",
-    status: "pending",
-  },
-  {
-    id: 2,
-    employeeName: "ประสิทธิ์ แก้วมณี",
-    requestDate: "2026-03-09",
-    startTime: "17:30",
-    endTime: "20:30",
-    totalHours: 3,
-    reason: "Deploy ระบบ attendance ใหม่",
-    approverName: "วิชัย พงษ์ทอง",
-    status: "pending",
-  },
-  {
-    id: 3,
-    employeeName: "ธนา รุ่งเรือง",
-    requestDate: "2026-03-08",
-    startTime: "18:00",
-    endTime: "19:30",
-    totalHours: 1.5,
-    reason: "แก้ incident production",
-    approverName: "พิมพ์ชนก ศิริวัฒน์",
-    status: "approved",
-  },
-];
+const otRequests: Array<any> = [];
 
 const toUiOtRow = (row: any) => ({
   id: Number(row.id),
@@ -92,7 +59,7 @@ const toUiOtRow = (row: any) => ({
   endTime: row.end_time || "-",
   totalHours: Number(row.total_hours || 0),
   reason: row.reason || "-",
-  approverName: row.approver_name || "รอผู้อนุมัติ",
+  approverName: row.approver_name || "",
   status: String(row.status || "pending").toLowerCase(),
 });
 
@@ -110,6 +77,7 @@ const otStatusBadge: Record<string, string> = {
 };
 
 const TimeAttendance = () => {
+  const { t } = useLanguage();
   const { hasPermission, hasRole, user } = useAuth();
   const roleViewKey = resolveRoleViewKey(user as any);
   const isManagerView = roleViewKey === "manager";
@@ -245,11 +213,11 @@ const TimeAttendance = () => {
 
   const handleCreateShift = async () => {
     if (!canCreateShift) {
-      alert("คุณไม่มีสิทธิ์สร้างกะเวลา");
+      alert(t("timeAttendance.messages.noShiftPermission"));
       return;
     }
     if (!newShift.shiftName || !newShift.timeIn || !newShift.timeOut) {
-      alert("กรุณากรอกชื่อกะ เวลาเข้า และเวลาออกให้ครบ");
+      alert(t("timeAttendance.messages.fillShiftRequired"));
       return;
     }
 
@@ -263,9 +231,9 @@ const TimeAttendance = () => {
       });
       setNewShift({ shiftName: "", timeIn: "", timeOut: "", graceMinutes: "0" });
       await fetchSchedules();
-      alert("สร้างกะเวลาเรียบร้อยแล้ว");
+      alert(t("timeAttendance.messages.shiftCreated"));
     } catch (error: any) {
-      alert(error?.message || "ไม่สามารถสร้างกะเวลาได้");
+      alert(error?.message || t("timeAttendance.messages.shiftCreateFailed"));
     } finally {
       setIsCreatingShift(false);
     }
@@ -277,7 +245,7 @@ const TimeAttendance = () => {
       await fetchAdjustmentApprovals();
     } catch (error) {
       console.error(`Failed to ${action} adjustment request:`, error);
-      alert("ไม่สามารถอัปเดตสถานะคำขอปรับเวลาได้");
+      alert(t("timeAttendance.messages.adjustmentUpdateFailed"));
     }
   };
 
@@ -287,10 +255,10 @@ const TimeAttendance = () => {
       setAttendanceActionMessage("");
       const endpoint = action === "check-in" ? "/attendance/check-in" : "/attendance/check-out";
       await apiPost(endpoint, {});
-      setAttendanceActionMessage(action === "check-in" ? "ลงเวลาเข้างานสำเร็จ" : "ลงเวลาออกงานสำเร็จ");
+      setAttendanceActionMessage(action === "check-in" ? t("timeAttendance.messages.checkInSuccess") : t("timeAttendance.messages.checkOutSuccess"));
       await fetchAttendance();
     } catch (error: any) {
-      const message = error instanceof Error ? error.message : "ไม่สามารถบันทึกเวลาได้";
+      const message = error instanceof Error ? error.message : t("timeAttendance.messages.attendanceSaveFailed");
       setAttendanceActionMessage(message);
     } finally {
       setAttendanceActionLoading(null);
@@ -319,11 +287,11 @@ const TimeAttendance = () => {
 
   const handleSubmitOt = async () => {
     if (!newOt.requestDate || !newOt.startTime || !newOt.endTime || !newOt.reason) {
-      alert("กรุณากรอกข้อมูล OT Request ให้ครบ");
+      alert(t("timeAttendance.messages.fillOtRequired"));
       return;
     }
     if (computedHours <= 0) {
-      alert("เวลา OT ไม่ถูกต้อง");
+      alert(t("timeAttendance.messages.invalidOtTime"));
       return;
     }
 
@@ -354,13 +322,13 @@ const TimeAttendance = () => {
       setOtRows((prev) => [
         {
           id: Date.now(),
-          employeeName: "ผู้ใช้งานปัจจุบัน",
+          employeeName: t("timeAttendance.common.currentUser"),
           requestDate: newOt.requestDate,
           startTime: newOt.startTime,
           endTime: newOt.endTime,
           totalHours: computedHours,
           reason: newOt.reason,
-          approverName: "รอผู้อนุมัติ",
+          approverName: t("timeAttendance.common.waitingApprover"),
           status: "pending",
         },
         ...prev,
@@ -368,10 +336,10 @@ const TimeAttendance = () => {
 
       setNewOt({ requestDate: "", startTime: "", endTime: "", reason: "" });
       setShowEmployeeOtForm(false);
-      alert("ส่งคำขอ OT เรียบร้อยแล้ว");
+      alert(t("timeAttendance.messages.otSubmitted"));
     } catch (error) {
       console.error("Create OT request failed:", error);
-      alert("ไม่สามารถส่งคำขอ OT ได้");
+      alert(t("timeAttendance.messages.otSubmitFailed"));
     } finally {
       setIsSubmittingOt(false);
     }
@@ -384,7 +352,7 @@ const TimeAttendance = () => {
         setOtRows((prev) => prev.map((row) => (row.id === id ? { ...row, status } : row)));
       } catch (error) {
         console.error("Failed to update OT status:", error);
-        alert("ไม่สามารถอัปเดตสถานะ OT ได้");
+        alert(t("timeAttendance.messages.otStatusUpdateFailed"));
       }
     };
     run();
@@ -409,26 +377,26 @@ const TimeAttendance = () => {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-3 text-sm">
-          <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-3 py-1 font-medium">พนักงาน</span>
-          <span className="text-muted-foreground">ดูเฉพาะตารางของคุณ</span>
+          <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-3 py-1 font-medium">{t("timeAttendance.employee.badge")}</span>
+          <span className="text-muted-foreground">{t("timeAttendance.employee.onlyYourSchedule")}</span>
         </div>
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">ตารางงานของคุณ</CardTitle>
+            <CardTitle className="text-base">{t("timeAttendance.employee.yourSchedule")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg bg-muted/40 border border-border px-6 py-4 text-center">
               <p className="font-semibold text-foreground">{myShift?.shiftName || "-"}</p>
               <p className="text-3xl font-bold text-primary mt-1">{myShift?.timeIn || "-"} - {myShift?.timeOut || "-"}</p>
-              <p className="text-sm text-muted-foreground mt-1">พัก 12:00 - 13:00</p>
+              <p className="text-sm text-muted-foreground mt-1">{t("timeAttendance.employee.breakTime")}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">ลงเวลาเข้า-ออกงาน</CardTitle>
+            <CardTitle className="text-base">{t("timeAttendance.employee.checkInOut")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -437,10 +405,10 @@ const TimeAttendance = () => {
                 disabled={checkInDisabled}
               >
                 {attendanceActionLoading === "check-in"
-                  ? "กำลังบันทึก..."
+                  ? t("timeAttendance.actions.saving")
                   : hasCheckedInToday
-                    ? "Check In แล้ววันนี้"
-                    : "Check In"}
+                    ? t("timeAttendance.actions.checkedInToday")
+                    : t("timeAttendance.actions.checkIn")}
               </Button>
               <Button
                 variant="outline"
@@ -448,10 +416,10 @@ const TimeAttendance = () => {
                 disabled={checkOutDisabled}
               >
                 {attendanceActionLoading === "check-out"
-                  ? "กำลังบันทึก..."
+                  ? t("timeAttendance.actions.saving")
                   : hasCheckedOutToday
-                    ? "Check Out แล้ววันนี้"
-                    : "Check Out"}
+                    ? t("timeAttendance.actions.checkedOutToday")
+                    : t("timeAttendance.actions.checkOut")}
               </Button>
             </div>
 
@@ -461,20 +429,20 @@ const TimeAttendance = () => {
 
             <div className="rounded-lg border bg-muted/20 p-4">
               <p className="text-xs text-muted-foreground mb-1">
-                สถานะวันนี้: {hasCheckedOutToday ? "ลงเวลาครบแล้ว" : hasCheckedInToday ? "ลงเวลาเข้าแล้ว" : "ยังไม่ลงเวลา"}
+                {t("timeAttendance.employee.todayStatus")}: {hasCheckedOutToday ? t("timeAttendance.employee.status.done") : hasCheckedInToday ? t("timeAttendance.employee.status.checkedIn") : t("timeAttendance.employee.status.notChecked")}
               </p>
-              <p className="text-sm text-muted-foreground">รายการล่าสุด</p>
-              <p className="text-sm mt-1">วันที่: {latestAttendance?.workDate || "-"}</p>
-              <p className="text-sm">เข้า: {latestAttendance?.timeIn || "-"} | ออก: {latestAttendance?.timeOut || "-"}</p>
+              <p className="text-sm text-muted-foreground">{t("timeAttendance.employee.latestRecord")}</p>
+              <p className="text-sm mt-1">{t("timeAttendance.common.date")}: {latestAttendance?.workDate || "-"}</p>
+              <p className="text-sm">{t("timeAttendance.common.in")}: {latestAttendance?.timeIn || "-"} | {t("timeAttendance.common.out")}: {latestAttendance?.timeOut || "-"}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">คำขอ OT ของคุณ</CardTitle>
+            <CardTitle className="text-base">{t("timeAttendance.employee.yourOtRequests")}</CardTitle>
             <Button size="sm" onClick={() => setShowEmployeeOtForm((v) => !v)}>
-              + ขอ OT
+              + {t("timeAttendance.employee.requestOt")}
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -482,42 +450,42 @@ const TimeAttendance = () => {
               <div className="space-y-4 border border-border rounded-lg p-4 bg-muted/20">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">วันที่ขอทำ OT</p>
+                    <p className="text-sm text-muted-foreground mb-1">{t("timeAttendance.fields.otDate")}</p>
                     <Input type="date" value={newOt.requestDate} onChange={(e) => setNewOt((p) => ({ ...p, requestDate: e.target.value }))} />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">เวลาเริ่มต้น</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t("timeAttendance.fields.startTime")}</p>
                       <Input type="time" value={newOt.startTime} onChange={(e) => setNewOt((p) => ({ ...p, startTime: e.target.value }))} />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">เวลาสิ้นสุด</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t("timeAttendance.fields.endTime")}</p>
                       <Input type="time" value={newOt.endTime} onChange={(e) => setNewOt((p) => ({ ...p, endTime: e.target.value }))} />
                     </div>
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">เหตุผลที่ขอ OT</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("timeAttendance.fields.otReason")}</p>
                   <Textarea value={newOt.reason} onChange={(e) => setNewOt((p) => ({ ...p, reason: e.target.value }))} />
                 </div>
-                <div className="text-sm text-muted-foreground">จำนวนชั่วโมงรวม: <span className="font-semibold text-foreground">{computedHours} ชั่วโมง</span></div>
+                <div className="text-sm text-muted-foreground">{t("timeAttendance.fields.totalHours")}: <span className="font-semibold text-foreground">{computedHours} {t("timeAttendance.common.hour")}</span></div>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSubmitOt} disabled={isSubmittingOt}>{isSubmittingOt ? "กำลังส่ง..." : "ยืนยันส่งคำขอ"}</Button>
-                  <Button size="sm" variant="outline" onClick={() => setShowEmployeeOtForm(false)}>ยกเลิก</Button>
+                  <Button size="sm" onClick={handleSubmitOt} disabled={isSubmittingOt}>{isSubmittingOt ? t("timeAttendance.actions.submitting") : t("timeAttendance.actions.confirmSubmit")}</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowEmployeeOtForm(false)}>{t("timeAttendance.actions.cancel")}</Button>
                 </div>
               </div>
             )}
 
             {employeeOtRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">ดูคำขอ OT ได้ที่หน้า Self-Service</p>
+              <p className="text-sm text-muted-foreground text-center py-6">{t("timeAttendance.employee.viewInSelfService")}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">วันที่</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">เวลา</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">ชั่วโมง</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">สถานะ</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">{t("timeAttendance.common.date")}</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.time")}</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">{t("timeAttendance.common.hour")}</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.status")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -525,9 +493,9 @@ const TimeAttendance = () => {
                     <tr key={r.id} className="border-b last:border-b-0">
                       <td className="px-3 py-2">{r.requestDate}</td>
                       <td className="px-3 py-2">{r.startTime} - {r.endTime}</td>
-                      <td className="px-3 py-2">{r.totalHours} ชม.</td>
+                      <td className="px-3 py-2">{r.totalHours} {t("selfService.hourAbbr")}</td>
                       <td className="px-3 py-2">
-                        <Badge variant="outline" className={otStatusBadge[r.status] || ""}>{r.status}</Badge>
+                        <Badge variant="outline" className={otStatusBadge[r.status] || ""}>{t(`timeAttendance.otStatus.${r.status}`, r.status)}</Badge>
                       </td>
                     </tr>
                   ))}
@@ -539,22 +507,22 @@ const TimeAttendance = () => {
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">ประวัติการลงเวลาของคุณ</CardTitle>
+            <CardTitle className="text-base">{t("timeAttendance.employee.attendanceHistory")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">วันที่</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">เวลาเข้า</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">เวลาออก</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">สถานะ</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.common.date")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.table.timeIn")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.table.timeOut")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.table.status")}</th>
                 </tr>
               </thead>
               <tbody>
                 {attendanceRows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">ยังไม่มีข้อมูลการลงเวลา</td>
+                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">{t("timeAttendance.messages.noAttendanceData")}</td>
                   </tr>
                 ) : (
                   attendanceRows.slice(0, 20).map((a) => (
@@ -563,7 +531,7 @@ const TimeAttendance = () => {
                       <td className="px-4 py-3">{a.timeIn}</td>
                       <td className="px-4 py-3">{a.timeOut}</td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className={statusBadge[a.status] || ""}>{a.status}</Badge>
+                        <Badge variant="outline" className={statusBadge[a.status] || ""}>{t(`timeAttendance.attendanceStatus.${a.status}`, a.status)}</Badge>
                       </td>
                     </tr>
                   ))
@@ -580,43 +548,43 @@ const TimeAttendance = () => {
     <div className="space-y-6 animate-fade-in">
       <Tabs defaultValue="shifts">
         <TabsList>
-          <TabsTrigger value="shifts">Work Schedule</TabsTrigger>
-          {!isEmployeeOnly && <TabsTrigger value="attendance">Attendance Log</TabsTrigger>}
-          {canManageAdjustments && <TabsTrigger value="adjustments">Adjustment Requests</TabsTrigger>}
-          {canRequestOt && <TabsTrigger value="ot-request">OT Request</TabsTrigger>}
-          {canApproveOt && <TabsTrigger value="ot-approval">คำร้องของลูกทีม (OT)</TabsTrigger>}
+          <TabsTrigger value="shifts">{t("timeAttendance.tabs.workSchedule")}</TabsTrigger>
+          {!isEmployeeOnly && <TabsTrigger value="attendance">{t("timeAttendance.tabs.attendanceLog")}</TabsTrigger>}
+          {canManageAdjustments && <TabsTrigger value="adjustments">{t("timeAttendance.tabs.adjustmentRequests")}</TabsTrigger>}
+          {canRequestOt && <TabsTrigger value="ot-request">{t("timeAttendance.tabs.otRequest")}</TabsTrigger>}
+          {canApproveOt && <TabsTrigger value="ot-approval">{t("timeAttendance.tabs.teamOtRequests")}</TabsTrigger>}
         </TabsList>
 
       <TabsContent value="shifts" className="mt-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Shift Management</CardTitle>
-            <Badge variant="outline">Total Shifts: {visibleScheduleRows.length}</Badge>
+            <CardTitle className="text-base">{t("timeAttendance.shiftManagement.title")}</CardTitle>
+            <Badge variant="outline">{t("timeAttendance.shiftManagement.totalShifts").replace("{{count}}", String(visibleScheduleRows.length))}</Badge>
           </CardHeader>
           <CardContent className="space-y-4">
             {canCreateShift && (
               <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
-                <p className="text-sm font-medium">เพิ่มกะเวลาใหม่</p>
+                <p className="text-sm font-medium">{t("timeAttendance.shiftManagement.addNew")}</p>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">ชื่อกะ</p>
-                    <Input value={newShift.shiftName} onChange={(e) => setNewShift((p) => ({ ...p, shiftName: e.target.value }))} placeholder="เช่น กะเช้า" />
+                    <p className="text-xs text-muted-foreground mb-1">{t("timeAttendance.shiftManagement.fields.shiftName")}</p>
+                    <Input value={newShift.shiftName} onChange={(e) => setNewShift((p) => ({ ...p, shiftName: e.target.value }))} placeholder={t("timeAttendance.shiftManagement.fields.shiftPlaceholder")} />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">เวลาเข้า</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("timeAttendance.shiftManagement.fields.timeIn")}</p>
                     <Input type="time" value={newShift.timeIn} onChange={(e) => setNewShift((p) => ({ ...p, timeIn: e.target.value }))} />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">เวลาออก</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("timeAttendance.shiftManagement.fields.timeOut")}</p>
                     <Input type="time" value={newShift.timeOut} onChange={(e) => setNewShift((p) => ({ ...p, timeOut: e.target.value }))} />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Grace (นาที)</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("timeAttendance.shiftManagement.fields.graceMinutes")}</p>
                     <Input type="number" value={newShift.graceMinutes} onChange={(e) => setNewShift((p) => ({ ...p, graceMinutes: e.target.value }))} min={0} />
                   </div>
                 </div>
                 <Button onClick={handleCreateShift} disabled={isCreatingShift}>
-                  {isCreatingShift ? "กำลังบันทึก..." : "สร้างกะเวลา"}
+                  {isCreatingShift ? t("timeAttendance.actions.saving") : t("timeAttendance.shiftManagement.createShift")}
                 </Button>
               </div>
             )}
@@ -625,21 +593,21 @@ const TimeAttendance = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Shift</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Time</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Grace</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Employees In Shift</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.shiftManagement.table.shift")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.shiftManagement.table.time")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.shiftManagement.table.grace")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.shiftManagement.table.company")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.shiftManagement.table.employeesInShift")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {schedulesLoading ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Loading shifts...</td>
+                      <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{t("timeAttendance.shiftManagement.loading")}</td>
                     </tr>
                   ) : visibleScheduleRows.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">ไม่พบข้อมูลกะเวลา</td>
+                      <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{t("timeAttendance.shiftManagement.empty")}</td>
                     </tr>
                   ) : (
                     visibleScheduleRows.map((s) => (
@@ -681,20 +649,20 @@ const TimeAttendance = () => {
       <TabsContent value="attendance" className="mt-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Attendance Log</CardTitle>
+            <CardTitle className="text-base">{t("timeAttendance.attendanceLog.title")}</CardTitle>
             <div className="flex items-center gap-2">
               <select
                 className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                 value={selectedAttendanceShift}
                 onChange={(e) => setSelectedAttendanceShift(e.target.value)}
               >
-                <option value="all">ทุกกะเวลา</option>
+                <option value="all">{t("timeAttendance.attendanceLog.allShifts")}</option>
                 {scheduleRows.map((s) => (
                   <option key={s.id} value={String(s.id)}>{s.shiftName}</option>
                 ))}
               </select>
               <Button size="sm" variant="outline" className="gap-1.5">
-                <Upload className="h-4 w-4" /> Import File
+                <Upload className="h-4 w-4" /> {t("timeAttendance.attendanceLog.importFile")}
               </Button>
             </div>
           </CardHeader>
@@ -703,35 +671,35 @@ const TimeAttendance = () => {
               teamAttendanceRows
                 .filter((a) => selectedAttendanceShift === "all" || String(a.shiftId || "") === selectedAttendanceShift)
                 .reduce((acc: Record<string, any[]>, row: any) => {
-                  const key = row.shiftName || "Unassigned Shift";
+                  const key = row.shiftName || t("timeAttendance.common.unassignedShift");
                   if (!acc[key]) acc[key] = [];
                   acc[key].push(row);
                   return acc;
                 }, {})
             ).length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">ไม่พบข้อมูล Attendance ตามกะที่เลือก</div>
+              <div className="py-8 text-center text-muted-foreground">{t("timeAttendance.attendanceLog.emptyByShift")}</div>
             ) : (
               Object.entries(
                 teamAttendanceRows
                   .filter((a) => selectedAttendanceShift === "all" || String(a.shiftId || "") === selectedAttendanceShift)
                   .reduce((acc: Record<string, any[]>, row: any) => {
-                    const key = row.shiftName || "Unassigned Shift";
+                    const key = row.shiftName || t("timeAttendance.common.unassignedShift");
                     if (!acc[key]) acc[key] = [];
                     acc[key].push(row);
                     return acc;
                   }, {})
               ).map(([shiftName, rows]) => (
                 <div key={shiftName} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-muted/40 text-sm font-medium">{shiftName} ({rows.length} คน)</div>
+                  <div className="px-4 py-2 bg-muted/40 text-sm font-medium">{shiftName} ({rows.length} {t("timeAttendance.attendanceLog.person")})</div>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/20">
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">Date</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">Code</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">Name</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">Scan In</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">Scan Out</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
+                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.date")}</th>
+                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.code")}</th>
+                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.name")}</th>
+                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.scanIn")}</th>
+                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.scanOut")}</th>
+                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.status")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -743,7 +711,7 @@ const TimeAttendance = () => {
                           <td className="px-4 py-2">{a.timeIn}</td>
                           <td className="px-4 py-2">{a.timeOut}</td>
                           <td className="px-4 py-2">
-                            <Badge variant="outline" className={statusBadge[a.status]}>{a.status}</Badge>
+                            <Badge variant="outline" className={statusBadge[a.status]}>{t(`timeAttendance.attendanceStatus.${a.status}`, a.status)}</Badge>
                           </td>
                         </tr>
                       ))}
@@ -761,29 +729,29 @@ const TimeAttendance = () => {
       <TabsContent value="adjustments" className="mt-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Attendance Adjustment Requests</CardTitle>
-            <Button size="sm" variant="outline" onClick={fetchAdjustmentApprovals}>Refresh</Button>
+            <CardTitle className="text-base">{t("timeAttendance.adjustments.title")}</CardTitle>
+            <Button size="sm" variant="outline" onClick={fetchAdjustmentApprovals}>{t("timeAttendance.adjustments.refresh")}</Button>
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Requester</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Department</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Reason</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Requested At</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.adjustments.table.requester")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.adjustments.table.type")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.adjustments.table.department")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.adjustments.table.reason")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.adjustments.table.requestedAt")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.adjustments.table.action")}</th>
                 </tr>
               </thead>
               <tbody>
                 {adjustmentsLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading adjustment requests...</td>
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">{t("timeAttendance.adjustments.loading")}</td>
                   </tr>
                 ) : adjustmentRows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">ไม่มีคำขอปรับเวลาที่รออนุมัติ</td>
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">{t("timeAttendance.adjustments.empty")}</td>
                   </tr>
                 ) : (
                   adjustmentRows.map((row) => (
@@ -812,31 +780,31 @@ const TimeAttendance = () => {
       {canRequestOt && (
       <TabsContent value="ot-request" className="mt-4">
         <Card className="shadow-card">
-          <CardHeader><CardTitle className="text-base">Submit OT Request</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("timeAttendance.otRequest.title")}</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">วันที่ขอทำ OT</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("timeAttendance.fields.otDate")}</p>
                   <Input type="date" value={newOt.requestDate} onChange={(e) => setNewOt((p) => ({ ...p, requestDate: e.target.value }))} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">เวลาเริ่มต้น</p>
+                    <p className="text-sm text-muted-foreground mb-1">{t("timeAttendance.fields.startTime")}</p>
                     <Input type="time" value={newOt.startTime} onChange={(e) => setNewOt((p) => ({ ...p, startTime: e.target.value }))} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">เวลาสิ้นสุด</p>
+                    <p className="text-sm text-muted-foreground mb-1">{t("timeAttendance.fields.endTime")}</p>
                     <Input type="time" value={newOt.endTime} onChange={(e) => setNewOt((p) => ({ ...p, endTime: e.target.value }))} />
                   </div>
                 </div>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">เหตุผลที่ขอ OT</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("timeAttendance.fields.otReason")}</p>
                 <Textarea value={newOt.reason} onChange={(e) => setNewOt((p) => ({ ...p, reason: e.target.value }))} />
               </div>
-              <div className="text-sm text-muted-foreground">จำนวนชั่วโมงรวม: <span className="font-semibold text-foreground">{computedHours} ชั่วโมง</span></div>
-              <Button size="sm" onClick={handleSubmitOt} disabled={isSubmittingOt}>{isSubmittingOt ? "กำลังส่ง..." : "Create OT Request"}</Button>
+              <div className="text-sm text-muted-foreground">{t("timeAttendance.fields.totalHours")}: <span className="font-semibold text-foreground">{computedHours} {t("timeAttendance.common.hour")}</span></div>
+              <Button size="sm" onClick={handleSubmitOt} disabled={isSubmittingOt}>{isSubmittingOt ? t("timeAttendance.actions.submitting") : t("timeAttendance.otRequest.create")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -847,22 +815,22 @@ const TimeAttendance = () => {
         <TabsContent value="ot-approval" className="mt-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">คำร้องของลูกทีม (OT)</CardTitle>
+            <CardTitle className="text-base">{t("timeAttendance.otApproval.title")}</CardTitle>
             {canRunOtPayrollPrep && (
-              <Button size="sm" variant="outline">คำนวณสรุป OT เพื่อส่ง Payroll</Button>
+              <Button size="sm" variant="outline">{t("timeAttendance.otApproval.payrollPrep")}</Button>
             )}
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Employee</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Request Date</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Start-End</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Total Hours</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Reason</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Approver</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.otApproval.table.employee")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.otApproval.table.requestDate")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.otApproval.table.startEnd")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.otApproval.table.totalHours")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.otApproval.table.reason")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.otApproval.table.approver")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.otApproval.table.status")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("timeAttendance.otApproval.table.action")}</th>
               </tr></thead>
               <tbody>
                 {teamOtRows.map((o) => (
@@ -870,11 +838,11 @@ const TimeAttendance = () => {
                     <td className="px-4 py-3">{o.employeeName}</td>
                     <td className="px-4 py-3">{o.requestDate}</td>
                     <td className="px-4 py-3">{o.startTime} - {o.endTime}</td>
-                    <td className="px-4 py-3">{o.totalHours}h</td>
+                    <td className="px-4 py-3">{o.totalHours} {t("selfService.hourAbbr")}</td>
                     <td className="px-4 py-3 max-w-[240px] truncate" title={o.reason}>{o.reason}</td>
-                    <td className="px-4 py-3">{o.approverName}</td>
+                    <td className="px-4 py-3">{o.approverName || t("timeAttendance.common.waitingApprover")}</td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className={otStatusBadge[o.status] || ""}>{o.status}</Badge>
+                      <Badge variant="outline" className={otStatusBadge[o.status] || ""}>{t(`timeAttendance.otStatus.${o.status}`, o.status)}</Badge>
                     </td>
                     <td className="px-4 py-3">
                       {o.status === "pending" ? (
@@ -883,7 +851,7 @@ const TimeAttendance = () => {
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive bg-destructive/10 hover:bg-destructive/20" onClick={() => handleUpdateOtStatus(o.id, "rejected")}><X className="h-4 w-4" /></Button>
                         </div>
                       ) : (
-                        <Badge variant="secondary" className="text-xs capitalize">{o.status}</Badge>
+                        <Badge variant="secondary" className="text-xs capitalize">{t(`timeAttendance.otStatus.${o.status}`, o.status)}</Badge>
                       )}
                     </td>
                   </tr>

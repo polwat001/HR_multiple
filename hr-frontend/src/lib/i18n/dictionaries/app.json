@@ -1,0 +1,30 @@
+{
+  "th": {
+    "app": {
+      "title": "HR Core System",
+      "unknownUser": "ผู้ใช้งาน",
+      "fullAccess": "สิทธิ์เต็มระบบ",
+      "companyScopedAccess": "สิทธิ์ตามขอบเขตบริษัท",
+      "logout": "ออกจากระบบ",
+      "logoutConfirm": "ต้องการออกจากระบบหรือไม่?",
+      "dashboardFallback": "แดชบอร์ด",
+      "language": "ภาษา",
+      "thai": "ไทย",
+      "english": "อังกฤษ"
+    }
+  },
+  "en": {
+    "app": {
+      "title": "HR Core System",
+      "unknownUser": "User",
+      "fullAccess": "Full Access",
+      "companyScopedAccess": "Company Scoped Access",
+      "logout": "Logout",
+      "logoutConfirm": "Do you want to log out?",
+      "dashboardFallback": "Dashboard",
+      "language": "Language",
+      "thai": "Thai",
+      "english": "English"
+    }
+  }
+}

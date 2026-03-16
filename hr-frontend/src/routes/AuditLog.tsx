@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiGet } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const actionColor: Record<string, string> = {
   LOGIN: "default",
@@ -13,6 +14,7 @@ const actionColor: Record<string, string> = {
 };
 
 const AuditLog = () => {
+  const { t } = useLanguage();
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ const AuditLog = () => {
       setLogs(Array.isArray(res) ? res : res?.data || []);
     } catch (e: any) {
       console.error("Failed to fetch audit logs:", e);
-      setError(e instanceof Error ? e.message : "โหลด Audit Logs ไม่สำเร็จ");
+      setError(e instanceof Error ? e.message : t("auditLog.fallbackError"));
       setLogs([]);
     } finally {
       setLoading(false);
@@ -84,48 +86,48 @@ const AuditLog = () => {
     <div className="space-y-6 animate-fade-in">
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="text-base">Audit Log Filters</CardTitle>
+          <CardTitle className="text-base">{t("auditLog.filtersTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-          <Input placeholder="User" value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
+          <Input placeholder={t("auditLog.filter.user")} value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
           <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
-            <option value="">All Actions</option>
+            <option value="">{t("auditLog.filter.allActions")}</option>
             {actionOptions.map((a) => (
               <option key={a} value={a}>{a}</option>
             ))}
           </select>
-          <Input placeholder="IP Address" value={ipFilter} onChange={(e) => setIpFilter(e.target.value)} />
+          <Input placeholder={t("auditLog.filter.ipAddress")} value={ipFilter} onChange={(e) => setIpFilter(e.target.value)} />
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          <Button variant="outline" onClick={fetchLogs}>Apply Filter</Button>
+          <Button variant="outline" onClick={fetchLogs}>{t("auditLog.filter.apply")}</Button>
         </CardContent>
       </Card>
 
       <Card className="shadow-card overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Transaction Log (Audit Trail)</CardTitle>
-          <Button size="sm" variant="outline" onClick={handleExportCsv}>Export CSV</Button>
+          <CardTitle className="text-base">{t("auditLog.tableTitle")}</CardTitle>
+          <Button size="sm" variant="outline" onClick={handleExportCsv}>{t("auditLog.exportCsv")}</Button>
         </CardHeader>
         <CardContent className="p-0">
           {error ? <p className="px-4 py-3 text-sm text-destructive">{error}</p> : null}
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Time</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">User</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Target</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">IP</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("auditLog.headers.time")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("auditLog.headers.user")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("auditLog.headers.action")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("auditLog.headers.target")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("auditLog.headers.ip")}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Loading audit logs...</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{t("auditLog.loading")}</td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No audit logs found</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{t("auditLog.empty")}</td>
                 </tr>
               ) : logs.map((l) => (
                 <tr key={l.id} className="border-b last:border-b-0 hover:bg-muted/30">

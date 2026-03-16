@@ -1,0 +1,44 @@
+{
+  "th": {
+    "pages": {
+      "noAccess": {
+        "employees": "คุณไม่มีสิทธิ์เข้าถึงข้อมูลพนักงาน",
+        "attendance": "คุณไม่มีสิทธิ์เข้าถึงเมนูเวลาและ OT",
+        "approvalFlow": "คุณไม่มีสิทธิ์เข้าถึง Approval Flow Configuration",
+        "auditLog": "คุณไม่มีสิทธิ์เข้าถึง Transaction Log",
+        "contacts": "คุณไม่มีสิทธิ์เข้าถึง Contact Directory",
+        "contracts": "คุณไม่มีสิทธิ์เข้าถึงเมนูสัญญาจ้าง",
+        "holidays": "คุณไม่มีสิทธิ์เข้าถึงเมนูวันหยุดนักขัตฤกษ์",
+        "leave": "คุณไม่มีสิทธิ์เข้าถึงเมนูการลา",
+        "organization": "คุณไม่มีสิทธิ์เข้าถึงเมนูโครงสร้างองค์กร",
+        "payroll": "คุณไม่มีสิทธิ์เข้าถึง Payroll Management",
+        "permissions": "คุณไม่มีสิทธิ์เข้าถึงเมนูผู้ใช้และสิทธิ์",
+        "positions": "คุณไม่มีสิทธิ์เข้าถึงเมนูตำแหน่งงาน",
+        "reports": "คุณไม่มีสิทธิ์เข้าถึงเมนูรายงาน",
+        "selfService": "คุณไม่มีสิทธิ์เข้าถึงเมนู Self-Service",
+        "systemSettings": "คุณไม่มีสิทธิ์เข้าถึงการตั้งค่าระบบ"
+      }
+    }
+  },
+  "en": {
+    "pages": {
+      "noAccess": {
+        "employees": "You do not have permission to access employee data",
+        "attendance": "You do not have permission to access Time & OT",
+        "approvalFlow": "You do not have permission to access Approval Flow Configuration",
+        "auditLog": "You do not have permission to access Transaction Log",
+        "contacts": "You do not have permission to access Contact Directory",
+        "contracts": "You do not have permission to access Contract Management",
+        "holidays": "You do not have permission to access Holiday Management",
+        "leave": "You do not have permission to access Leave Management",
+        "organization": "You do not have permission to access Organization Structure",
+        "payroll": "You do not have permission to access Payroll Management",
+        "permissions": "You do not have permission to access User & Permissions",
+        "positions": "You do not have permission to access Position Management",
+        "reports": "You do not have permission to access Reports",
+        "selfService": "You do not have permission to access Self-Service",
+        "systemSettings": "You do not have permission to access System Settings"
+      }
+    }
+  }
+}

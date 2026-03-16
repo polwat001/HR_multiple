@@ -9,37 +9,39 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiGet } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const reports = [
-  { id: "employee-list", name: "Employee List (ทะเบียนประวัติพนักงาน)", icon: Users, description: "รายชื่อพนักงานพร้อมข้อมูลสำคัญ" },
-  { id: "attendance-summary", name: "Attendance Summary (สรุปขาดลามาสาย)", icon: Clock, description: "สรุปสถิติการเข้างานรายเดือน" },
-  { id: "ot-monthly", name: "OT Monthly Summary (สรุปชั่วโมง OT ประจำเดือน)", icon: TrendingUp, description: "รายงานชั่วโมง OT สำหรับส่งทำเงินเดือน" },
-  { id: "leave-usage", name: "Leave Usage (สรุปการใช้วันลา)", icon: CalendarCheck2, description: "สรุปการใช้สิทธิ์ลาตามช่วงวันที่" },
+  { id: "employee-list", icon: Users },
+  { id: "attendance-summary", icon: Clock },
+  { id: "ot-monthly", icon: TrendingUp },
+  { id: "leave-usage", icon: CalendarCheck2 },
 ];
 
 const mockCompanies = [
-  { value: "all", label: "All Companies" },
-  { value: "abc", label: "ABC" },
-  { value: "xyz", label: "XYZ" },
-  { value: "def", label: "DEF" },
+  { value: "all" },
+  { value: "abc" },
+  { value: "xyz" },
+  { value: "def" },
 ];
 
 const mockDepartments = [
-  { value: "all", label: "ทุกแผนก" },
-  { value: "hr", label: "HR" },
-  { value: "it", label: "IT" },
-  { value: "acc", label: "Accounting" },
-  { value: "ops", label: "Operations" },
+  { value: "all" },
+  { value: "hr" },
+  { value: "it" },
+  { value: "acc" },
+  { value: "ops" },
 ];
 
 const employeeStatuses = [
-  { value: "all", label: "ทุกสถานะ" },
-  { value: "active", label: "Active" },
-  { value: "resigned", label: "Resigned" },
+  { value: "all" },
+  { value: "active" },
+  { value: "resigned" },
 ];
 
 const Reports = () => {
   const { user: authUser } = useAuth();
+  const { t } = useLanguage();
   const roleViewKey = resolveRoleViewKey(authUser as any);
   const isEmployeeReports = roleViewKey === "employee";
   const isManagerReports = roleViewKey === "manager";
@@ -70,7 +72,7 @@ const Reports = () => {
       ? reports.filter((r) => r.id === "attendance-summary" || r.id === "ot-monthly" || r.id === "leave-usage")
       : reports;
 
-  const exportLabel = format === "pdf" ? "Export PDF" : "Export XLSX";
+  const exportLabel = format === "pdf" ? t("reports.exportPdf") : t("reports.exportXlsx");
 
   const filterManagerTeamRows = useCallback(
     <T extends Record<string, any>>(rows: T[]): T[] => {
@@ -136,20 +138,20 @@ const Reports = () => {
 
   const getSummaryBadge = (key: string, value: number) => {
     if (key === "late") {
-      if (value >= 4) return { label: "สูง", className: "bg-red-100 text-red-700 border-red-300" };
-      if (value >= 1) return { label: "เฝ้าระวัง", className: "bg-amber-100 text-amber-700 border-amber-300" };
-      return { label: "ปกติ", className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+      if (value >= 4) return { label: t("reports.badge.high"), className: "bg-red-100 text-red-700 border-red-300" };
+      if (value >= 1) return { label: t("reports.badge.watch"), className: "bg-amber-100 text-amber-700 border-amber-300" };
+      return { label: t("reports.badge.normal"), className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
     }
 
     if (key === "absent") {
-      if (value >= 2) return { label: "สูง", className: "bg-red-100 text-red-700 border-red-300" };
-      if (value === 1) return { label: "เฝ้าระวัง", className: "bg-amber-100 text-amber-700 border-amber-300" };
-      return { label: "ปกติ", className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+      if (value >= 2) return { label: t("reports.badge.high"), className: "bg-red-100 text-red-700 border-red-300" };
+      if (value === 1) return { label: t("reports.badge.watch"), className: "bg-amber-100 text-amber-700 border-amber-300" };
+      return { label: t("reports.badge.normal"), className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
     }
 
     if (key === "leavePending") {
-      if (value >= 3) return { label: "รอนาน", className: "bg-amber-100 text-amber-700 border-amber-300" };
-      return { label: "ปกติ", className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
+      if (value >= 3) return { label: t("reports.badge.longPending"), className: "bg-amber-100 text-amber-700 border-amber-300" };
+      return { label: t("reports.badge.normal"), className: "bg-emerald-100 text-emerald-700 border-emerald-300" };
     }
 
     return null;
@@ -157,14 +159,14 @@ const Reports = () => {
 
   const employeeSummaryCards = useMemo(
     () => [
-      { key: "attendance", label: "บันทึกการเข้างาน", value: employeeSummary.attendanceRecords },
-      { key: "late", label: "มาสาย", value: employeeSummary.lateCount },
-      { key: "absent", label: "ขาดงาน", value: employeeSummary.absentCount },
-      { key: "ot", label: "OT ชั่วโมงรวม", value: employeeSummary.otHours },
-      { key: "leavePending", label: "ใบลารออนุมัติ", value: employeeSummary.pendingLeave },
-      { key: "leaveRemain", label: "วันลาคงเหลือ", value: employeeSummary.remainingLeave },
+      { key: "attendance", label: t("reports.summary.attendanceRecords"), value: employeeSummary.attendanceRecords },
+      { key: "late", label: t("reports.summary.late"), value: employeeSummary.lateCount },
+      { key: "absent", label: t("reports.summary.absent"), value: employeeSummary.absentCount },
+      { key: "ot", label: t("reports.summary.otHours"), value: employeeSummary.otHours },
+      { key: "leavePending", label: t("reports.summary.pendingLeave"), value: employeeSummary.pendingLeave },
+      { key: "leaveRemain", label: t("reports.summary.remainingLeave"), value: employeeSummary.remainingLeave },
     ],
-    [employeeSummary]
+    [employeeSummary, t]
   );
 
   const handleExport = async (reportId: string, reportName: string, forcedFormat?: "excel" | "pdf") => {
@@ -245,7 +247,7 @@ const Reports = () => {
       }
     } catch (error) {
       console.error("Report API export failed:", error);
-      alert("ไม่สามารถดึงรายงานจากระบบได้");
+      alert(t("reports.fetchFailed"));
       return;
     }
 
@@ -296,40 +298,40 @@ const Reports = () => {
         <Card className="shadow-card border-primary/20">
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base">My Reports Dashboard</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">สรุปรายงานเฉพาะข้อมูลส่วนตัวของคุณ</p>
+              <CardTitle className="text-base">{t("reports.myDashboardTitle")}</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">{t("reports.myDashboardSubtitle")}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline">Employee Scope</Badge>
+              <Badge variant="outline">{t("reports.employeeScope")}</Badge>
               <Button variant="outline" size="sm" onClick={fetchEmployeeSummary} disabled={employeeSummaryLoading}>
-                {employeeSummaryLoading ? "Refreshing..." : "Refresh Summary"}
+                {employeeSummaryLoading ? t("reports.refreshing") : t("reports.refreshSummary")}
               </Button>
             </div>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">วันที่เริ่มต้น</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("reports.dateFrom")}</p>
               <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">วันที่สิ้นสุด</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("reports.dateTo")}</p>
               <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             </div>
             <div className="md:col-span-2 flex items-end gap-2">
-              <Button variant="outline" className="gap-1.5" onClick={() => handleExport("attendance-summary", "Attendance Summary", "excel")}>
-                <Download className="h-4 w-4" /> Export Attendance
+              <Button variant="outline" className="gap-1.5" onClick={() => handleExport("attendance-summary", t("reports.catalog.attendance-summary.name"), "excel")}>
+                <Download className="h-4 w-4" /> {t("reports.exportAttendance")}
               </Button>
-              <Button variant="outline" className="gap-1.5" onClick={() => handleExport("ot-monthly", "OT Monthly Summary", "excel")}>
-                <Download className="h-4 w-4" /> Export OT
+              <Button variant="outline" className="gap-1.5" onClick={() => handleExport("ot-monthly", t("reports.catalog.ot-monthly.name"), "excel")}>
+                <Download className="h-4 w-4" /> {t("reports.exportOt")}
               </Button>
-              <Button variant="outline" className="gap-1.5" onClick={() => handleExport("leave-usage", "Leave Usage", "excel")}>
-                <Download className="h-4 w-4" /> Export Leave
+              <Button variant="outline" className="gap-1.5" onClick={() => handleExport("leave-usage", t("reports.catalog.leave-usage.name"), "excel")}>
+                <Download className="h-4 w-4" /> {t("reports.exportLeave")}
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-0 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {employeeSummaryCards.map((card) => (
             <Card key={card.key} className="shadow-card">
               <CardContent className="p-5">
@@ -354,7 +356,7 @@ const Reports = () => {
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">Available Personal Reports</CardTitle>
+            <CardTitle className="text-base">{t("reports.availablePersonal")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {visibleReports.map((r) => (
@@ -364,13 +366,13 @@ const Reports = () => {
                     <r.icon className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{r.name}</p>
-                    <p className="text-xs text-muted-foreground">{r.description}</p>
+                    <p className="text-sm font-medium">{t(`reports.catalog.${r.id}.name`)}</p>
+                    <p className="text-xs text-muted-foreground">{t(`reports.catalog.${r.id}.description`)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => handleExport(r.id, r.name, "excel")}>Export XLSX</Button>
-                  <Button size="sm" variant="outline" onClick={() => handleExport(r.id, r.name, "pdf")}>Export PDF</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleExport(r.id, t(`reports.catalog.${r.id}.name`), "excel")}>{t("reports.exportXlsx")}</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleExport(r.id, t(`reports.catalog.${r.id}.name`), "pdf")}>{t("reports.exportPdf")}</Button>
                 </div>
               </div>
             ))}
@@ -384,13 +386,13 @@ const Reports = () => {
     <div className="space-y-6 animate-fade-in">
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="text-base">Report Filters</CardTitle>
+          <CardTitle className="text-base">{t("reports.filters.title")}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           <div>
-            <p className="text-xs text-muted-foreground mb-1">บริษัท</p>
+            <p className="text-xs text-muted-foreground mb-1">{t("reports.filters.company")}</p>
             {isEmployeeReports || isManagerReports || isCompanyReports ? (
-              <div className="h-10 rounded-md border border-input px-3 flex items-center text-sm bg-muted/30">Current Company</div>
+              <div className="h-10 rounded-md border border-input px-3 flex items-center text-sm bg-muted/30">{t("reports.currentCompany")}</div>
             ) : (
               <select
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
@@ -398,16 +400,16 @@ const Reports = () => {
                 onChange={(e) => setCompanyFilter(e.target.value)}
               >
                 {mockCompanies.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
+                  <option key={item.value} value={item.value}>{t(`reports.filters.companies.${item.value}`)}</option>
                 ))}
               </select>
             )}
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground mb-1">แผนก</p>
+            <p className="text-xs text-muted-foreground mb-1">{t("reports.filters.department")}</p>
             {isEmployeeReports ? (
-              <div className="h-10 rounded-md border border-input px-3 flex items-center text-sm bg-muted/30">My Department</div>
+              <div className="h-10 rounded-md border border-input px-3 flex items-center text-sm bg-muted/30">{t("reports.myDepartment")}</div>
             ) : (
               <select
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
@@ -415,31 +417,31 @@ const Reports = () => {
                 onChange={(e) => setDepartmentFilter(e.target.value)}
               >
                 {mockDepartments.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
+                  <option key={item.value} value={item.value}>{t(`reports.filters.departments.${item.value}`)}</option>
                 ))}
               </select>
             )}
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground mb-1">วันที่เริ่มต้น</p>
+            <p className="text-xs text-muted-foreground mb-1">{t("reports.dateFrom")}</p>
             <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground mb-1">วันที่สิ้นสุด</p>
+            <p className="text-xs text-muted-foreground mb-1">{t("reports.dateTo")}</p>
             <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground mb-1">สถานะพนักงาน</p>
+            <p className="text-xs text-muted-foreground mb-1">{t("reports.filters.employeeStatus")}</p>
             <select
               className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
               value={employeeStatus}
               onChange={(e) => setEmployeeStatus(e.target.value)}
             >
               {employeeStatuses.map((item) => (
-                <option key={item.value} value={item.value}>{item.label}</option>
+                <option key={item.value} value={item.value}>{t(`reports.filters.statuses.${item.value}`)}</option>
               ))}
             </select>
           </div>
@@ -456,15 +458,15 @@ const Reports = () => {
                   <r.icon className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-sm">{r.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{r.description}</p>
+                  <p className="font-medium text-sm">{t(`reports.catalog.${r.id}.name`)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t(`reports.catalog.${r.id}.description`)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleExport(r.id, r.name, "excel")}>
-                    <Download className="h-4 w-4" /> Export XLSX
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleExport(r.id, t(`reports.catalog.${r.id}.name`), "excel")}>
+                    <Download className="h-4 w-4" /> {t("reports.exportXlsx")}
                   </Button>
-                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleExport(r.id, r.name, "pdf")}>
-                    <Download className="h-4 w-4" /> Export PDF
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleExport(r.id, t(`reports.catalog.${r.id}.name`), "pdf")}>
+                    <Download className="h-4 w-4" /> {t("reports.exportPdf")}
                   </Button>
                 </div>
               </CardContent>
@@ -475,61 +477,61 @@ const Reports = () => {
         {/* Generate Options */}
         <Card className="shadow-card h-fit">
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Generate Options</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> {t("reports.generateOptions.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <div>
-              <p className="text-sm font-medium mb-3">Scope</p>
+              <p className="text-sm font-medium mb-3">{t("reports.generateOptions.scope")}</p>
               {isEmployeeReports ? (
                 <div className="text-sm rounded-md border border-border p-3 bg-muted/30">
-                  My Data Only
+                  {t("reports.scope.myDataOnly")}
                 </div>
               ) : isManagerReports ? (
                 <div className="text-sm rounded-md border border-border p-3 bg-muted/30">
-                  Team Only (Department Scope)
+                  {t("reports.scope.teamOnly")}
                 </div>
               ) : isCompanyReports ? (
                 <div className="text-sm rounded-md border border-border p-3 bg-muted/30">
-                  Current Company Only
+                  {t("reports.scope.currentCompanyOnly")}
                 </div>
               ) : (
                 <RadioGroup value={scope} onValueChange={setScope} className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="current" id="scope-current" />
-                    <Label htmlFor="scope-current" className="text-sm">Current Company Only</Label>
+                    <Label htmlFor="scope-current" className="text-sm">{t("reports.scope.currentCompanyOnly")}</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="all" id="scope-all" />
-                    <Label htmlFor="scope-all" className="text-sm">All Companies (Consolidated)</Label>
+                    <Label htmlFor="scope-all" className="text-sm">{t("reports.scope.allCompanies")}</Label>
                   </div>
                 </RadioGroup>
               )}
             </div>
             <div>
-              <p className="text-sm font-medium mb-3">Format</p>
+              <p className="text-sm font-medium mb-3">{t("reports.generateOptions.format")}</p>
               <RadioGroup value={format} onValueChange={setFormat} className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="excel" id="fmt-excel" />
-                  <Label htmlFor="fmt-excel" className="text-sm">Excel (.xlsx)</Label>
+                  <Label htmlFor="fmt-excel" className="text-sm">{t("reports.generateOptions.excel")}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="pdf" id="fmt-pdf" />
-                  <Label htmlFor="fmt-pdf" className="text-sm">PDF</Label>
+                  <Label htmlFor="fmt-pdf" className="text-sm">{t("reports.generateOptions.pdf")}</Label>
                 </div>
               </RadioGroup>
             </div>
             <div className="p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
               {isHoldingReports
-                ? "Consolidated export mode: รวมข้อมูลทุกบริษัทในไฟล์เดียวสำหรับผู้บริหาร"
+                ? t("reports.generateOptions.holdingHint")
                 : format === "pdf" && scope === "current"
-                ? "PDF will use the selected company's header & logo"
+                ? t("reports.generateOptions.pdfCompanyHint")
                 : format === "pdf" && scope === "all"
-                ? "PDF will use Group (Holding) header"
-                : "Excel file will include all selected data"}
+                ? t("reports.generateOptions.pdfGroupHint")
+                : t("reports.generateOptions.excelHint")}
             </div>
             <Button
               className="w-full gap-1.5"
-              onClick={() => handleExport("bulk-export", "Bulk Export")}
+              onClick={() => handleExport("bulk-export", t("reports.bulkExportName"))}
             >
               <Download className="h-4 w-4" /> {exportLabel}
             </Button>

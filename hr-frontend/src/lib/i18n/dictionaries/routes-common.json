@@ -1,0 +1,2064 @@
+{
+  "th": {
+    "notFound": {
+      "message": "ไม่พบหน้าที่ต้องการ",
+      "backHome": "กลับหน้าหลัก"
+    },
+    "approvalFlow": {
+      "title": "ตั้งค่าสายการอนุมัติ",
+      "subtitle": "ตั้งค่าเส้นทางอนุมัติของเอกสาร Leave, OT และ Payroll",
+      "badgeSystemAdmin": "ผู้ดูแลระบบ",
+      "badgeCentralHr": "HR ส่วนกลาง",
+      "table": {
+        "module": "โมดูล",
+        "level1": "ระดับ 1",
+        "level2": "ระดับ 2",
+        "level3": "ระดับ 3"
+      },
+      "save": "บันทึกสายการอนุมัติ",
+      "module": {
+        "leave": "การลา",
+        "ot": "OT",
+        "payroll": "เงินเดือน"
+      }
+    },
+    "positionMaster": {
+      "title": "ข้อมูลตำแหน่ง",
+      "add": "เพิ่มตำแหน่งใหม่",
+      "table": {
+        "index": "#",
+        "position": "ตำแหน่ง",
+        "level": "ระดับ",
+        "companies": "บริษัทที่ใช้งาน",
+        "status": "สถานะ"
+      },
+      "status": {
+        "active": "ใช้งาน",
+        "inactive": "ไม่ใช้งาน"
+      }
+    },
+    "payroll": {
+      "title": "จัดการเงินเดือน",
+      "descriptionManage": "จัดการรอบเงินเดือนของบริษัท และส่งออกไฟล์ธนาคาร",
+      "descriptionReadOnly": "โหมดอ่านอย่างเดียวสำหรับตรวจสอบและ support payroll",
+      "badge": {
+        "hrCompany": "HR Company (จัดการ)",
+        "centralHr": "Central HR (อ่านอย่างเดียว)",
+        "systemAdmin": "System Admin (อ่านอย่างเดียว)"
+      },
+      "fields": {
+        "month": "รอบเดือนเงินเดือน",
+        "employees": "จำนวนพนักงาน",
+        "otAmount": "ยอด OT",
+        "netAmount": "ยอดสุทธิ"
+      },
+      "actions": {
+        "runCycle": "รันรอบเงินเดือน",
+        "recalculate": "คำนวณ OT/ลาซ้ำ",
+        "exportReport": "ส่งออกรายงานเงินเดือน",
+        "exportBank": "ส่งออกไฟล์ธนาคาร",
+        "generatePayslip": "สร้างสลิปเงินเดือน"
+      },
+      "readOnlyNotice": "โหมดอ่านอย่างเดียว: บทบาทนี้ใช้สำหรับตรวจสอบและ support ไม่สามารถรัน Payroll หรือสร้างไฟล์จ่ายเงินได้",
+      "table": {
+        "month": "เดือน",
+        "company": "บริษัท",
+        "ot": "OT",
+        "leaveDeduction": "หักลา",
+        "net": "สุทธิ",
+        "status": "สถานะ"
+      },
+      "status": {
+        "closed": "ปิดรอบ",
+        "processing": "กำลังประมวลผล",
+        "draft": "ฉบับร่าง",
+        "waiting_approval": "รออนุมัติ",
+        "completed": "เสร็จสมบูรณ์"
+      }
+    },
+    "systemSettings": {
+      "tabs": {
+        "general": "ทั่วไป",
+        "dataFix": "แก้ข้อมูล",
+        "security": "ความปลอดภัย"
+      },
+      "title": "ตั้งค่าระบบ",
+      "groupName": "ชื่อกลุ่มบริษัท",
+      "defaultTimezone": "เขตเวลาตั้งต้น",
+      "saveSettings": "บันทึกการตั้งค่า",
+      "dataCorrectionTitle": "เครื่องมือแก้ไขข้อมูล",
+      "dataCorrectionDesc": "สำหรับทีม IT/Implementation: ใช้แก้ข้อมูลผิดพลาดในระบบส่วนกลาง",
+      "recalculateLeave": "คำนวณสิทธิ์ลาซ้ำ",
+      "reindexAttendance": "ทำดัชนีเวลาเข้างานใหม่",
+      "deleteInvalid": "ลบรายการที่ไม่ถูกต้อง",
+      "securityTitle": "การควบคุมความปลอดภัย",
+      "securityDesc": "กำหนดนโยบายความปลอดภัยระดับระบบ",
+      "forceLogout": "บังคับออกจากระบบทุกบัญชี",
+      "rotateApiKeys": "หมุนเวียน API Keys",
+      "applyPolicy": "ใช้นโยบาย"
+    },
+    "auditLog": {
+      "filtersTitle": "ตัวกรองบันทึกการใช้งาน",
+      "filter": {
+        "user": "ผู้ใช้",
+        "allActions": "ทุกการกระทำ",
+        "ipAddress": "IP Address",
+        "apply": "ใช้ตัวกรอง"
+      },
+      "tableTitle": "บันทึกธุรกรรม (Audit Trail)",
+      "exportCsv": "ส่งออก CSV",
+      "headers": {
+        "time": "เวลา",
+        "user": "ผู้ใช้",
+        "action": "การกระทำ",
+        "target": "เป้าหมาย",
+        "ip": "IP"
+      },
+      "loading": "กำลังโหลดบันทึกการใช้งาน...",
+      "empty": "ไม่พบบันทึกการใช้งาน",
+      "fallbackError": "โหลด Audit Logs ไม่สำเร็จ"
+    },
+    "contacts": {
+      "title": "สมุดรายชื่อ",
+      "searchPlaceholder": "ค้นหาชื่อ, รหัสพนักงาน, แผนก, ตำแหน่ง",
+      "exportCsv": "ส่งออก CSV",
+      "selectColumns": "เลือกคอลัมน์สำหรับ Export CSV",
+      "loading": "กำลังโหลดรายชื่อผู้ติดต่อ...",
+      "empty": "ไม่พบรายชื่อที่ค้นหา",
+      "needAtLeastOneColumn": "กรุณาเลือกอย่างน้อย 1 คอลัมน์ก่อน Export",
+      "table": {
+        "employee": "พนักงาน",
+        "positionDepartment": "ตำแหน่ง/แผนก",
+        "company": "บริษัท",
+        "contact": "ติดต่อ"
+      },
+      "columns": {
+        "employee_code": "รหัสพนักงาน",
+        "firstname_th": "ชื่อ",
+        "lastname_th": "นามสกุล",
+        "position_name": "ตำแหน่ง",
+        "department_name": "แผนก",
+        "company_name": "บริษัท",
+        "email": "อีเมล",
+        "phone": "โทรศัพท์"
+      }
+    },
+    "employeeList": {
+      "loading": "กำลังโหลดข้อมูลพนักงาน...",
+      "searchPlaceholder": "ค้นหารหัส หรือชื่อพนักงาน...",
+      "allDepartments": "แผนกทั้งหมด",
+      "foundCount": "พบ {{count}} รายชื่อ",
+      "addEmployee": "เพิ่มพนักงานใหม่",
+      "title": "รายชื่อพนักงาน",
+      "table": {
+        "employeeCode": "รหัสพนักงาน",
+        "fullName": "ชื่อ-นามสกุล",
+        "company": "บริษัท",
+        "department": "แผนก",
+        "position": "ตำแหน่ง",
+        "status": "สถานะ",
+        "manage": "จัดการ"
+      },
+      "actions": {
+        "edit": "แก้ไข",
+        "delete": "ลบ",
+        "transferCompany": "ย้ายบริษัท"
+      },
+      "deleteConfirm": "ต้องการลบข้อมูลพนักงานนี้หรือไม่?",
+      "deleteFailed": "ยังไม่สามารถลบพนักงานได้ในระบบปัจจุบัน",
+      "empty": "ไม่พบข้อมูลพนักงาน",
+      "na": "N/A"
+    },
+    "holidayManagement": {
+      "fetchFailed": "ไม่สามารถโหลดข้อมูลวันหยุดได้",
+      "noManagePermission": "คุณไม่มีสิทธิ์จัดการวันหยุด",
+      "saveFailed": "บันทึกวันหยุดไม่สำเร็จ",
+      "noDeletePermission": "คุณไม่มีสิทธิ์ลบวันหยุด",
+      "deleteConfirm": "ยืนยันการลบวันหยุดรายการนี้?",
+      "deleteFailed": "ลบวันหยุดไม่สำเร็จ",
+      "title": "ข้อมูลวันหยุด",
+      "readOnlyNotice": "สิทธิ์ของคุณเป็นแบบดูข้อมูลเท่านั้น",
+      "fields": {
+        "date": "วัน/เดือน/ปี",
+        "nameTh": "ชื่อวันหยุด (TH)",
+        "nameEn": "ชื่อวันหยุด (EN)",
+        "payType": "ประเภทการจ่าย",
+        "description": "รายละเอียด"
+      },
+      "payType": {
+        "paidHoliday": "Paid Holiday",
+        "unpaidHoliday": "Unpaid Holiday",
+        "paid": "Paid",
+        "unpaid": "Unpaid"
+      },
+      "actions": {
+        "saveChanges": "บันทึกการเปลี่ยนแปลง",
+        "addHoliday": "เพิ่มวันหยุด",
+        "cancelEdit": "ยกเลิกการแก้ไข",
+        "edit": "แก้ไข",
+        "delete": "ลบ"
+      },
+      "calendarTitle": "ปฏิทินวันหยุด",
+      "table": {
+        "date": "วันที่",
+        "nameTh": "ชื่อวันหยุด (TH)",
+        "nameEn": "ชื่อวันหยุด (EN)",
+        "type": "ประเภท",
+        "actions": "การจัดการ"
+      },
+      "loading": "กำลังโหลดวันหยุด...",
+      "empty": "ไม่มีข้อมูลวันหยุด"
+    },
+    "selfService": {
+      "title": "Self-Service",
+      "loading": "กำลังโหลด Self-Service...",
+      "monthData": "เดือนข้อมูล:",
+      "thisMonth": "เดือนนี้",
+      "jobInfo": {
+        "tenure": "อายุงาน"
+      },
+      "leaveQuota": "โควต้าวันลา",
+      "used": "ใช้แล้ว",
+      "remaining": "คงเหลือ",
+      "noLeaveQuota": "ไม่พบข้อมูลโควต้าวันลา",
+      "attendance": {
+        "title": "ปฏิทินเข้างาน",
+        "present": "มาทำงาน",
+        "late": "สาย",
+        "absent": "ขาด",
+        "leave": "ลา"
+      },
+      "otSummary": "สรุป OT เดือนนี้",
+      "otHours": "ชั่วโมง",
+      "otValue": "ค่า OT",
+      "otTable": {
+        "date": "วันที่",
+        "hours": "ชั่วโมง",
+        "amount": "จำนวนเงิน",
+        "status": "สถานะ"
+      },
+      "otStatus": {
+        "approved": "อนุมัติ",
+        "pending": "รออนุมัติ",
+        "rejected": "ปฏิเสธ"
+      },
+      "noOtData": "ยังไม่มีข้อมูล OT",
+      "dayUnit": "วัน",
+      "yearUnit": "ปี",
+      "monthUnit": "เดือน",
+      "hourAbbr": "ชม."
+    },
+    "employeeProfile": {
+      "loading": "กำลังโหลดข้อมูลพนักงาน...",
+      "backToList": "กลับไปรายการพนักงาน",
+      "saving": "กำลังบันทึก...",
+      "save": "บันทึกข้อมูลพนักงาน",
+      "saveSuccess": "บันทึกข้อมูลพนักงานเรียบร้อย",
+      "savePartialWarning": "ระบบยังไม่รองรับการบันทึกบางฟิลด์บนฐานข้อมูล แต่ข้อมูลในหน้าจอได้รับการอัปเดตแล้ว",
+      "historyRequired": "กรุณากรอกข้อมูล History Log ให้ครบ",
+      "avatar": "Avatar",
+      "uploadProfile": "อัปโหลดรูปโปรไฟล์",
+      "uploadFile": "อัปโหลดไฟล์",
+      "firstName": "ชื่อ",
+      "lastName": "นามสกุล",
+      "nickname": "ชื่อเล่น",
+      "nationalId": "รหัสบัตรประชาชน",
+      "birthDate": "วันเกิด",
+      "gender": "เพศ",
+      "genderOption": {
+        "unspecified": "ไม่ระบุ",
+        "male": "ชาย",
+        "female": "หญิง",
+        "other": "อื่นๆ"
+      },
+      "phone": "เบอร์โทร",
+      "email": "อีเมล",
+      "emergencyName": "ชื่อผู้ติดต่อฉุกเฉิน",
+      "emergencyPhone": "เบอร์ผู้ติดต่อฉุกเฉิน",
+      "emergencyRelation": "ความสัมพันธ์ผู้ติดต่อฉุกเฉิน",
+      "position": "ตำแหน่ง",
+      "department": "แผนก",
+      "employeeCode": "รหัสพนักงาน (Employee Code)",
+      "company": "สังกัดบริษัท",
+      "reportTo": "หัวหน้างาน (Report to)",
+      "employeeType": "ประเภทพนักงาน",
+      "employeeTypeOption": {
+        "monthly": "รายเดือน",
+        "daily": "รายวัน"
+      },
+      "status": "สถานะ",
+      "statusOption": {
+        "active": "Active",
+        "resigned": "Resigned"
+      },
+      "unspecified": "ไม่ระบุ",
+      "tabs": {
+        "personal": "Personal Info",
+        "work": "Work Info",
+        "attachments": "Attachments",
+        "history": "History Log"
+      },
+      "personalTitle": "ข้อมูลส่วนตัว (Personal Info)",
+      "workTitle": "ข้อมูลการทำงาน (Work Info)",
+      "attachmentsTitle": "เอกสารแนบ (Attachments)",
+      "noAttachments": "ยังไม่มีไฟล์แนบ",
+      "historyTitle": "ประวัติการทำงาน (History Log)",
+      "type": "ประเภท",
+      "historyEvent": {
+        "promote": "เลื่อนตำแหน่ง",
+        "salaryAdjust": "ปรับเงินเดือน",
+        "transferDepartment": "ย้ายแผนก"
+      },
+      "oldValue": "ตำแหน่ง/ค่าเดิม",
+      "newValue": "ตำแหน่ง/ค่าใหม่",
+      "note": "หมายเหตุเพิ่มเติม",
+      "addItem": "เพิ่มรายการ",
+      "noHistory": "ยังไม่มีประวัติการเปลี่ยนแปลง"
+    },
+    "userPermission": {
+      "tabs": {
+        "accounts": "บัญชีผู้ใช้",
+        "assignments": "กำหนดบทบาท",
+        "roles": "สิทธิ์การใช้งาน",
+        "logs": "บันทึกธุรกรรม"
+      },
+      "messages": {
+        "loadFailedUsingDefault": "โหลด Permission Matrix ไม่สำเร็จ กำลังใช้ค่าเริ่มต้น",
+        "saveSuccessPrefix": "บันทึก Permission Matrix สำเร็จสำหรับ role",
+        "saveFailed": "บันทึก Permission Matrix ไม่สำเร็จ"
+      },
+      "status": {
+        "active": "ใช้งาน",
+        "locked": "ล็อก"
+      },
+      "accounts": {
+        "title": "บัญชีผู้ใช้",
+        "addUser": "เพิ่มผู้ใช้",
+        "table": {
+          "emailUsername": "อีเมล / ชื่อผู้ใช้",
+          "displayName": "ชื่อผู้ใช้งาน",
+          "lastLogin": "เข้าสู่ระบบล่าสุด",
+          "status": "สถานะ",
+          "action": "การจัดการ"
+        },
+        "actions": {
+          "lock": "ล็อก",
+          "unlock": "ปลดล็อก"
+        }
+      },
+      "roles": {
+        "newRole": "เพิ่มบทบาทใหม่",
+        "permissionMatrix": "ตารางสิทธิ์",
+        "loading": "กำลังโหลด...",
+        "saving": "กำลังบันทึก...",
+        "save": "บันทึก Permission Matrix",
+        "table": {
+          "module": "โมดูล",
+          "view": "ดู",
+          "create": "สร้าง",
+          "edit": "แก้ไข",
+          "delete": "ลบ"
+        }
+      },
+      "modules": {
+        "dashboard": "แดชบอร์ด",
+        "organization": "โครงสร้างองค์กร",
+        "employee": "พนักงาน",
+        "attendance": "เวลาเข้าออกงาน",
+        "leave": "การลา",
+        "contract": "สัญญา",
+        "reports": "รายงาน",
+        "permissions": "สิทธิ์การใช้งาน",
+        "holidays": "วันหยุด",
+        "audit_log": "บันทึกตรวจสอบ"
+      },
+      "assignments": {
+        "assignRole": "กำหนดบทบาท",
+        "addAssignment": "เพิ่มการกำหนด",
+        "fields": {
+          "user": "ผู้ใช้",
+          "role": "บทบาท",
+          "companyScope": "ขอบเขตบริษัท",
+          "departmentScope": "ขอบเขตแผนก"
+        },
+        "table": {
+          "title": "ตารางกำหนดบทบาท",
+          "user": "ผู้ใช้",
+          "role": "บทบาท",
+          "companyScope": "ขอบเขตบริษัท",
+          "departmentScope": "ขอบเขตแผนก",
+          "unknown": "ไม่ทราบชื่อ"
+        }
+      },
+      "logs": {
+        "title": "บันทึกธุรกรรม",
+        "table": {
+          "user": "ผู้ใช้",
+          "action": "การกระทำ",
+          "target": "เป้าหมาย",
+          "datetime": "วันเวลา"
+        }
+      }
+    },
+    "contractManagement": {
+      "tabs": {
+        "list": "รายการสัญญา",
+        "templates": "เทมเพลต"
+      },
+      "title": "จัดการสัญญา (ตามขอบเขตบริษัท)",
+      "createContract": "สร้างสัญญา",
+      "createContractHint": "สร้างสัญญาใหม่ (ระบบจะเติมข้อมูลพนักงานลงฟอร์ม PDF ให้พิมพ์/บันทึก)",
+      "selectEmployee": "เลือกพนักงาน",
+      "salaryPlaceholder": "เงินเดือน",
+      "createPdf": "สร้างเอกสาร PDF (พิมพ์/บันทึก)",
+      "close": "ปิด",
+      "loading": "กำลังโหลดสัญญา...",
+      "empty": "ไม่พบข้อมูลสัญญาในขอบเขตบริษัทของคุณ",
+      "contractType": {
+        "probation": "ทดลองงาน",
+        "yearly": "รายปี",
+        "permanent": "ประจำ"
+      },
+      "status": {
+        "active": "ใช้งาน",
+        "expired": "หมดอายุ",
+        "expiring": "ใกล้หมดอายุ"
+      },
+      "table": {
+        "employee": "พนักงาน",
+        "contractType": "ประเภทสัญญา",
+        "company": "บริษัท",
+        "start": "เริ่ม",
+        "end": "สิ้นสุด",
+        "status": "สถานะ",
+        "action": "การจัดการ"
+      },
+      "actions": {
+        "renew": "ต่ออายุ",
+        "generatePdf": "สร้าง PDF"
+      },
+      "templates": {
+        "title": "เทมเพลตสัญญา (บริษัท)",
+        "newTemplate": "เพิ่มเทมเพลต",
+        "builder": "ตัวสร้างเทมเพลต",
+        "save": "บันทึกเทมเพลต",
+        "previewVariables": "ตัวแปรตัวอย่างในเทมเพลต",
+        "selectTemplateForPdf": "เลือกเทมเพลตเพื่อใช้งานตอน Generate PDF",
+        "fields": {
+          "templateName": "ชื่อเทมเพลต",
+          "companyScope": "บริษัท (ขอบเขตโลโก้)",
+          "logoUrl": "ลิงก์โลโก้",
+          "templateContent": "เนื้อหาเทมเพลต",
+          "contentPlaceholder": "ใช้ตัวแปรเช่น {{employee_name}}, {{position}}, {{salary}}"
+        }
+      },
+      "alerts": {
+        "fillTemplateNameAndContent": "กรุณากรอกชื่อเทมเพลตและเนื้อหา",
+        "templateCreatedDemo": "สร้างเทมเพลตสำเร็จ (เดโมหน้า UI)",
+        "selectEmployeeAndDates": "กรุณาเลือกพนักงานและช่วงวันที่สัญญา"
+      },
+      "pdf": {
+        "title": "สัญญาจ้างงาน",
+        "employeeSignature": "ลายเซ็นพนักงาน",
+        "companySignature": "ลายเซ็นบริษัท"
+      }
+    },
+    "reports": {
+      "exportPdf": "Export PDF",
+      "exportXlsx": "Export XLSX",
+      "myDashboardTitle": "แดชบอร์ดรายงานของฉัน",
+      "fetchFailed": "ไม่สามารถดึงรายงานจากระบบได้",
+      "myDashboardSubtitle": "สรุปรายงานเฉพาะข้อมูลส่วนตัวของคุณ",
+      "employeeScope": "ขอบเขตพนักงาน",
+      "refreshing": "กำลังรีเฟรช...",
+      "refreshSummary": "รีเฟรชสรุป",
+      "dateFrom": "วันที่เริ่มต้น",
+      "dateTo": "วันที่สิ้นสุด",
+      "exportAttendance": "Export Attendance",
+      "exportOt": "Export OT",
+      "exportLeave": "Export Leave",
+      "availablePersonal": "รายงานส่วนตัวที่ใช้งานได้",
+      "currentCompany": "บริษัทปัจจุบัน",
+      "myDepartment": "แผนกของฉัน",
+      "filters": {
+        "title": "ตัวกรองรายงาน",
+        "company": "บริษัท",
+        "department": "แผนก",
+        "employeeStatus": "สถานะพนักงาน",
+        "companies": {
+          "all": "ทุกบริษัท",
+          "abc": "ABC",
+          "xyz": "XYZ",
+          "def": "DEF"
+        },
+        "departments": {
+          "all": "ทุกแผนก",
+          "hr": "HR",
+          "it": "IT",
+          "acc": "บัญชี",
+          "ops": "ปฏิบัติการ"
+        },
+        "statuses": {
+          "all": "ทุกสถานะ",
+          "active": "ทำงาน",
+          "resigned": "ลาออก"
+        }
+      },
+      "summary": {
+        "attendanceRecords": "บันทึกการเข้างาน",
+        "late": "มาสาย",
+        "absent": "ขาดงาน",
+        "otHours": "OT ชั่วโมงรวม",
+        "pendingLeave": "ใบลารออนุมัติ",
+        "remainingLeave": "วันลาคงเหลือ"
+      },
+      "badge": {
+        "high": "สูง",
+        "watch": "เฝ้าระวัง",
+        "normal": "ปกติ",
+        "longPending": "รอนาน"
+      },
+      "catalog": {
+        "employee-list": {
+          "name": "Employee List (ทะเบียนประวัติพนักงาน)",
+          "description": "รายชื่อพนักงานพร้อมข้อมูลสำคัญ"
+        },
+        "attendance-summary": {
+          "name": "Attendance Summary (สรุปขาดลามาสาย)",
+          "description": "สรุปสถิติการเข้างานรายเดือน"
+        },
+        "ot-monthly": {
+          "name": "OT Monthly Summary (สรุปชั่วโมง OT ประจำเดือน)",
+          "description": "รายงานชั่วโมง OT สำหรับส่งทำเงินเดือน"
+        },
+        "leave-usage": {
+          "name": "Leave Usage (สรุปการใช้วันลา)",
+          "description": "สรุปการใช้สิทธิ์ลาตามช่วงวันที่"
+        }
+      },
+      "generateOptions": {
+        "title": "ตัวเลือกการสร้างรายงาน",
+        "scope": "Scope",
+        "format": "Format",
+        "excel": "Excel (.xlsx)",
+        "pdf": "PDF",
+        "holdingHint": "Consolidated export mode: รวมข้อมูลทุกบริษัทในไฟล์เดียวสำหรับผู้บริหาร",
+        "pdfCompanyHint": "PDF will use the selected company's header & logo",
+        "pdfGroupHint": "PDF will use Group (Holding) header",
+        "excelHint": "Excel file will include all selected data"
+      },
+      "scope": {
+        "myDataOnly": "ข้อมูลของฉันเท่านั้น",
+        "teamOnly": "เฉพาะทีม (ขอบเขตแผนก)",
+        "currentCompanyOnly": "เฉพาะบริษัทปัจจุบัน",
+        "allCompanies": "ทุกบริษัท (รวมศูนย์)"
+      },
+      "bulkExportName": "ส่งออกรายงานรวม"
+    },
+    "dashboard": {
+      "loading": "กำลังโหลดแดชบอร์ด...",
+      "roles": {
+        "employee": "พนักงาน",
+        "manager": "ผู้จัดการ",
+        "hrCompany": "HR บริษัท",
+        "centralHr": "HR ส่วนกลาง",
+        "superAdmin": "ผู้ดูแลระบบ"
+      },
+      "common": {
+        "dashboard": "แดชบอร์ด",
+        "allCompanies": "ทุกบริษัท",
+        "unassigned": "ไม่ระบุแผนก",
+        "noData": "ไม่มีข้อมูล",
+        "date": "วันที่",
+        "status": "สถานะ",
+        "upcomingHolidays": "วันหยุดที่กำลังจะมาถึง",
+        "noUpcomingHolidays": "ไม่มีวันหยุดในช่วง 30 วันถัดไป",
+        "pending": "รออนุมัติ",
+        "noPendingApprovals": "ไม่มีคำยื่นที่รออนุมัติ",
+        "noPendingLeave": "ไม่มีคำขอลาที่รออนุมัติ"
+      },
+      "header": {
+        "welcomeBackPrefix": "ยินดีต้อนรับกลับ",
+        "superAdminTitle": "แดชบอร์ดผู้ดูแลระบบ",
+        "superAdminSubtitle": "ภาพรวมเชิงกลยุทธ์ทั้งระบบ พร้อมจุดที่ต้องตัดสินใจทันที",
+        "centralHrTitle": "แดชบอร์ด HR ส่วนกลาง",
+        "centralHrSubtitle": "ภาพรวมข้ามบริษัท เน้นอนุมัติและกำลังคนระดับองค์กร",
+        "hrCompanyTitle": "แดชบอร์ด HR บริษัท",
+        "hrCompanySubtitlePrefix": "ภาพรวมบริษัท",
+        "welcomeDashboard": "ยินดีต้อนรับสู่แดชบอร์ด"
+      },
+      "employee": {
+        "title": "แดชบอร์ดพนักงาน",
+        "subtitle": "สรุปข้อมูลสำคัญของคุณ",
+        "latestAttendance": "ข้อมูลการลงเวลาล่าสุด",
+        "cards": {
+          "remainingLeave": "วันลาคงเหลือ",
+          "pendingLeave": "คำขอลาที่รออนุมัติ",
+          "lateThisMonth": "มาสายเดือนนี้",
+          "otThisMonth": "OT เดือนนี้"
+        }
+      },
+      "manager": {
+        "title": "แดชบอร์ดผู้จัดการ",
+        "subtitle": "ภาพรวมแผนก/ทีมของคุณ",
+        "teamOtChart": "กราฟ OT ของทีม",
+        "pendingRequests": "คำยื่นจากลูกน้อง (Pending Approval)",
+        "latestTeamLeave": "คำขอลาจากลูกน้อง (ล่าสุด)",
+        "cards": {
+          "pendingApprovals": "คำยื่นรออนุมัติ",
+          "present": "ทำงาน",
+          "late": "สาย",
+          "absent": "ขาด",
+          "leave": "ลา",
+          "teamMembers": "สมาชิกในทีม"
+        }
+      },
+      "charts": {
+        "employeeDistribution": "สัดส่วนพนักงานตามแผนก",
+        "attendanceStatus": "สถานะการเข้างาน"
+      },
+      "attendance": {
+        "present": "ทำงาน",
+        "late": "สาย",
+        "absent": "ขาด",
+        "leave": "ลา"
+      },
+      "statCards": {
+        "totalHeadcount": "จำนวนพนักงานทั้งหมด",
+        "newJoiners": "พนักงานเข้าใหม่",
+        "resigned": "พนักงานลาออก",
+        "totalOtHours": "ชั่วโมง OT รวม",
+        "contractsExpiring": "สัญญาใกล้หมดอายุ",
+        "pendingApprovals": "รายการรออนุมัติ"
+      },
+      "alerts": {
+        "expiringContracts": "สัญญาใกล้หมดอายุ (30-60 วัน)",
+        "noExpiringContracts": "ไม่มีสัญญาใกล้หมดอายุ",
+        "pendingApprovals": "คำขอรออนุมัติ",
+        "noPendingApprovals": "ไม่มีคำขอที่รออนุมัติ",
+        "upcomingHolidays": "วันหยุดที่กำลังจะมาถึง (30 วันข้างหน้า)",
+        "noUpcomingHolidays": "ไม่มีวันหยุดที่กำลังจะมาถึง"
+      }
+    },
+    "leaveManagement": {
+      "loading": "กำลังโหลดข้อมูล...",
+      "noHistory": "ไม่พบประวัติการลา",
+      "common": {
+        "na": "-",
+        "unknown": "ไม่ทราบประเภท",
+        "day": "วัน"
+      },
+      "tabs": {
+        "myLeave": "ลาของฉัน",
+        "requestLeave": "ขอลา",
+        "teamRequests": "คำร้องของลูกทีม",
+        "balanceAdjustment": "ปรับ Leave Balance",
+        "leavePolicy": "นโยบายการลา",
+        "leaveCalendar": "ปฏิทินลา",
+        "holidayManagement": "จัดการวันหยุด"
+      },
+      "status": {
+        "all": "ทั้งหมด",
+        "pending": "รออนุมัติ",
+        "approved": "อนุมัติ",
+        "rejected": "ไม่อนุมัติ"
+      },
+      "messages": {
+        "fillRequired": "กรุณากรอกข้อมูลใบลาให้ครบถ้วน",
+        "requestSubmitted": "ส่งคำร้องขอลางานเรียบร้อยแล้ว",
+        "requestFailed": "ไม่สามารถส่งคำร้องได้"
+      },
+      "employee": {
+        "tab": "พนักงาน",
+        "historyTab": "ประวัติการลาของคุณ",
+        "requestLeave": "ขอลา",
+        "requestTitle": "คำขอลางาน",
+        "leaveHistory": "ประวัติการลา"
+      },
+      "fields": {
+        "leaveType": "ประเภทการลา",
+        "totalDaysHours": "จำนวนวัน/ชั่วโมง",
+        "totalDaysPlaceholder": "เช่น 1 หรือ 0.5",
+        "startDate": "วันที่เริ่มต้น",
+        "endDate": "วันที่สิ้นสุด",
+        "reason": "เหตุผลการลา",
+        "reasonPlaceholder": "ระบุเหตุผลการลา",
+        "status": "สถานะ"
+      },
+      "actions": {
+        "submitting": "กำลังส่งคำร้อง...",
+        "confirmSubmit": "ยืนยันส่งคำขอ",
+        "cancel": "ยกเลิก",
+        "reject": "ไม่อนุมัติ",
+        "approve": "อนุมัติ"
+      },
+      "history": {
+        "summary": "ทั้งหมด"
+      },
+      "table": {
+        "type": "ประเภท",
+        "date": "วันที่",
+        "total": "จำนวน",
+        "status": "สถานะ"
+      },
+      "leaveTypes": {
+        "1": "Vacation (พักร้อน)",
+        "2": "Sick Leave (ลาป่วย)",
+        "3": "Personal Leave (ลากิจ)",
+        "4": "Maternity (ลาคลอด)"
+      },
+      "labels": {
+        "leave": "ลา"
+      },
+      "myLeave": {
+        "balanceTitle": "Leave Balance (แยกตามประเภทการลา)",
+        "historyTitle": "ประวัติการลา",
+        "emptyBalance": "ไม่พบข้อมูลโควต้าการลา",
+        "table": {
+          "leaveType": "ประเภทการลา",
+          "quota": "โควตา",
+          "used": "ใช้แล้ว",
+          "pending": "รออนุมัติ",
+          "balance": "คงเหลือ"
+        }
+      },
+      "request": {
+        "title": "สร้างคำขอลา",
+        "create": "สร้างคำขอลา",
+        "attachment": "แนบไฟล์ (เช่น ใบรับรองแพทย์)",
+        "selectedFile": "ไฟล์ที่เลือก"
+      },
+      "approval": {
+        "title": "คำร้องของลูกทีม (Leave)",
+        "loading": "กำลังโหลดคำร้อง...",
+        "empty": "ไม่มีคำร้องที่รออนุมัติ",
+        "overlapWarning": "คำเตือน: วันที่ลาซ้อนรวม {{count}} รายการ (อนุมัติแล้ว {{approved}})",
+        "noOverlap": "ไม่มีการลาซ้อน",
+        "confirmOverlap": "คำเตือน: มีพนักงานในทีมลาซ้อนช่วงวันเดียวกันที่อนุมัติแล้ว {{count}} คน\nต้องการอนุมัติต่อหรือไม่?",
+        "table": {
+          "employee": "พนักงาน",
+          "leaveType": "ประเภทการลา",
+          "dateRange": "ช่วงวันที่ลา",
+          "overlapWarning": "แจ้งเตือนการลาซ้อน",
+          "action": "การจัดการ"
+        }
+      },
+      "balanceAdjust": {
+        "title": "ปรับยอด Leave Balance ของพนักงาน",
+        "empty": "ไม่พบข้อมูล Leave Balance",
+        "summary": "Quota: {{quota}} | Used: {{used}} | Balance: {{balance}}",
+        "adjust": "ปรับยอด"
+      },
+      "policy": {
+        "title": "ตั้งค่าการลารายบริษัท",
+        "save": "บันทึกนโยบายการลา",
+        "table": {
+          "company": "บริษัท",
+          "serviceYears": "อายุงานขั้นต่ำ (ปี)",
+          "vacationDays": "พักร้อนที่ได้ (วัน/ปี)",
+          "sickCert": "ลาป่วยเกินกี่วันต้องแนบใบรับรองแพทย์"
+        }
+      },
+      "calendar": {
+        "placeholder": "มุมมองปฏิทินลา - สรุปภาพรวมวันลาของทีม (ตัวอย่าง)"
+      },
+      "holidays": {
+        "title": "ปฏิทินวันหยุด 2026",
+        "add": "เพิ่มวันหยุด",
+        "edit": "แก้ไข",
+        "table": {
+          "date": "วันที่",
+          "name": "ชื่อวันหยุด",
+          "action": "การจัดการ"
+        },
+        "names": {
+          "newYear": "วันขึ้นปีใหม่",
+          "makhaBucha": "วันมาฆบูชา",
+          "chakri": "วันจักรี",
+          "songkran": "วันสงกรานต์",
+          "labour": "วันแรงงาน",
+          "coronation": "วันฉัตรมงคล",
+          "queenSuthidaBirthday": "วันเฉลิมพระชนมพรรษา ร.10",
+          "kingBirthdaySubstitute": "วันเฉลิมพระชนมพรรษา ร.10 (ชดเชย)",
+          "mothersDay": "วันแม่แห่งชาติ",
+          "chulalongkorn": "วันปิยมหาราช",
+          "fathersDay": "วันพ่อแห่งชาติ",
+          "constitution": "วันรัฐธรรมนูญ",
+          "yearEnd": "วันสิ้นปี"
+        }
+      }
+    },
+    "timeAttendance": {
+      "tabs": {
+        "workSchedule": "ตารางกะงาน",
+        "attendanceLog": "บันทึกเวลา",
+        "adjustmentRequests": "คำขอปรับเวลา",
+        "otRequest": "คำขอ OT",
+        "teamOtRequests": "คำร้องของลูกทีม (OT)"
+      },
+      "common": {
+        "date": "วันที่",
+        "in": "เข้า",
+        "out": "ออก",
+        "hour": "ชั่วโมง",
+        "currentUser": "ผู้ใช้งานปัจจุบัน",
+        "waitingApprover": "รอผู้อนุมัติ",
+        "unassignedShift": "กะไม่ระบุ"
+      },
+      "actions": {
+        "saving": "กำลังบันทึก...",
+        "checkIn": "Check In",
+        "checkOut": "Check Out",
+        "checkedInToday": "Check In แล้ววันนี้",
+        "checkedOutToday": "Check Out แล้ววันนี้",
+        "submitting": "กำลังส่ง...",
+        "confirmSubmit": "ยืนยันส่งคำขอ",
+        "cancel": "ยกเลิก"
+      },
+      "employee": {
+        "badge": "พนักงาน",
+        "onlyYourSchedule": "ดูเฉพาะตารางของคุณ",
+        "yourSchedule": "ตารางงานของคุณ",
+        "breakTime": "พัก 12:00 - 13:00",
+        "checkInOut": "ลงเวลาเข้า-ออกงาน",
+        "todayStatus": "สถานะวันนี้",
+        "latestRecord": "รายการล่าสุด",
+        "yourOtRequests": "คำขอ OT ของคุณ",
+        "requestOt": "ขอ OT",
+        "viewInSelfService": "ดูคำขอ OT ได้ที่หน้า Self-Service",
+        "attendanceHistory": "ประวัติการลงเวลาของคุณ",
+        "status": {
+          "done": "ลงเวลาครบแล้ว",
+          "checkedIn": "ลงเวลาเข้าแล้ว",
+          "notChecked": "ยังไม่ลงเวลา"
+        }
+      },
+      "fields": {
+        "otDate": "วันที่ขอทำ OT",
+        "startTime": "เวลาเริ่มต้น",
+        "endTime": "เวลาสิ้นสุด",
+        "otReason": "เหตุผลที่ขอ OT",
+        "totalHours": "จำนวนชั่วโมงรวม"
+      },
+      "messages": {
+        "noShiftPermission": "คุณไม่มีสิทธิ์สร้างกะเวลา",
+        "fillShiftRequired": "กรุณากรอกชื่อกะ เวลาเข้า และเวลาออกให้ครบ",
+        "shiftCreated": "สร้างกะเวลาเรียบร้อยแล้ว",
+        "shiftCreateFailed": "ไม่สามารถสร้างกะเวลาได้",
+        "adjustmentUpdateFailed": "ไม่สามารถอัปเดตสถานะคำขอปรับเวลาได้",
+        "checkInSuccess": "ลงเวลาเข้างานสำเร็จ",
+        "checkOutSuccess": "ลงเวลาออกงานสำเร็จ",
+        "attendanceSaveFailed": "ไม่สามารถบันทึกเวลาได้",
+        "fillOtRequired": "กรุณากรอกข้อมูล OT Request ให้ครบ",
+        "invalidOtTime": "เวลา OT ไม่ถูกต้อง",
+        "otSubmitted": "ส่งคำขอ OT เรียบร้อยแล้ว",
+        "otSubmitFailed": "ไม่สามารถส่งคำขอ OT ได้",
+        "otStatusUpdateFailed": "ไม่สามารถอัปเดตสถานะ OT ได้",
+        "noAttendanceData": "ยังไม่มีข้อมูลการลงเวลา"
+      },
+      "table": {
+        "status": "สถานะ",
+        "time": "เวลา",
+        "timeIn": "เวลาเข้า",
+        "timeOut": "เวลาออก",
+        "date": "วันที่",
+        "code": "รหัส",
+        "name": "ชื่อ",
+        "scanIn": "สแกนเข้า",
+        "scanOut": "สแกนออก"
+      },
+      "attendanceStatus": {
+        "present": "มาทำงาน",
+        "late": "สาย",
+        "absent": "ขาดงาน",
+        "missing_scan": "สแกนไม่ครบ"
+      },
+      "otStatus": {
+        "pending": "รออนุมัติ",
+        "approved": "อนุมัติ",
+        "rejected": "ไม่อนุมัติ"
+      },
+      "shiftManagement": {
+        "title": "จัดการกะงาน",
+        "totalShifts": "กะทั้งหมด: {{count}}",
+        "addNew": "เพิ่มกะเวลาใหม่",
+        "loading": "กำลังโหลดกะงาน...",
+        "empty": "ไม่พบข้อมูลกะเวลา",
+        "createShift": "สร้างกะเวลา",
+        "fields": {
+          "shiftName": "ชื่อกะ",
+          "shiftPlaceholder": "เช่น กะเช้า",
+          "timeIn": "เวลาเข้า",
+          "timeOut": "เวลาออก",
+          "graceMinutes": "Grace (นาที)"
+        },
+        "table": {
+          "shift": "กะ",
+          "time": "เวลา",
+          "grace": "Grace",
+          "company": "บริษัท",
+          "employeesInShift": "พนักงานในกะ"
+        }
+      },
+      "attendanceLog": {
+        "title": "บันทึกเวลา",
+        "allShifts": "ทุกกะเวลา",
+        "importFile": "นำเข้าไฟล์",
+        "emptyByShift": "ไม่พบข้อมูล Attendance ตามกะที่เลือก",
+        "person": "คน"
+      },
+      "adjustments": {
+        "title": "คำขอปรับเวลาเข้างาน",
+        "refresh": "รีเฟรช",
+        "loading": "กำลังโหลดคำขอปรับเวลา...",
+        "empty": "ไม่มีคำขอปรับเวลาที่รออนุมัติ",
+        "table": {
+          "requester": "ผู้ขอ",
+          "type": "ประเภท",
+          "department": "แผนก",
+          "reason": "เหตุผล",
+          "requestedAt": "เวลาที่ยื่น",
+          "action": "การจัดการ"
+        }
+      },
+      "otRequest": {
+        "title": "ส่งคำขอ OT",
+        "create": "สร้างคำขอ OT"
+      },
+      "otApproval": {
+        "title": "คำร้องของลูกทีม (OT)",
+        "payrollPrep": "คำนวณสรุป OT เพื่อส่ง Payroll",
+        "table": {
+          "employee": "พนักงาน",
+          "requestDate": "วันที่ยื่น",
+          "startEnd": "เวลาเริ่ม-สิ้นสุด",
+          "totalHours": "ชั่วโมงรวม",
+          "reason": "เหตุผล",
+          "approver": "ผู้อนุมัติ",
+          "status": "สถานะ",
+          "action": "การจัดการ"
+        }
+      }
+    },
+    "organizationStructure": {
+      "loading": "กำลังโหลดโครงสร้างองค์กร...",
+      "errorPrefix": "เกิดข้อผิดพลาด",
+      "noData": "ไม่มีข้อมูลโครงสร้างองค์กร",
+      "none": "ไม่มี",
+      "unspecified": "ไม่ระบุ",
+      "tabs": {
+        "company": "บริษัท",
+        "department": "แผนก",
+        "position": "ตำแหน่ง",
+        "orgChart": "ผังองค์กร"
+      },
+      "messages": {
+        "companyAddedDemo": "เพิ่มบริษัทใหม่ในหน้าเดโมสำเร็จ (ยังไม่บันทึกลงฐานข้อมูล)",
+        "departmentAddedDemo": "เพิ่มแผนกใหม่ในหน้าเดโมสำเร็จ (ยังไม่บันทึกลงฐานข้อมูล)",
+        "positionAddedDemo": "เพิ่มตำแหน่งใหม่ในหน้าเดโมสำเร็จ (ยังไม่บันทึกลงฐานข้อมูล)"
+      },
+      "company": {
+        "title": "ข้อมูลบริษัท",
+        "add": "เพิ่มบริษัทใหม่",
+        "fields": {
+          "code": "รหัสบริษัท (Code)",
+          "nameTh": "ชื่อบริษัทภาษาไทย",
+          "nameEn": "ชื่อบริษัทภาษาอังกฤษ",
+          "taxId": "เลขประจำตัวผู้เสียภาษี",
+          "logoUrl": "โลโก้บริษัท (URL)",
+          "phone": "เบอร์ติดต่อ",
+          "address": "ที่อยู่"
+        },
+        "table": {
+          "code": "Code",
+          "nameTh": "ชื่อไทย",
+          "nameEn": "ชื่ออังกฤษ",
+          "taxId": "Tax ID",
+          "contact": "Contact"
+        }
+      },
+      "department": {
+        "title": "ข้อมูลแผนก",
+        "add": "เพิ่มแผนก",
+        "fields": {
+          "code": "รหัสแผนก",
+          "name": "ชื่อแผนก",
+          "company": "บริษัท",
+          "parent": "แผนกหลัก (Parent Department)",
+          "costCenter": "Cost Center"
+        },
+        "placeholders": {
+          "selectCompany": "เลือกบริษัท",
+          "selectParent": "เลือกแผนกหลัก"
+        },
+        "table": {
+          "code": "Code",
+          "department": "Department",
+          "company": "Company",
+          "parent": "Parent",
+          "costCenter": "Cost Center"
+        }
+      },
+      "position": {
+        "title": "ข้อมูลตำแหน่ง",
+        "add": "เพิ่มตำแหน่ง",
+        "fields": {
+          "code": "รหัสตำแหน่ง",
+          "title": "ชื่อตำแหน่ง",
+          "level": "ระดับขั้น",
+          "company": "บริษัท",
+          "department": "แผนก"
+        },
+        "placeholders": {
+          "selectLevel": "เลือกระดับ",
+          "selectCompany": "เลือกบริษัท",
+          "selectDepartment": "เลือกแผนก"
+        },
+        "table": {
+          "code": "Code",
+          "title": "Title",
+          "level": "Level",
+          "company": "Company"
+        }
+      },
+      "adminTools": {
+        "title": "เครื่องมือผู้ดูแลองค์กร",
+        "addCompany": "เพิ่มบริษัทใหม่",
+        "createDepartment": "สร้างแผนก",
+        "createPosition": "สร้างตำแหน่ง"
+      },
+      "orgChartTitle": "ผังองค์กร (Tree View)"
+    }
+  },
+  "en": {
+    "notFound": {
+      "message": "Oops! Page not found",
+      "backHome": "Return to Home"
+    },
+    "approvalFlow": {
+      "title": "Approval Flow Configuration",
+      "subtitle": "Configure approval routing for Leave, OT, and Payroll documents",
+      "badgeSystemAdmin": "System Admin",
+      "badgeCentralHr": "Central HR",
+      "table": {
+        "module": "Module",
+        "level1": "Level 1",
+        "level2": "Level 2",
+        "level3": "Level 3"
+      },
+      "save": "Save Approval Flow",
+      "module": {
+        "leave": "Leave",
+        "ot": "OT",
+        "payroll": "Payroll"
+      }
+    },
+    "positionMaster": {
+      "title": "Position Master",
+      "add": "Add New Position",
+      "table": {
+        "index": "#",
+        "position": "Position Title",
+        "level": "Level",
+        "companies": "Active Companies",
+        "status": "Status"
+      },
+      "status": {
+        "active": "active",
+        "inactive": "inactive"
+      }
+    },
+    "payroll": {
+      "title": "Payroll Management",
+      "descriptionManage": "Manage company payroll cycles and export bank files",
+      "descriptionReadOnly": "Read-only mode for payroll verification and support",
+      "badge": {
+        "hrCompany": "HR Company (Manage)",
+        "centralHr": "Central HR (Read)",
+        "systemAdmin": "System Admin (Read)"
+      },
+      "fields": {
+        "month": "Payroll Month",
+        "employees": "Employees",
+        "otAmount": "OT Amount",
+        "netAmount": "Net Amount"
+      },
+      "actions": {
+        "runCycle": "Run Payroll Cycle",
+        "recalculate": "Recalculate OT/Leave",
+        "exportReport": "Export Payroll Report",
+        "exportBank": "Export Bank File",
+        "generatePayslip": "Generate Payslip"
+      },
+      "readOnlyNotice": "Read-only mode: this role is for verification and support; it cannot run payroll or generate payout files.",
+      "table": {
+        "month": "Month",
+        "company": "Company",
+        "ot": "OT",
+        "leaveDeduction": "Leave Deduction",
+        "net": "Net",
+        "status": "Status"
+      },
+      "status": {
+        "closed": "closed",
+        "processing": "processing",
+        "draft": "draft",
+        "waiting_approval": "waiting approval",
+        "completed": "completed"
+      }
+    },
+    "systemSettings": {
+      "tabs": {
+        "general": "General",
+        "dataFix": "Data Fix",
+        "security": "Security"
+      },
+      "title": "System Settings",
+      "groupName": "Group Name",
+      "defaultTimezone": "Default Timezone",
+      "saveSettings": "Save Settings",
+      "dataCorrectionTitle": "Data Correction Tools",
+      "dataCorrectionDesc": "For IT/Implementation teams: use to fix invalid data in the central system",
+      "recalculateLeave": "Recalculate Leave Balance",
+      "reindexAttendance": "Reindex Attendance",
+      "deleteInvalid": "Delete Invalid Transactions",
+      "securityTitle": "Security Controls",
+      "securityDesc": "Define system-wide security policies",
+      "forceLogout": "Force Logout All Users",
+      "rotateApiKeys": "Rotate API Keys",
+      "applyPolicy": "Apply Policy"
+    },
+    "auditLog": {
+      "filtersTitle": "Audit Log Filters",
+      "filter": {
+        "user": "User",
+        "allActions": "All Actions",
+        "ipAddress": "IP Address",
+        "apply": "Apply Filter"
+      },
+      "tableTitle": "Transaction Log (Audit Trail)",
+      "exportCsv": "Export CSV",
+      "headers": {
+        "time": "Time",
+        "user": "User",
+        "action": "Action",
+        "target": "Target",
+        "ip": "IP"
+      },
+      "loading": "Loading audit logs...",
+      "empty": "No audit logs found",
+      "fallbackError": "Failed to load Audit Logs"
+    },
+    "contacts": {
+      "title": "Contact Directory",
+      "searchPlaceholder": "Search name, employee code, department, or position",
+      "exportCsv": "Export CSV",
+      "selectColumns": "Select columns for CSV export",
+      "loading": "Loading contact directory...",
+      "empty": "No matching contacts found",
+      "needAtLeastOneColumn": "Please select at least 1 column before export",
+      "table": {
+        "employee": "Employee",
+        "positionDepartment": "Position/Department",
+        "company": "Company",
+        "contact": "Contact"
+      },
+      "columns": {
+        "employee_code": "Employee Code",
+        "firstname_th": "First Name",
+        "lastname_th": "Last Name",
+        "position_name": "Position",
+        "department_name": "Department",
+        "company_name": "Company",
+        "email": "Email",
+        "phone": "Phone"
+      }
+    },
+    "employeeList": {
+      "loading": "Loading employee data...",
+      "searchPlaceholder": "Search by employee code or name...",
+      "allDepartments": "All Departments",
+      "foundCount": "Found {{count}} records",
+      "addEmployee": "Add New Employee",
+      "title": "Employee List",
+      "table": {
+        "employeeCode": "Employee Code",
+        "fullName": "Full Name",
+        "company": "Company",
+        "department": "Department",
+        "position": "Position",
+        "status": "Status",
+        "manage": "Manage"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "transferCompany": "Transfer Company"
+      },
+      "deleteConfirm": "Do you want to delete this employee?",
+      "deleteFailed": "Unable to delete employee in the current system",
+      "empty": "No employee records found",
+      "na": "N/A"
+    },
+    "holidayManagement": {
+      "fetchFailed": "Unable to load holiday data",
+      "noManagePermission": "You do not have permission to manage holidays",
+      "saveFailed": "Failed to save holiday",
+      "noDeletePermission": "You do not have permission to delete holidays",
+      "deleteConfirm": "Confirm deleting this holiday?",
+      "deleteFailed": "Failed to delete holiday",
+      "title": "Holiday Data",
+      "readOnlyNotice": "Your permission is read-only",
+      "fields": {
+        "date": "Date",
+        "nameTh": "Holiday Name (TH)",
+        "nameEn": "Holiday Name (EN)",
+        "payType": "Payment Type",
+        "description": "Description"
+      },
+      "payType": {
+        "paidHoliday": "Paid Holiday",
+        "unpaidHoliday": "Unpaid Holiday",
+        "paid": "Paid",
+        "unpaid": "Unpaid"
+      },
+      "actions": {
+        "saveChanges": "Save Changes",
+        "addHoliday": "Add Holiday",
+        "cancelEdit": "Cancel Edit",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "calendarTitle": "Holiday Calendar",
+      "table": {
+        "date": "Date",
+        "nameTh": "Holiday Name (TH)",
+        "nameEn": "Holiday Name (EN)",
+        "type": "Type",
+        "actions": "Actions"
+      },
+      "loading": "Loading holidays...",
+      "empty": "No holiday data"
+    },
+    "selfService": {
+      "title": "Self-Service",
+      "loading": "Loading Self-Service...",
+      "monthData": "Data Month:",
+      "thisMonth": "This Month",
+      "jobInfo": {
+        "tenure": "Tenure"
+      },
+      "leaveQuota": "Leave Quota",
+      "used": "Used",
+      "remaining": "Remaining",
+      "noLeaveQuota": "No leave quota data",
+      "attendance": {
+        "title": "Attendance Calendar",
+        "present": "Present",
+        "late": "Late",
+        "absent": "Absent",
+        "leave": "Leave"
+      },
+      "otSummary": "OT Summary This Month",
+      "otHours": "Hours",
+      "otValue": "OT Value",
+      "otTable": {
+        "date": "Date",
+        "hours": "Hours",
+        "amount": "Amount",
+        "status": "Status"
+      },
+      "otStatus": {
+        "approved": "Approved",
+        "pending": "Pending",
+        "rejected": "Rejected"
+      },
+      "noOtData": "No OT data",
+      "dayUnit": "days",
+      "yearUnit": "years",
+      "monthUnit": "months",
+      "hourAbbr": "hr"
+    },
+    "employeeProfile": {
+      "loading": "Loading employee data...",
+      "backToList": "Back to employee list",
+      "saving": "Saving...",
+      "save": "Save Employee",
+      "saveSuccess": "Employee saved successfully",
+      "savePartialWarning": "Some fields are not yet persisted in the current backend, but on-screen data has been updated",
+      "historyRequired": "Please complete required History Log fields",
+      "avatar": "Avatar",
+      "uploadProfile": "Upload Profile Image",
+      "uploadFile": "Upload File",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "nickname": "Nickname",
+      "nationalId": "National ID",
+      "birthDate": "Birth Date",
+      "gender": "Gender",
+      "genderOption": {
+        "unspecified": "Unspecified",
+        "male": "Male",
+        "female": "Female",
+        "other": "Other"
+      },
+      "phone": "Phone",
+      "email": "Email",
+      "emergencyName": "Emergency Contact Name",
+      "emergencyPhone": "Emergency Contact Phone",
+      "emergencyRelation": "Emergency Contact Relation",
+      "position": "Position",
+      "department": "Department",
+      "employeeCode": "Employee Code",
+      "company": "Company",
+      "reportTo": "Report to",
+      "employeeType": "Employee Type",
+      "employeeTypeOption": {
+        "monthly": "Monthly",
+        "daily": "Daily"
+      },
+      "status": "Status",
+      "statusOption": {
+        "active": "Active",
+        "resigned": "Resigned"
+      },
+      "unspecified": "Unspecified",
+      "tabs": {
+        "personal": "Personal Info",
+        "work": "Work Info",
+        "attachments": "Attachments",
+        "history": "History Log"
+      },
+      "personalTitle": "Personal Info",
+      "workTitle": "Work Info",
+      "attachmentsTitle": "Attachments",
+      "noAttachments": "No attachments",
+      "historyTitle": "History Log",
+      "type": "Type",
+      "historyEvent": {
+        "promote": "Promote",
+        "salaryAdjust": "Salary Adjustment",
+        "transferDepartment": "Transfer Department"
+      },
+      "oldValue": "Old Value",
+      "newValue": "New Value",
+      "note": "Additional Note",
+      "addItem": "Add Item",
+      "noHistory": "No change history"
+    },
+    "userPermission": {
+      "tabs": {
+        "accounts": "User Accounts",
+        "assignments": "Role Assignment",
+        "roles": "Permission Matrix",
+        "logs": "Transaction Log"
+      },
+      "messages": {
+        "loadFailedUsingDefault": "Failed to load permission matrix. Using default values",
+        "saveSuccessPrefix": "Permission matrix saved for role",
+        "saveFailed": "Failed to save permission matrix"
+      },
+      "status": {
+        "active": "active",
+        "locked": "locked"
+      },
+      "accounts": {
+        "title": "User Accounts",
+        "addUser": "Add User",
+        "table": {
+          "emailUsername": "Email / Username",
+          "displayName": "Display Name",
+          "lastLogin": "Last Login",
+          "status": "Status",
+          "action": "Action"
+        },
+        "actions": {
+          "lock": "Lock",
+          "unlock": "Unlock"
+        }
+      },
+      "roles": {
+        "newRole": "New Role",
+        "permissionMatrix": "Permission Matrix",
+        "loading": "Loading...",
+        "saving": "Saving...",
+        "save": "Save Permission Matrix",
+        "table": {
+          "module": "Module",
+          "view": "View",
+          "create": "Create",
+          "edit": "Edit",
+          "delete": "Delete"
+        }
+      },
+      "modules": {
+        "dashboard": "dashboard",
+        "organization": "organization",
+        "employee": "employee",
+        "attendance": "attendance",
+        "leave": "leave",
+        "contract": "contract",
+        "reports": "reports",
+        "permissions": "permissions",
+        "holidays": "holidays",
+        "audit_log": "audit log"
+      },
+      "assignments": {
+        "assignRole": "Assign Role",
+        "addAssignment": "Add Assignment",
+        "fields": {
+          "user": "User",
+          "role": "Role",
+          "companyScope": "Company Scope",
+          "departmentScope": "Department Scope"
+        },
+        "table": {
+          "title": "Role Assignment Table",
+          "user": "User",
+          "role": "Role",
+          "companyScope": "Company Scope",
+          "departmentScope": "Department Scope",
+          "unknown": "Unknown"
+        }
+      },
+      "logs": {
+        "title": "Transaction Log",
+        "table": {
+          "user": "User",
+          "action": "Action",
+          "target": "Target",
+          "datetime": "DateTime"
+        }
+      }
+    },
+    "contractManagement": {
+      "tabs": {
+        "list": "Contract List",
+        "templates": "Templates"
+      },
+      "title": "Contract Management (Company Scoped)",
+      "createContract": "Create Contract",
+      "createContractHint": "Create a new contract (the system fills employee data into a PDF form for print/save)",
+      "selectEmployee": "Select employee",
+      "salaryPlaceholder": "Salary",
+      "createPdf": "Create PDF Document (Print/Save)",
+      "close": "Close",
+      "loading": "Loading contracts...",
+      "empty": "No contracts found in your company scope",
+      "contractType": {
+        "probation": "Probation",
+        "yearly": "Yearly",
+        "permanent": "Permanent"
+      },
+      "status": {
+        "active": "active",
+        "expired": "expired",
+        "expiring": "expiring"
+      },
+      "table": {
+        "employee": "Employee",
+        "contractType": "Contract Type",
+        "company": "Company",
+        "start": "Start",
+        "end": "End",
+        "status": "Status",
+        "action": "Action"
+      },
+      "actions": {
+        "renew": "Renew",
+        "generatePdf": "Generate PDF"
+      },
+      "templates": {
+        "title": "Contract Templates (Company)",
+        "newTemplate": "New Template",
+        "builder": "Template Builder",
+        "save": "Save Template",
+        "previewVariables": "Template Preview Variables",
+        "selectTemplateForPdf": "Select a template for PDF generation",
+        "fields": {
+          "templateName": "Template Name",
+          "companyScope": "Company (Logo Scope)",
+          "logoUrl": "Logo URL",
+          "templateContent": "Template Content",
+          "contentPlaceholder": "Use variables like {{employee_name}}, {{position}}, {{salary}}"
+        }
+      },
+      "alerts": {
+        "fillTemplateNameAndContent": "Please fill template name and content",
+        "templateCreatedDemo": "Template created successfully (UI demo)",
+        "selectEmployeeAndDates": "Please select employee and contract date range"
+      },
+      "pdf": {
+        "title": "Employment Contract",
+        "employeeSignature": "Employee Signature",
+        "companySignature": "Company Signature"
+      }
+    },
+    "reports": {
+      "exportPdf": "Export PDF",
+      "exportXlsx": "Export XLSX",
+      "myDashboardTitle": "My Reports Dashboard",
+      "fetchFailed": "Unable to fetch reports from the system",
+      "myDashboardSubtitle": "Summary reports for your personal data",
+      "employeeScope": "Employee Scope",
+      "refreshing": "Refreshing...",
+      "refreshSummary": "Refresh Summary",
+      "dateFrom": "Start Date",
+      "dateTo": "End Date",
+      "exportAttendance": "Export Attendance",
+      "exportOt": "Export OT",
+      "exportLeave": "Export Leave",
+      "availablePersonal": "Available Personal Reports",
+      "currentCompany": "Current Company",
+      "myDepartment": "My Department",
+      "filters": {
+        "title": "Report Filters",
+        "company": "Company",
+        "department": "Department",
+        "employeeStatus": "Employee Status",
+        "companies": {
+          "all": "All Companies",
+          "abc": "ABC",
+          "xyz": "XYZ",
+          "def": "DEF"
+        },
+        "departments": {
+          "all": "All Departments",
+          "hr": "HR",
+          "it": "IT",
+          "acc": "Accounting",
+          "ops": "Operations"
+        },
+        "statuses": {
+          "all": "All Statuses",
+          "active": "Active",
+          "resigned": "Resigned"
+        }
+      },
+      "summary": {
+        "attendanceRecords": "Attendance Records",
+        "late": "Late",
+        "absent": "Absent",
+        "otHours": "Total OT Hours",
+        "pendingLeave": "Pending Leave",
+        "remainingLeave": "Remaining Leave"
+      },
+      "badge": {
+        "high": "High",
+        "watch": "Watch",
+        "normal": "Normal",
+        "longPending": "Long Pending"
+      },
+      "catalog": {
+        "employee-list": {
+          "name": "Employee List",
+          "description": "Employee roster with key profile data"
+        },
+        "attendance-summary": {
+          "name": "Attendance Summary",
+          "description": "Monthly attendance statistics"
+        },
+        "ot-monthly": {
+          "name": "OT Monthly Summary",
+          "description": "OT hours report for payroll"
+        },
+        "leave-usage": {
+          "name": "Leave Usage",
+          "description": "Leave entitlement usage by date range"
+        }
+      },
+      "generateOptions": {
+        "title": "Generate Options",
+        "scope": "Scope",
+        "format": "Format",
+        "excel": "Excel (.xlsx)",
+        "pdf": "PDF",
+        "holdingHint": "Consolidated export mode: all companies in one file for executives",
+        "pdfCompanyHint": "PDF will use the selected company's header and logo",
+        "pdfGroupHint": "PDF will use Group (Holding) header",
+        "excelHint": "Excel file will include all selected data"
+      },
+      "scope": {
+        "myDataOnly": "My Data Only",
+        "teamOnly": "Team Only (Department Scope)",
+        "currentCompanyOnly": "Current Company Only",
+        "allCompanies": "All Companies (Consolidated)"
+      },
+      "bulkExportName": "Bulk Export"
+    },
+    "dashboard": {
+      "loading": "Loading dashboard...",
+      "roles": {
+        "employee": "Employee",
+        "manager": "Manager",
+        "hrCompany": "HR Company",
+        "centralHr": "Central HR",
+        "superAdmin": "Super Admin"
+      },
+      "common": {
+        "dashboard": "Dashboard",
+        "allCompanies": "All Companies",
+        "unassigned": "Unassigned",
+        "noData": "No Data",
+        "date": "Date",
+        "status": "Status",
+        "upcomingHolidays": "Upcoming Holidays",
+        "noUpcomingHolidays": "No holidays in next 30 days",
+        "pending": "Pending",
+        "noPendingApprovals": "No pending approvals",
+        "noPendingLeave": "No pending leave requests"
+      },
+      "header": {
+        "welcomeBackPrefix": "Welcome back,",
+        "superAdminTitle": "Super Admin Dashboard",
+        "superAdminSubtitle": "Strategic system-wide overview with immediate decision points",
+        "centralHrTitle": "Central HR Dashboard",
+        "centralHrSubtitle": "Cross-company overview focused on approvals and workforce",
+        "hrCompanyTitle": "HR Company Dashboard",
+        "hrCompanySubtitlePrefix": "Company overview",
+        "welcomeDashboard": "Welcome to Dashboard"
+      },
+      "employee": {
+        "title": "Employee Dashboard",
+        "subtitle": "Your key information summary",
+        "latestAttendance": "Latest Attendance",
+        "cards": {
+          "remainingLeave": "Remaining Leave",
+          "pendingLeave": "Pending Leave Requests",
+          "lateThisMonth": "Late This Month",
+          "otThisMonth": "OT This Month"
+        }
+      },
+      "manager": {
+        "title": "Department Dashboard",
+        "subtitle": "Your team and department overview",
+        "teamOtChart": "Team OT Chart",
+        "pendingRequests": "Team Pending Requests",
+        "latestTeamLeave": "Latest Team Leave Requests",
+        "cards": {
+          "pendingApprovals": "Pending Requests",
+          "present": "Present",
+          "late": "Late",
+          "absent": "Absent",
+          "leave": "Leave",
+          "teamMembers": "Team Members"
+        }
+      },
+      "charts": {
+        "employeeDistribution": "Employee Distribution by Department",
+        "attendanceStatus": "Attendance Status"
+      },
+      "attendance": {
+        "present": "Present",
+        "late": "Late",
+        "absent": "Absent",
+        "leave": "Leave"
+      },
+      "statCards": {
+        "totalHeadcount": "Total Headcount",
+        "newJoiners": "New Joiners",
+        "resigned": "Resigned",
+        "totalOtHours": "Total OT Hours",
+        "contractsExpiring": "Contracts Expiring",
+        "pendingApprovals": "Pending Approvals"
+      },
+      "alerts": {
+        "expiringContracts": "Contracts Expiring Soon (30-60 Days)",
+        "noExpiringContracts": "No expiring contracts",
+        "pendingApprovals": "Pending Approvals",
+        "noPendingApprovals": "No pending approvals",
+        "upcomingHolidays": "Upcoming Public Holidays (Next 30 Days)",
+        "noUpcomingHolidays": "No upcoming holidays"
+      }
+    },
+    "leaveManagement": {
+      "loading": "Loading data...",
+      "noHistory": "No leave history found",
+      "common": {
+        "na": "-",
+        "unknown": "Unknown",
+        "day": "day(s)"
+      },
+      "tabs": {
+        "myLeave": "My Leave",
+        "requestLeave": "Request Leave",
+        "teamRequests": "Team Requests",
+        "balanceAdjustment": "Leave Balance Adjustment",
+        "leavePolicy": "Leave Policy",
+        "leaveCalendar": "Leave Calendar",
+        "holidayManagement": "Holiday Management"
+      },
+      "status": {
+        "all": "All",
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "messages": {
+        "fillRequired": "Please complete all required leave request fields",
+        "requestSubmitted": "Leave request submitted successfully",
+        "requestFailed": "Unable to submit leave request"
+      },
+      "employee": {
+        "tab": "Employee",
+        "historyTab": "Your Leave History",
+        "requestLeave": "Request Leave",
+        "requestTitle": "Leave Request",
+        "leaveHistory": "Leave History"
+      },
+      "fields": {
+        "leaveType": "Leave Type",
+        "totalDaysHours": "Total Days/Hours",
+        "totalDaysPlaceholder": "e.g. 1 or 0.5",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "reason": "Reason",
+        "reasonPlaceholder": "Enter leave reason",
+        "status": "Status"
+      },
+      "actions": {
+        "submitting": "Submitting...",
+        "confirmSubmit": "Submit Request",
+        "cancel": "Cancel",
+        "reject": "Reject",
+        "approve": "Approve"
+      },
+      "history": {
+        "summary": "Total"
+      },
+      "table": {
+        "type": "Type",
+        "date": "Date",
+        "total": "Total",
+        "status": "Status"
+      },
+      "leaveTypes": {
+        "1": "Vacation",
+        "2": "Sick Leave",
+        "3": "Personal Leave",
+        "4": "Maternity"
+      },
+      "labels": {
+        "leave": "Leave"
+      },
+      "myLeave": {
+        "balanceTitle": "Leave Balance (by leave type)",
+        "historyTitle": "Leave History",
+        "emptyBalance": "No leave quota data found",
+        "table": {
+          "leaveType": "Leave Type",
+          "quota": "Quota",
+          "used": "Used",
+          "pending": "Pending",
+          "balance": "Balance"
+        }
+      },
+      "request": {
+        "title": "Create Leave Request",
+        "create": "Create Leave Request",
+        "attachment": "Attachment (e.g., medical certificate)",
+        "selectedFile": "Selected file"
+      },
+      "approval": {
+        "title": "Team Leave Requests",
+        "loading": "Loading requests...",
+        "empty": "No pending requests",
+        "overlapWarning": "Warning: {{count}} overlapping requests ({{approved}} approved)",
+        "noOverlap": "No overlap",
+        "confirmOverlap": "Warning: {{count}} team members are already approved for overlapping leave dates.\nDo you want to continue approving?",
+        "table": {
+          "employee": "Employee",
+          "leaveType": "Leave Type",
+          "dateRange": "Date Range",
+          "overlapWarning": "Overlap Warning",
+          "action": "Action"
+        }
+      },
+      "balanceAdjust": {
+        "title": "Adjust Employee Leave Balance",
+        "empty": "No leave balance data found",
+        "summary": "Quota: {{quota}} | Used: {{used}} | Balance: {{balance}}",
+        "adjust": "Adjust"
+      },
+      "policy": {
+        "title": "Leave Configuration by Company",
+        "save": "Save Leave Policy",
+        "table": {
+          "company": "Company",
+          "serviceYears": "Minimum Service Years",
+          "vacationDays": "Vacation Days (days/year)",
+          "sickCert": "Sick Leave Days Requiring Certificate"
+        }
+      },
+      "calendar": {
+        "placeholder": "Leave calendar view - team leave overview (demo placeholder)"
+      },
+      "holidays": {
+        "title": "Holiday Calendar 2026",
+        "add": "Add Holiday",
+        "edit": "Edit",
+        "table": {
+          "date": "Date",
+          "name": "Holiday Name",
+          "action": "Action"
+        },
+        "names": {
+          "newYear": "New Year's Day",
+          "makhaBucha": "Makha Bucha Day",
+          "chakri": "Chakri Memorial Day",
+          "songkran": "Songkran Festival",
+          "labour": "Labour Day",
+          "coronation": "Coronation Day",
+          "queenSuthidaBirthday": "H.M. King Birthday Celebration",
+          "kingBirthdaySubstitute": "H.M. King Birthday (Substitute)",
+          "mothersDay": "Mother's Day",
+          "chulalongkorn": "King Chulalongkorn Day",
+          "fathersDay": "Father's Day",
+          "constitution": "Constitution Day",
+          "yearEnd": "New Year's Eve"
+        }
+      }
+    },
+    "timeAttendance": {
+      "tabs": {
+        "workSchedule": "Work Schedule",
+        "attendanceLog": "Attendance Log",
+        "adjustmentRequests": "Adjustment Requests",
+        "otRequest": "OT Request",
+        "teamOtRequests": "Team OT Requests"
+      },
+      "common": {
+        "date": "Date",
+        "in": "In",
+        "out": "Out",
+        "hour": "hours",
+        "currentUser": "Current User",
+        "waitingApprover": "Waiting Approver",
+        "unassignedShift": "Unassigned Shift"
+      },
+      "actions": {
+        "saving": "Saving...",
+        "checkIn": "Check In",
+        "checkOut": "Check Out",
+        "checkedInToday": "Checked in today",
+        "checkedOutToday": "Checked out today",
+        "submitting": "Submitting...",
+        "confirmSubmit": "Submit Request",
+        "cancel": "Cancel"
+      },
+      "employee": {
+        "badge": "Employee",
+        "onlyYourSchedule": "View only your schedule",
+        "yourSchedule": "Your Schedule",
+        "breakTime": "Break 12:00 - 13:00",
+        "checkInOut": "Check In/Out",
+        "todayStatus": "Today Status",
+        "latestRecord": "Latest Record",
+        "yourOtRequests": "Your OT Requests",
+        "requestOt": "Request OT",
+        "viewInSelfService": "View OT requests on Self-Service page",
+        "attendanceHistory": "Your Attendance History",
+        "status": {
+          "done": "Completed",
+          "checkedIn": "Checked in",
+          "notChecked": "Not checked in"
+        }
+      },
+      "fields": {
+        "otDate": "OT Date",
+        "startTime": "Start Time",
+        "endTime": "End Time",
+        "otReason": "OT Reason",
+        "totalHours": "Total Hours"
+      },
+      "messages": {
+        "noShiftPermission": "You do not have permission to create shifts",
+        "fillShiftRequired": "Please fill shift name, time in, and time out",
+        "shiftCreated": "Shift created successfully",
+        "shiftCreateFailed": "Unable to create shift",
+        "adjustmentUpdateFailed": "Unable to update adjustment request status",
+        "checkInSuccess": "Checked in successfully",
+        "checkOutSuccess": "Checked out successfully",
+        "attendanceSaveFailed": "Unable to save attendance",
+        "fillOtRequired": "Please complete OT request fields",
+        "invalidOtTime": "Invalid OT time",
+        "otSubmitted": "OT request submitted successfully",
+        "otSubmitFailed": "Unable to submit OT request",
+        "otStatusUpdateFailed": "Unable to update OT status",
+        "noAttendanceData": "No attendance records yet"
+      },
+      "table": {
+        "status": "Status",
+        "time": "Time",
+        "timeIn": "Time In",
+        "timeOut": "Time Out",
+        "date": "Date",
+        "code": "Code",
+        "name": "Name",
+        "scanIn": "Scan In",
+        "scanOut": "Scan Out"
+      },
+      "attendanceStatus": {
+        "present": "Present",
+        "late": "Late",
+        "absent": "Absent",
+        "missing_scan": "Missing Scan"
+      },
+      "otStatus": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "shiftManagement": {
+        "title": "Shift Management",
+        "totalShifts": "Total Shifts: {{count}}",
+        "addNew": "Add New Shift",
+        "loading": "Loading shifts...",
+        "empty": "No shift data found",
+        "createShift": "Create Shift",
+        "fields": {
+          "shiftName": "Shift Name",
+          "shiftPlaceholder": "e.g., Morning Shift",
+          "timeIn": "Time In",
+          "timeOut": "Time Out",
+          "graceMinutes": "Grace (minutes)"
+        },
+        "table": {
+          "shift": "Shift",
+          "time": "Time",
+          "grace": "Grace",
+          "company": "Company",
+          "employeesInShift": "Employees In Shift"
+        }
+      },
+      "attendanceLog": {
+        "title": "Attendance Log",
+        "allShifts": "All Shifts",
+        "importFile": "Import File",
+        "emptyByShift": "No attendance records for selected shift",
+        "person": "people"
+      },
+      "adjustments": {
+        "title": "Attendance Adjustment Requests",
+        "refresh": "Refresh",
+        "loading": "Loading adjustment requests...",
+        "empty": "No pending attendance adjustment requests",
+        "table": {
+          "requester": "Requester",
+          "type": "Type",
+          "department": "Department",
+          "reason": "Reason",
+          "requestedAt": "Requested At",
+          "action": "Action"
+        }
+      },
+      "otRequest": {
+        "title": "Submit OT Request",
+        "create": "Create OT Request"
+      },
+      "otApproval": {
+        "title": "Team OT Requests",
+        "payrollPrep": "Calculate OT Summary for Payroll",
+        "table": {
+          "employee": "Employee",
+          "requestDate": "Request Date",
+          "startEnd": "Start-End",
+          "totalHours": "Total Hours",
+          "reason": "Reason",
+          "approver": "Approver",
+          "status": "Status",
+          "action": "Action"
+        }
+      }
+    },
+    "organizationStructure": {
+      "loading": "Loading organization structure...",
+      "errorPrefix": "Error",
+      "noData": "No organization structure data available.",
+      "none": "None",
+      "unspecified": "Unspecified",
+      "tabs": {
+        "company": "Company",
+        "department": "Department",
+        "position": "Position",
+        "orgChart": "Org Chart"
+      },
+      "messages": {
+        "companyAddedDemo": "Company added in demo mode (not saved to database)",
+        "departmentAddedDemo": "Department added in demo mode (not saved to database)",
+        "positionAddedDemo": "Position added in demo mode (not saved to database)"
+      },
+      "company": {
+        "title": "Company Information",
+        "add": "Add New Company",
+        "fields": {
+          "code": "Company Code",
+          "nameTh": "Thai Company Name",
+          "nameEn": "English Company Name",
+          "taxId": "Tax ID",
+          "logoUrl": "Company Logo (URL)",
+          "phone": "Phone",
+          "address": "Address"
+        },
+        "table": {
+          "code": "Code",
+          "nameTh": "Thai Name",
+          "nameEn": "English Name",
+          "taxId": "Tax ID",
+          "contact": "Contact"
+        }
+      },
+      "department": {
+        "title": "Department Information",
+        "add": "Add Department",
+        "fields": {
+          "code": "Department Code",
+          "name": "Department Name",
+          "company": "Company",
+          "parent": "Parent Department",
+          "costCenter": "Cost Center"
+        },
+        "placeholders": {
+          "selectCompany": "Select company",
+          "selectParent": "Select parent department"
+        },
+        "table": {
+          "code": "Code",
+          "department": "Department",
+          "company": "Company",
+          "parent": "Parent",
+          "costCenter": "Cost Center"
+        }
+      },
+      "position": {
+        "title": "Position Information",
+        "add": "Add Position",
+        "fields": {
+          "code": "Position Code",
+          "title": "Position Title",
+          "level": "Level",
+          "company": "Company",
+          "department": "Department"
+        },
+        "placeholders": {
+          "selectLevel": "Select level",
+          "selectCompany": "Select company",
+          "selectDepartment": "Select department"
+        },
+        "table": {
+          "code": "Code",
+          "title": "Title",
+          "level": "Level",
+          "company": "Company"
+        }
+      },
+      "adminTools": {
+        "title": "Organization Admin Tools",
+        "addCompany": "Add New Company",
+        "createDepartment": "Create Department",
+        "createPosition": "Create Position"
+      },
+      "orgChartTitle": "Org Chart (Tree View)"
+    }
+  }
+}

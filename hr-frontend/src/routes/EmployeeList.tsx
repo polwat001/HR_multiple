@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCompany } from "@/contexts/CompanyContexts";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Permission, UserRole } from "@/types/roles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ const statusStyles: Record<string, string> = {
 };
 
 const EmployeeList = () => {
+  const { t } = useLanguage();
   const { selectedCompany } = useCompany();
   const { hasPermission, hasRole, user } = useAuth();
   const roleViewKey = resolveRoleViewKey(user as any);
@@ -99,18 +101,18 @@ const EmployeeList = () => {
 
   const handleDeleteEmployee = async (id: string) => {
     if (!canManageEmployees) return;
-    if (!window.confirm("ต้องการลบข้อมูลพนักงานนี้หรือไม่?")) return;
+    if (!window.confirm(t("employeeList.deleteConfirm"))) return;
 
     try {
       await apiDelete(`/employees/${id}`);
       setEmployees((prev) => prev.filter((e) => String(e.id) !== String(id)));
     } catch (error) {
       console.error("Delete employee failed:", error);
-      alert("ยังไม่สามารถลบพนักงานได้ในระบบปัจจุบัน");
+      alert(t("employeeList.deleteFailed"));
     }
   };
 
-  if (isLoading) return <div className="p-8 text-center animate-pulse text-muted-foreground">กำลังโหลดข้อมูลพนักงาน...</div>;
+  if (isLoading) return <div className="p-8 text-center animate-pulse text-muted-foreground">{t("employeeList.loading")}</div>;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -121,7 +123,7 @@ const EmployeeList = () => {
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="ค้นหารหัส หรือชื่อพนักงาน..."
+                placeholder={t("employeeList.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -132,11 +134,11 @@ const EmployeeList = () => {
               <SelectTrigger className="w-[180px]">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="แผนกทั้งหมด" />
+                  <SelectValue placeholder={t("employeeList.allDepartments")} />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">แผนกทั้งหมด</SelectItem>
+                <SelectItem value="all">{t("employeeList.allDepartments")}</SelectItem>
                 {departments.map((d) => (
                   <SelectItem key={d} value={d}>{d}</SelectItem>
                 ))}
@@ -144,12 +146,12 @@ const EmployeeList = () => {
             </Select>
 
             <div className="text-sm text-muted-foreground ml-auto">
-              พบ {filtered.length} รายชื่อ
+              {t("employeeList.foundCount").replace("{{count}}", String(filtered.length))}
             </div>
 
             {canManageEmployees && (
               <Button size="sm" className="gap-1.5" onClick={() => router.push("/employees/new")}>
-                <Plus className="h-4 w-4" /> เพิ่มพนักงานใหม่
+                <Plus className="h-4 w-4" /> {t("employeeList.addEmployee")}
               </Button>
             )}
           </div>
@@ -159,20 +161,20 @@ const EmployeeList = () => {
       {/* Table Section */}
       <Card className="shadow-card overflow-hidden">
         <CardHeader className="pb-0 border-b bg-muted/10">
-          <CardTitle className="text-base py-2">รายชื่อพนักงาน (Employee List)</CardTitle>
+          <CardTitle className="text-base py-2">{t("employeeList.title")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">รหัสพนักงาน</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">ชื่อ-นามสกุล</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">บริษัท</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">แผนก</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">ตำแหน่ง</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">สถานะ</th>
-                  {(canManageEmployees || canTransferCrossCompany) && <th className="text-left px-4 py-3 font-medium text-muted-foreground">จัดการ</th>}
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.employeeCode")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.fullName")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.company")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.department")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.position")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.status")}</th>
+                  {(canManageEmployees || canTransferCrossCompany) && <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.manage")}</th>}
                 </tr>
               </thead>
               <tbody>
@@ -184,20 +186,20 @@ const EmployeeList = () => {
                         className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors"
                         onClick={() => router.push(`/employees/${emp.id}`)}
                       >
-                        <td className="px-4 py-3 font-mono text-xs">{emp.employee_code || "N/A"}</td>
+                        <td className="px-4 py-3 font-mono text-xs">{emp.employee_code || t("employeeList.na")}</td>
                         <td className="px-4 py-3">
                           <span className="font-medium text-foreground">{emp.firstname_th} {emp.lastname_th}</span>
                         </td>
                         <td className="px-4 py-3">
                           <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                            {emp.company_name || "N/A"}
+                            {emp.company_name || t("employeeList.na")}
                           </span>
                         </td>
-                        <td className="px-4 py-3">{emp.department_name || "N/A"}</td>
-                        <td className="px-4 py-3">{emp.position_name || "N/A"}</td>
+                        <td className="px-4 py-3">{emp.department_name || t("employeeList.na")}</td>
+                        <td className="px-4 py-3">{emp.position_name || t("employeeList.na")}</td>
                         <td className="px-4 py-3">
                           <Badge variant="outline" className={statusStyles[emp.status?.toLowerCase() || ""] || ""}>
-                            {emp.status || "N/A"}
+                            {emp.status || t("employeeList.na")}
                           </Badge>
                         </td>
                         {(canManageEmployees || canTransferCrossCompany) && (
@@ -205,15 +207,15 @@ const EmployeeList = () => {
                             <div className="flex gap-2">
                               {canManageEmployees ? (
                                 <>
-                                  <Button size="sm" variant="outline" className="h-8 w-8 p-0" title="แก้ไข" onClick={() => router.push(`/employees/${emp.id}`)}>
+                                  <Button size="sm" variant="outline" className="h-8 w-8 p-0" title={t("employeeList.actions.edit")} onClick={() => router.push(`/employees/${emp.id}`)}>
                                     <Pencil className="h-4 w-4" />
                                   </Button>
-                                  <Button size="sm" variant="destructive" className="h-8 w-8 p-0" title="ลบ" onClick={() => handleDeleteEmployee(String(emp.id))}>
+                                  <Button size="sm" variant="destructive" className="h-8 w-8 p-0" title={t("employeeList.actions.delete")} onClick={() => handleDeleteEmployee(String(emp.id))}>
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </>
                               ) : (
-                                <Button size="sm" variant="outline">Transfer Company</Button>
+                                <Button size="sm" variant="outline">{t("employeeList.actions.transferCompany")}</Button>
                               )}
                             </div>
                           </td>
@@ -223,7 +225,7 @@ const EmployeeList = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={(canManageEmployees || canTransferCrossCompany) ? 7 : 6} className="p-8 text-center text-muted-foreground">ไม่พบข้อมูลพนักงาน</td>
+                    <td colSpan={(canManageEmployees || canTransferCrossCompany) ? 7 : 6} className="p-8 text-center text-muted-foreground">{t("employeeList.empty")}</td>
                   </tr>
                 )}
               </tbody>

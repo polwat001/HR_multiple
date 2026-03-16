@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Search, Download } from "lucide-react";
 import { apiGet } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface EmployeeContact {
   id: number;
@@ -29,23 +30,29 @@ type ExportColumnKey =
   | "email"
   | "phone";
 
-const exportColumnOptions: Array<{ key: ExportColumnKey; label: string }> = [
-  { key: "employee_code", label: "รหัสพนักงาน" },
-  { key: "firstname_th", label: "ชื่อ" },
-  { key: "lastname_th", label: "นามสกุล" },
-  { key: "position_name", label: "ตำแหน่ง" },
-  { key: "department_name", label: "แผนก" },
-  { key: "company_name", label: "บริษัท" },
-  { key: "email", label: "อีเมล" },
-  { key: "phone", label: "โทรศัพท์" },
+const exportColumnKeys: ExportColumnKey[] = [
+  "employee_code",
+  "firstname_th",
+  "lastname_th",
+  "position_name",
+  "department_name",
+  "company_name",
+  "email",
+  "phone",
 ];
 
 const ContactManagement = () => {
+  const { t } = useLanguage();
   const [rows, setRows] = useState<EmployeeContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selectedColumns, setSelectedColumns] = useState<ExportColumnKey[]>(
-    exportColumnOptions.map((item) => item.key)
+    exportColumnKeys
+  );
+
+  const exportColumnOptions = useMemo(
+    () => exportColumnKeys.map((key) => ({ key, label: t(`contacts.columns.${key}`) })),
+    [t]
   );
 
   useEffect(() => {
@@ -85,7 +92,7 @@ const ContactManagement = () => {
 
   const handleExportCsv = () => {
     if (selectedColumns.length === 0) {
-      alert("กรุณาเลือกอย่างน้อย 1 คอลัมน์ก่อน Export");
+      alert(t("contacts.needAtLeastOneColumn"));
       return;
     }
 
@@ -127,7 +134,7 @@ const ContactManagement = () => {
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4" /> Contact Directory
+            <Users className="h-4 w-4" /> {t("contacts.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -137,7 +144,7 @@ const ContactManagement = () => {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="ค้นหาชื่อ, รหัสพนักงาน, แผนก, ตำแหน่ง"
+                placeholder={t("contacts.searchPlaceholder")}
                 className="pl-9"
               />
             </div>
@@ -147,12 +154,12 @@ const ContactManagement = () => {
               onClick={handleExportCsv}
               disabled={loading || filteredRows.length === 0}
             >
-              <Download className="h-4 w-4" /> Export CSV
+              <Download className="h-4 w-4" /> {t("contacts.exportCsv")}
             </Button>
           </div>
 
           <div className="rounded-lg border bg-muted/20 p-3">
-            <p className="text-xs text-muted-foreground mb-2">เลือกคอลัมน์สำหรับ Export CSV</p>
+            <p className="text-xs text-muted-foreground mb-2">{t("contacts.selectColumns")}</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {exportColumnOptions.map((column) => (
                 <label key={column.key} className="inline-flex items-center gap-2 text-sm cursor-pointer">
@@ -168,18 +175,18 @@ const ContactManagement = () => {
           </div>
 
           {loading ? (
-            <div className="text-sm text-muted-foreground py-6 text-center">กำลังโหลดรายชื่อผู้ติดต่อ...</div>
+            <div className="text-sm text-muted-foreground py-6 text-center">{t("contacts.loading")}</div>
           ) : filteredRows.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-6 text-center">ไม่พบรายชื่อที่ค้นหา</div>
+            <div className="text-sm text-muted-foreground py-6 text-center">{t("contacts.empty")}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">พนักงาน</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">ตำแหน่ง/แผนก</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">บริษัท</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">ติดต่อ</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("contacts.table.employee")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("contacts.table.positionDepartment")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("contacts.table.company")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("contacts.table.contact")}</th>
                   </tr>
                 </thead>
                 <tbody>

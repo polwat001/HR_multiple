@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Shield, Plus, Users, ClipboardList, UserCog } from "lucide-react";
 import { apiGet, apiPut } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const rolesCatalog = [
   {
@@ -107,6 +108,7 @@ const transactionLogs = [
 ];
 
 const UserPermissions = () => {
+  const { t } = useLanguage();
   const [selectedRole, setSelectedRole] = useState(0);
   const [users, setUsers] = useState(initialUsers);
   const [assignments, setAssignments] = useState(initialAssignments);
@@ -140,7 +142,7 @@ const UserPermissions = () => {
       } catch (error) {
         console.error("Failed to load permission matrix:", error);
         setMatrix(initialPermissionMatrix);
-        setMatrixMessage("โหลด Permission Matrix ไม่สำเร็จ กำลังใช้ค่าเริ่มต้น");
+        setMatrixMessage(t("userPermission.messages.loadFailedUsingDefault"));
       } finally {
         setMatrixLoading(false);
       }
@@ -183,10 +185,10 @@ const UserPermissions = () => {
     try {
       setMatrixSaving(true);
       await apiPut(`/admin/permission-matrix/${encodeURIComponent(selectedRoleName)}`, { matrix });
-      setMatrixMessage(`บันทึก Permission Matrix ของ role ${selectedRoleName} สำเร็จ`);
+      setMatrixMessage(`${t("userPermission.messages.saveSuccessPrefix")}: ${selectedRoleName}`);
     } catch (error: any) {
       console.error("Failed to save permission matrix:", error);
-      const msg = error instanceof Error ? error.message : "บันทึก Permission Matrix ไม่สำเร็จ";
+      const msg = error instanceof Error ? error.message : t("userPermission.messages.saveFailed");
       setMatrixMessage(msg);
     } finally {
       setMatrixSaving(false);
@@ -197,26 +199,26 @@ const UserPermissions = () => {
     <div className="space-y-6 animate-fade-in">
       <Tabs defaultValue="accounts">
         <TabsList>
-          <TabsTrigger value="accounts">User Accounts</TabsTrigger>
-          <TabsTrigger value="assignments">Role Assignment</TabsTrigger>
-          <TabsTrigger value="roles">Permission Matrix</TabsTrigger>
-          <TabsTrigger value="logs">Transaction Log</TabsTrigger>
+          <TabsTrigger value="accounts">{t("userPermission.tabs.accounts")}</TabsTrigger>
+          <TabsTrigger value="assignments">{t("userPermission.tabs.assignments")}</TabsTrigger>
+          <TabsTrigger value="roles">{t("userPermission.tabs.roles")}</TabsTrigger>
+          <TabsTrigger value="logs">{t("userPermission.tabs.logs")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts" className="mt-4">
           <Card className="shadow-card">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> User Accounts</CardTitle>
-              <Button size="sm" variant="outline" className="gap-1.5"><Plus className="h-4 w-4" /> Add User</Button>
+              <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> {t("userPermission.accounts.title")}</CardTitle>
+              <Button size="sm" variant="outline" className="gap-1.5"><Plus className="h-4 w-4" /> {t("userPermission.accounts.addUser")}</Button>
             </CardHeader>
             <CardContent className="p-0">
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email / Username</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">ชื่อผู้ใช้งาน</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Last Login</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.accounts.table.emailUsername")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.accounts.table.displayName")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.accounts.table.lastLogin")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.accounts.table.status")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.accounts.table.action")}</th>
                 </tr></thead>
                 <tbody>
                   {users.map((u) => (
@@ -229,12 +231,12 @@ const UserPermissions = () => {
                       <td className="px-4 py-3 text-xs font-mono">{u.lastLogin}</td>
                       <td className="px-4 py-3">
                         <Badge variant={u.status === "active" ? "secondary" : "destructive"} className="uppercase text-xs">
-                          {u.status}
+                          {t(`userPermission.status.${u.status}`, u.status)}
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
                         <Button size="sm" variant="outline" onClick={() => toggleUserStatus(u.id)}>
-                          {u.status === "active" ? "Lock" : "Unlock"}
+                          {u.status === "active" ? t("userPermission.accounts.actions.lock") : t("userPermission.accounts.actions.unlock")}
                         </Button>
                       </td>
                     </tr>
@@ -264,25 +266,25 @@ const UserPermissions = () => {
                   </CardContent>
                 </Card>
               ))}
-              <Button variant="outline" className="w-full gap-1.5 mt-2"><Plus className="h-4 w-4" /> New Role</Button>
+              <Button variant="outline" className="w-full gap-1.5 mt-2"><Plus className="h-4 w-4" /> {t("userPermission.roles.newRole")}</Button>
             </div>
 
             {/* Permission Matrix */}
             <Card className="shadow-card lg:col-span-2">
               <CardHeader>
                 <CardTitle className="text-base">
-                  Permission Matrix — {rolesCatalog[selectedRole].name}
+                  {t("userPermission.roles.permissionMatrix")} - {rolesCatalog[selectedRole].name}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {matrixMessage ? <p className="text-xs mb-3 text-muted-foreground">{matrixMessage}</p> : null}
                 <table className="w-full text-sm">
                   <thead><tr className="border-b bg-muted/40">
-                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">Module</th>
-                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">View</th>
-                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">Create</th>
-                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">Edit</th>
-                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">Delete</th>
+                    <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("userPermission.roles.table.module")}</th>
+                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">{t("userPermission.roles.table.view")}</th>
+                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">{t("userPermission.roles.table.create")}</th>
+                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">{t("userPermission.roles.table.edit")}</th>
+                    <th className="text-center px-4 py-2 font-medium text-muted-foreground">{t("userPermission.roles.table.delete")}</th>
                   </tr></thead>
                   <tbody>
                     {modules.map((m) => {
@@ -290,7 +292,7 @@ const UserPermissions = () => {
                       if (!row) return null;
                       return (
                         <tr key={m} className="border-b last:border-b-0">
-                          <td className="px-4 py-2.5 capitalize font-medium">{m.replaceAll("_", " ")}</td>
+                          <td className="px-4 py-2.5 capitalize font-medium">{t(`userPermission.modules.${m}`, m.replaceAll("_", " "))}</td>
                           <td className="text-center px-4 py-2.5"><Checkbox checked={row.view} onCheckedChange={() => handlePermissionToggle(m, "view")} /></td>
                           <td className="text-center px-4 py-2.5"><Checkbox checked={row.create} onCheckedChange={() => handlePermissionToggle(m, "create")} /></td>
                           <td className="text-center px-4 py-2.5"><Checkbox checked={row.edit} onCheckedChange={() => handlePermissionToggle(m, "edit")} /></td>
@@ -302,7 +304,7 @@ const UserPermissions = () => {
                 </table>
                 <div className="mt-4 flex justify-end">
                   <Button size="sm" onClick={handleSaveMatrix} disabled={matrixSaving || matrixLoading}>
-                    {matrixLoading ? "Loading..." : matrixSaving ? "Saving..." : "Save Permission Matrix"}
+                    {matrixLoading ? t("userPermission.roles.loading") : matrixSaving ? t("userPermission.roles.saving") : t("userPermission.roles.save")}
                   </Button>
                 </div>
               </CardContent>
@@ -314,11 +316,11 @@ const UserPermissions = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="shadow-card lg:col-span-1">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><UserCog className="h-4 w-4" /> Assign Role</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><UserCog className="h-4 w-4" /> {t("userPermission.assignments.assignRole")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">User</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("userPermission.assignments.fields.user")}</p>
                   <select
                     className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                     value={newAssignment.userId}
@@ -330,7 +332,7 @@ const UserPermissions = () => {
                   </select>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Role</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("userPermission.assignments.fields.role")}</p>
                   <select
                     className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                     value={newAssignment.role}
@@ -342,35 +344,35 @@ const UserPermissions = () => {
                   </select>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Company Scope</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("userPermission.assignments.fields.companyScope")}</p>
                   <Input value={newAssignment.companyScope} onChange={(e) => setNewAssignment((prev) => ({ ...prev, companyScope: e.target.value }))} />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Department Scope</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("userPermission.assignments.fields.departmentScope")}</p>
                   <Input value={newAssignment.departmentScope} onChange={(e) => setNewAssignment((prev) => ({ ...prev, departmentScope: e.target.value }))} />
                 </div>
-                <Button size="sm" className="w-full" onClick={handleAddAssignment}>Add Assignment</Button>
+                <Button size="sm" className="w-full" onClick={handleAddAssignment}>{t("userPermission.assignments.addAssignment")}</Button>
               </CardContent>
             </Card>
 
             <Card className="shadow-card lg:col-span-2">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> Role Assignment Table</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> {t("userPermission.assignments.table.title")}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b bg-muted/40">
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">User</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Role</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company Scope</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Department Scope</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.assignments.table.user")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.assignments.table.role")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.assignments.table.companyScope")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.assignments.table.departmentScope")}</th>
                   </tr></thead>
                   <tbody>
                     {assignments.map((a, idx) => {
                       const userInfo = userMap.get(a.userId);
                       return (
                         <tr key={`${a.userId}-${a.role}-${idx}`} className="border-b last:border-b-0 hover:bg-muted/30">
-                          <td className="px-4 py-3">{userInfo?.displayName || "Unknown"}</td>
+                          <td className="px-4 py-3">{userInfo?.displayName || t("userPermission.assignments.table.unknown")}</td>
                           <td className="px-4 py-3"><Badge variant="default" className="text-xs">{a.role}</Badge></td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">{a.companyScope}</td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">{a.departmentScope}</td>
@@ -387,15 +389,15 @@ const UserPermissions = () => {
         <TabsContent value="logs" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Transaction Log</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><ClipboardList className="h-4 w-4" /> {t("userPermission.logs.title")}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">User</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Target</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">DateTime</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.logs.table.user")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.logs.table.action")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.logs.table.target")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.logs.table.datetime")}</th>
                 </tr></thead>
                 <tbody>
                   {transactionLogs.map((log) => (

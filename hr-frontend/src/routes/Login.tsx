@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiPost } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Building2, Lock, User } from "lucide-react";
 
 // 💡 ปรับ Interface ให้ตรงกับที่ Node.js ของเราส่งมา
@@ -20,6 +21,7 @@ interface LoginResponse {
 }
 
 const Login = () => {
+  const { language, setLanguage, t } = useLanguage();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,7 +44,7 @@ const Login = () => {
 
     try {
       if (!username.trim() || !password.trim()) {
-        throw new Error("กรุณากรอก username และ password");
+        throw new Error(t("auth.requiredFields"));
       }
 
       // 💡 เรียก API ไปที่เส้น Login ของเรา (คาดหวังว่าใน lib/api มีการตั้งค่า Base URL ไว้แล้ว)
@@ -84,11 +86,22 @@ const Login = () => {
           </div>
           <CardTitle className="text-2xl text-center">HR System</CardTitle>
           <p className="text-center text-sm text-muted-foreground">
-            เข้าสู่ระบบจัดการทรัพยากรบุคคล
+            {t("auth.loginSubtitle")}
           </p>
         </CardHeader>
 
         <CardContent className="pt-6">
+          <div className="mb-4 flex justify-end">
+            <select
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as "th" | "en")}
+            >
+              <option value="th">{t("app.thai")}</option>
+              <option value="en">{t("app.english")}</option>
+            </select>
+          </div>
+
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>{error}</AlertDescription>
@@ -98,7 +111,7 @@ const Login = () => {
           {success && (
             <Alert className="mb-4 bg-green-50 border-green-200">
               <AlertDescription className="text-green-800">
-                ✅ เข้าสู่ระบบสำเร็จ! กำลังเปลี่ยนหน้า...
+                ✅ {t("auth.loginSuccess")}
               </AlertDescription>
             </Alert>
           )}
@@ -107,14 +120,14 @@ const Login = () => {
             {/* Username Input */}
             <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-medium">
-                Username
+                {t("auth.username")}
               </Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="username"
                   type="text"
-                  placeholder="กรอก username"
+                  placeholder={t("auth.usernamePlaceholder")}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={loading}
@@ -126,14 +139,14 @@ const Login = () => {
             {/* Password Input */}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">
-                Password
+                {t("auth.password")}
               </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
-                  placeholder="กรอก password"
+                  placeholder={t("auth.passwordPlaceholder")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
@@ -148,13 +161,13 @@ const Login = () => {
               disabled={loading}
               className="w-full mt-6 bg-primary  bg-blue-500 hover:bg-blue-600 text-white hover:bg-primary/90"
             >
-              {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+              {loading ? t("auth.loggingIn") : t("auth.loginButton")}
             </Button>
           </form>
 
           {/* Test Account Info */}
           <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
-            <p className="text-xs font-medium text-blue-900">Test Accounts (ทุก role)</p>
+            <p className="text-xs font-medium text-blue-900">{t("auth.testAccounts")}</p>
             <div className="space-y-1">
               {testAccounts.map((acc) => (
                 <button
@@ -171,7 +184,7 @@ const Login = () => {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-blue-700">Password ทุกบัญชี: <code className="bg-blue-50 px-1.5 py-0.5 rounded">123456</code></p>
+            <p className="text-[11px] text-blue-700">{t("auth.commonPassword")}: <code className="bg-blue-50 px-1.5 py-0.5 rounded">123456</code></p>
           </div>
         </CardContent>
       </Card>

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/types/roles";
 
 const positions = [
@@ -20,15 +21,16 @@ const positions = [
 
 const PositionMaster = () => {
   const { hasRole } = useAuth();
+  const { t } = useLanguage();
   const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
 
   return (
   <div className="space-y-6 animate-fade-in">
     <Card className="shadow-card overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Position Master</CardTitle>
+        <CardTitle className="text-base">{t("positionMaster.title")}</CardTitle>
         {isSuperAdmin && (
-          <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Add New Position</Button>
+          <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> {t("positionMaster.add")}</Button>
         )}
       </CardHeader>
       <CardContent className="p-0">
@@ -36,11 +38,11 @@ const PositionMaster = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">#</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Position Title</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Level</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Active Companies</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.index")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.position")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.level")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.companies")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.status")}</th>
               </tr>
             </thead>
             <tbody>
@@ -57,8 +59,8 @@ const PositionMaster = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={p.status === "active" ? "default" : "secondary"} className="text-xs capitalize">
-                      {p.status}
+                    <Badge variant={p.status === "active" ? "default" : "secondary"} className="text-xs">
+                      {t(`positionMaster.status.${p.status}`, p.status)}
                     </Badge>
                   </td>
                 </tr>

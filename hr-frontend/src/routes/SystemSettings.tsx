@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const SystemSettings = () => {
+  const { t } = useLanguage();
   const [groupName, setGroupName] = useState("HR Group Holding");
   const [defaultTimezone, setDefaultTimezone] = useState("Asia/Bangkok");
 
@@ -13,26 +15,26 @@ const SystemSettings = () => {
     <div className="space-y-6 animate-fade-in">
       <Tabs defaultValue="general">
         <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="data-fix">Data Fix</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="general">{t("systemSettings.tabs.general")}</TabsTrigger>
+          <TabsTrigger value="data-fix">{t("systemSettings.tabs.dataFix")}</TabsTrigger>
+          <TabsTrigger value="security">{t("systemSettings.tabs.security")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">System Settings</CardTitle>
+              <CardTitle className="text-base">{t("systemSettings.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="groupName">Group Name</Label>
+                <Label htmlFor="groupName">{t("systemSettings.groupName")}</Label>
                 <Input id="groupName" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="timezone">Default Timezone</Label>
+                <Label htmlFor="timezone">{t("systemSettings.defaultTimezone")}</Label>
                 <Input id="timezone" value={defaultTimezone} onChange={(e) => setDefaultTimezone(e.target.value)} />
               </div>
-              <Button>Save Settings</Button>
+              <Button>{t("systemSettings.saveSettings")}</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -40,16 +42,16 @@ const SystemSettings = () => {
         <TabsContent value="data-fix" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">Data Correction Tools</CardTitle>
+              <CardTitle className="text-base">{t("systemSettings.dataCorrectionTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                สำหรับทีม IT/Implementation: ใช้แก้ข้อมูลผิดพลาดในระบบส่วนกลาง
+                {t("systemSettings.dataCorrectionDesc")}
               </p>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline">Recalculate Leave Balance</Button>
-                <Button variant="outline">Reindex Attendance</Button>
-                <Button variant="destructive">Delete Invalid Transactions</Button>
+                <Button variant="outline">{t("systemSettings.recalculateLeave")}</Button>
+                <Button variant="outline">{t("systemSettings.reindexAttendance")}</Button>
+                <Button variant="destructive">{t("systemSettings.deleteInvalid")}</Button>
               </div>
             </CardContent>
           </Card>
@@ -58,14 +60,14 @@ const SystemSettings = () => {
         <TabsContent value="security" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">Security Controls</CardTitle>
+              <CardTitle className="text-base">{t("systemSettings.securityTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">กำหนดนโยบายความปลอดภัยระดับระบบ</p>
+              <p className="text-sm text-muted-foreground">{t("systemSettings.securityDesc")}</p>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline">Force Logout All Users</Button>
-                <Button variant="outline">Rotate API Keys</Button>
-                <Button>Apply Policy</Button>
+                <Button variant="outline">{t("systemSettings.forceLogout")}</Button>
+                <Button variant="outline">{t("systemSettings.rotateApiKeys")}</Button>
+                <Button>{t("systemSettings.applyPolicy")}</Button>
               </div>
             </CardContent>
           </Card>

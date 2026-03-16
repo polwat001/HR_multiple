@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import CompanySwitcher from "@/components/CompanySwitcher";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/types/roles";
 import { MODULE_ACCESS_MATRIX, NAV_MODULE_ORDER, ModuleKey, canAccessModule } from "@/lib/accessMatrix";
 import { cn } from "@/lib/utils";
@@ -40,15 +41,16 @@ const moduleIconMap: Record<ModuleKey, React.ComponentType<{ className?: string 
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [collapsed, setCollapsed] = useState(false);
   const { user, userPermissions, logout: authLogout, hasRole } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const router = useRouter();
   const location = router.pathname;
   const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
   const isCentralHr = hasRole(UserRole.CENTRAL_HR);
   const canSwitchCompany = isCentralHr;
-  const roleLabel = (user as any)?.role || (user as any)?.role_name || "Employee";
+  const roleLabel = (user as any)?.role || (user as any)?.role_name || t("app.unknownUser");
 
   const handleLogout = () => {
-    if (confirm("ต้องการออกจากระบบหรือไม่?")) {
+    if (confirm(t("app.logoutConfirm"))) {
       authLogout();
     }
   };
@@ -84,7 +86,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
           {!collapsed && (
             <span className="text-white font-semibold text-sm truncate">
-              HR Core System
+              {t("app.title")}
             </span>
           )}
         </div>
@@ -106,7 +108,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 )}
               >
                 <item.icon className={cn("h-5 w-5 shrink-0", isActive && "text-sidebar-primary")} />
-                {!collapsed && <span className="truncate">{item.label}</span>}
+                {!collapsed && <span className="truncate">{t(`module.${item.moduleKey}`, item.label)}</span>}
               </Link>
             );
           })}
@@ -120,7 +122,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           )}
         >
           <LogOut className="h-5 w-5 shrink-0" />
-          {!collapsed && <span className="truncate">Logout</span>}
+          {!collapsed && <span className="truncate">{t("app.logout")}</span>}
         </button>
 
         {/* Collapse toggle */}
@@ -138,18 +140,32 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 shrink-0">
           <div>
             <h1 className="text-lg font-semibold text-foreground">
-              {visibleNavItems.find(i => 
+              {t(
+                `module.${visibleNavItems.find(i => 
                 location === i.path || 
                 (i.path !== "/" && location.startsWith(i.path))
-              )?.label || "Dashboard"}
+              )?.moduleKey || "dashboard"}`,
+                t("app.dashboardFallback")
+              )}
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">{t("app.language")}</span>
+              <select
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as "th" | "en")}
+              >
+                <option value="th">{t("app.thai")}</option>
+                <option value="en">{t("app.english")}</option>
+              </select>
+            </div>
             {canSwitchCompany ? (
               <CompanySwitcher />
             ) : (
               <div className="text-xs px-3 py-2 rounded-md border border-border bg-muted/30 text-muted-foreground">
-                {isSuperAdmin ? "Full Access" : "Company Scoped Access"}
+                {isSuperAdmin ? t("app.fullAccess") : t("app.companyScopedAccess")}
               </div>
             )}
             <div className="flex items-center gap-2 pl-4 border-l border-border">
@@ -157,7 +173,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 {user?.username?.[0]?.toUpperCase() || "U"}
               </div>
               <div className="text-sm">
-                <div className="font-medium text-foreground">{user?.display_name || user?.username || "User"}</div>
+                <div className="font-medium text-foreground">{user?.display_name || user?.username || t("app.unknownUser")}</div>
                 <div className="text-xs text-muted-foreground">{roleLabel}{user?.position_name ? ` • ${user.position_name}` : ""}</div>
               </div>
             </div>

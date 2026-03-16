@@ -1,0 +1,42 @@
+{
+  "th": {
+    "module": {
+      "dashboard": "แดชบอร์ด",
+      "selfService": "บริการพนักงาน",
+      "organization": "โครงสร้างองค์กร",
+      "positions": "ตำแหน่งงาน",
+      "employees": "พนักงาน",
+      "attendance": "เวลาและการเข้างาน",
+      "leave": "การลา",
+      "contacts": "สมุดรายชื่อ",
+      "contracts": "สัญญา",
+      "holidays": "วันหยุด",
+      "reports": "รายงาน",
+      "payroll": "เงินเดือน",
+      "approvalFlow": "สายการอนุมัติ",
+      "permissions": "ผู้ใช้และสิทธิ์",
+      "systemSettings": "ตั้งค่าระบบ",
+      "auditLog": "บันทึกการใช้งาน"
+    }
+  },
+  "en": {
+    "module": {
+      "dashboard": "Dashboard",
+      "selfService": "Self-Service",
+      "organization": "Organization",
+      "positions": "Position Master",
+      "employees": "Employee",
+      "attendance": "Time & Attendance",
+      "leave": "Leave",
+      "contacts": "Contact Directory",
+      "contracts": "Contract",
+      "holidays": "Holiday",
+      "reports": "Reports",
+      "payroll": "Payroll",
+      "approvalFlow": "Approval Flow",
+      "permissions": "User & Permission",
+      "systemSettings": "System Settings",
+      "auditLog": "Audit Logs"
+    }
+  }
+}

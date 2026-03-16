@@ -12,8 +12,10 @@ import {
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Dashboard = () => {
+  const { t } = useLanguage();
   const { selectedCompany } = useCompany();
   const { user: authUser } = useAuth();
   const isAll = selectedCompany.id === "all";
@@ -173,11 +175,11 @@ const Dashboard = () => {
         const dept = e.department || e.department_name || "Unassigned";
         return [
           dept,
-          deptFilteredEmployees.filter((d: any) => (d.department || d.department_name || "Unassigned") === dept).length,
+          deptFilteredEmployees.filter((d: any) => (d.department || d.department_name || t("dashboard.common.unassigned")) === dept).length,
         ];
       })
     ),
-    ([dept, count]: [string, number]) => ({ name: dept || "Unassigned", value: count })
+    ([dept, count]: [string, number]) => ({ name: dept || t("dashboard.common.unassigned"), value: count })
   );
 
   // Contracts expiring in 30/60 days
@@ -199,10 +201,10 @@ const Dashboard = () => {
   );
 
   const attendanceByStatus = [
-    { name: "Present", value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "present").length, color: "hsl(145 60% 42%)" },
-    { name: "Late", value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "late").length, color: "hsl(38 92% 50%)" },
-    { name: "Absent", value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "absent").length, color: "hsl(0 72% 55%)" },
-    { name: "Leave", value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "leave").length, color: "hsl(205 80% 55%)" },
+    { name: t("dashboard.attendance.present"), value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "present").length, color: "hsl(145 60% 42%)" },
+    { name: t("dashboard.attendance.late"), value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "late").length, color: "hsl(38 92% 50%)" },
+    { name: t("dashboard.attendance.absent"), value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "absent").length, color: "hsl(0 72% 55%)" },
+    { name: t("dashboard.attendance.leave"), value: monthAttendanceLogs.filter((r: any) => String(r.status || "").toLowerCase() === "leave").length, color: "hsl(205 80% 55%)" },
   ];
 
   // Upcoming holidays (next 30 days)
@@ -215,12 +217,12 @@ const Dashboard = () => {
     .sort((a: any, b: any) => new Date(a.holiday_date || a.date).getTime() - new Date(b.holiday_date || b.date).getTime());
 
   const statCards = [
-    { key: "total_headcount", label: "Total Headcount", value: totalHeadcount, icon: Users, color: "text-primary" },
-    { key: "new_joiners", label: "New Joiners", value: newJoiners, icon: UserCheck, color: "text-success" },
-    { key: "resigned", label: "Resigned", value: resigned, icon: LogOut, color: "text-destructive" },
-    { key: "total_ot", label: "Total OT Hours", value: totalOtHours, icon: Clock, color: "text-warning" },
-    { key: "contracts_expiring", label: "Contracts Expiring", value: expiringContracts.length, icon: FileWarning, color: "text-orange-600" },
-    { key: "pending_approvals", label: "Pending Approvals", value: (pendingApprovals || []).length, icon: AlertCircle, color: "text-info" },
+    { key: "total_headcount", label: t("dashboard.statCards.totalHeadcount"), value: totalHeadcount, icon: Users, color: "text-primary" },
+    { key: "new_joiners", label: t("dashboard.statCards.newJoiners"), value: newJoiners, icon: UserCheck, color: "text-success" },
+    { key: "resigned", label: t("dashboard.statCards.resigned"), value: resigned, icon: LogOut, color: "text-destructive" },
+    { key: "total_ot", label: t("dashboard.statCards.totalOtHours"), value: totalOtHours, icon: Clock, color: "text-warning" },
+    { key: "contracts_expiring", label: t("dashboard.statCards.contractsExpiring"), value: expiringContracts.length, icon: FileWarning, color: "text-orange-600" },
+    { key: "pending_approvals", label: t("dashboard.statCards.pendingApprovals"), value: (pendingApprovals || []).length, icon: AlertCircle, color: "text-info" },
   ];
 
   const ownLeaveBalance = (leaveBalances || []).reduce(
@@ -287,7 +289,7 @@ const Dashboard = () => {
       grouped.set(day, (grouped.get(day) || 0) + 1);
     });
     const entries = Array.from(grouped.entries()).map(([day, count]) => ({ day, ot: count }));
-    return entries.length > 0 ? entries.slice(-7) : [{ day: "No Data", ot: 0 }];
+    return entries.length > 0 ? entries.slice(-7) : [{ day: t("dashboard.common.noData"), ot: 0 }];
   })();
 
   const teamPendingRequests = (pendingApprovals || []).filter((item: any) =>
@@ -303,65 +305,65 @@ const Dashboard = () => {
 
   const roleTheme = {
     employee: {
-      label: "Employee",
+      label: t("dashboard.roles.employee"),
       badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
       cardClass: "border-emerald-200 bg-emerald-50/40",
       priorityClass: "ring-2 ring-emerald-300 border-emerald-300",
     },
     manager: {
-      label: "Manager",
+      label: t("dashboard.roles.manager"),
       badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
       cardClass: "border-amber-200 bg-amber-50/40",
       priorityClass: "ring-2 ring-amber-300 border-amber-300",
     },
     hr_company: {
-      label: "HR Company",
+      label: t("dashboard.roles.hrCompany"),
       badgeClass: "bg-blue-100 text-blue-800 border-blue-300",
       cardClass: "border-blue-200 bg-blue-50/40",
       priorityClass: "ring-2 ring-blue-300 border-blue-300",
     },
     central_hr: {
-      label: "Central HR",
+      label: t("dashboard.roles.centralHr"),
       badgeClass: "bg-indigo-100 text-indigo-800 border-indigo-300",
       cardClass: "border-indigo-200 bg-indigo-50/40",
       priorityClass: "ring-2 ring-indigo-300 border-indigo-300",
     },
     super_admin: {
-      label: "Super Admin",
+      label: t("dashboard.roles.superAdmin"),
       badgeClass: "bg-rose-100 text-rose-800 border-rose-300",
       cardClass: "border-rose-200 bg-rose-50/40",
       priorityClass: "ring-2 ring-rose-300 border-rose-300",
     },
     default: {
-      label: "Dashboard",
+      label: t("dashboard.common.dashboard"),
       badgeClass: "bg-slate-100 text-slate-800 border-slate-300",
       cardClass: "border-border",
       priorityClass: "ring-2 ring-slate-300 border-slate-300",
     },
   }[themeRoleKey];
 
-  const companyScopeLabel = selectedCompany.id === "all" ? "All Companies" : selectedCompany.shortName;
+  const companyScopeLabel = selectedCompany.id === "all" ? t("dashboard.common.allCompanies") : selectedCompany.shortName;
   const generalDashboardHeader = (() => {
     if (isSuperAdminDashboard) {
       return {
-        title: currentUser ? `Welcome back, ${displayName} (Super Admin)` : "Super Admin Dashboard",
-        subtitle: "ภาพรวมเชิงกลยุทธ์ทั้งระบบ พร้อมจุดที่ต้องตัดสินใจทันที",
+        title: currentUser ? `${t("dashboard.header.welcomeBackPrefix")} ${displayName} (${t("dashboard.roles.superAdmin")})` : t("dashboard.header.superAdminTitle"),
+        subtitle: t("dashboard.header.superAdminSubtitle"),
       };
     }
     if (isCentralHrDashboard) {
       return {
-        title: currentUser ? `Welcome back, ${displayName} (Central HR)` : "Central HR Dashboard",
-        subtitle: "ภาพรวมข้ามบริษัท เน้นอนุมัติและกำลังคนระดับองค์กร",
+        title: currentUser ? `${t("dashboard.header.welcomeBackPrefix")} ${displayName} (${t("dashboard.roles.centralHr")})` : t("dashboard.header.centralHrTitle"),
+        subtitle: t("dashboard.header.centralHrSubtitle"),
       };
     }
     if (isHrCompanyDashboard) {
       return {
-        title: currentUser ? `Welcome back, ${displayName} (HR Company)` : "HR Company Dashboard",
-        subtitle: `ภาพรวมบริษัท ${companyScopeLabel} เน้นการอนุมัติและสถานะพนักงาน`,
+        title: currentUser ? `${t("dashboard.header.welcomeBackPrefix")} ${displayName} (${t("dashboard.roles.hrCompany")})` : t("dashboard.header.hrCompanyTitle"),
+        subtitle: t("dashboard.header.hrCompanySubtitlePrefix") + " " + companyScopeLabel,
       };
     }
     return {
-      title: currentUser ? `Welcome back, ${displayName}` : "Welcome to Dashboard",
+      title: currentUser ? `${t("dashboard.header.welcomeBackPrefix")} ${displayName}` : t("dashboard.header.welcomeDashboard"),
       subtitle: companyScopeLabel,
     };
   })();
@@ -381,7 +383,7 @@ const Dashboard = () => {
     .filter(Boolean) as typeof statCards;
 
   if (loading) {
-    return <div className="p-6 text-center">Loading dashboard...</div>;
+    return <div className="p-6 text-center">{t("dashboard.loading")}</div>;
   }
 
   if (isEmployeeDashboard) {
@@ -390,43 +392,43 @@ const Dashboard = () => {
         <div className="mb-4">
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold text-gray-900">
-              {currentUser ? `Welcome back, ${displayName}` : "Employee Dashboard"}
+              {currentUser ? `${t("dashboard.header.welcomeBackPrefix")} ${displayName}` : t("dashboard.employee.title")}
             </h1>
             <Badge variant="outline" className={roleTheme.badgeClass}>{roleTheme.label}</Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">สรุปข้อมูลสำคัญของคุณ</p>
+          <p className="text-sm text-muted-foreground mt-1">{t("dashboard.employee.subtitle")}</p>
         </div>
 
         <div className="grid grid-cols-0 md:grid-cols-4 gap-6">
-          <Card className={`shadow-card ${roleTheme.cardClass} ${roleTheme.priorityClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">วันลาคงเหลือ</p><p className="text-2xl font-bold mt-1">{ownLeaveBalance}</p></CardContent></Card>
-          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">คำขอลาที่รออนุมัติ</p><p className="text-2xl font-bold mt-1">{ownPendingLeaves}</p></CardContent></Card>
-          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">มาสายเดือนนี้</p><p className="text-2xl font-bold mt-1">{ownLateThisMonth}</p></CardContent></Card>
-          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">OT เดือนนี้</p><p className="text-2xl font-bold mt-1">{ownOtThisMonth}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass} ${roleTheme.priorityClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.employee.cards.remainingLeave")}</p><p className="text-2xl font-bold mt-1">{ownLeaveBalance}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.employee.cards.pendingLeave")}</p><p className="text-2xl font-bold mt-1">{ownPendingLeaves}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.employee.cards.lateThisMonth")}</p><p className="text-2xl font-bold mt-1">{ownLateThisMonth}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.employee.cards.otThisMonth")}</p><p className="text-2xl font-bold mt-1">{ownOtThisMonth}</p></CardContent></Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base font-semibold">ข้อมูลการลงเวลาล่าสุด</CardTitle>
+              <CardTitle className="text-base font-semibold">{t("dashboard.employee.latestAttendance")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="rounded-lg border bg-muted/20 p-4 space-y-2">
-                <p className="text-sm"><span className="text-muted-foreground">วันที่:</span> {latestScan?.work_date || "-"}</p>
+                <p className="text-sm"><span className="text-muted-foreground">{t("dashboard.common.date")}:</span> {latestScan?.work_date || "-"}</p>
                 <p className="text-sm"><span className="text-muted-foreground">Check-in:</span> {latestScan?.check_in_time || "-"}</p>
                 <p className="text-sm"><span className="text-muted-foreground">Check-out:</span> {latestScan?.check_out_time || "-"}</p>
-                <p className="text-sm"><span className="text-muted-foreground">สถานะ:</span> {latestScan?.status || "-"}</p>
+                <p className="text-sm"><span className="text-muted-foreground">{t("dashboard.common.status")}:</span> {latestScan?.status || "-"}</p>
               </div>
             </CardContent>
           </Card>
 
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base font-semibold">วันหยุดที่กำลังจะมาถึง</CardTitle>
+              <CardTitle className="text-base font-semibold">{t("dashboard.common.upcomingHolidays")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-72 overflow-y-auto">
                 {upcomingHolidays.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-6 text-center">ไม่มีวันหยุดในช่วง 30 วันถัดไป</p>
+                  <p className="text-sm text-muted-foreground py-6 text-center">{t("dashboard.common.noUpcomingHolidays")}</p>
                 ) : (
                   upcomingHolidays.slice(0, 5).map((holiday: any) => (
                     <div key={holiday.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
@@ -449,25 +451,25 @@ const Dashboard = () => {
         <div className="mb-4">
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold text-gray-900">
-              {currentUser ? `Welcome back, ${displayName}` : "Department Dashboard"}
+              {currentUser ? `${t("dashboard.header.welcomeBackPrefix")} ${displayName}` : t("dashboard.manager.title")}
             </h1>
             <Badge variant="outline" className={roleTheme.badgeClass}>{roleTheme.label}</Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">ภาพรวมแผนก/ทีมของคุณ</p>
+          <p className="text-sm text-muted-foreground mt-1">{t("dashboard.manager.subtitle")}</p>
         </div>
 
         <div className="grid grid-cols-0 sm:grid-cols-1 md:grid-cols-3 lg:grid-cols-0 gap-6">
-          <Card className={`shadow-card ${roleTheme.cardClass} ${roleTheme.priorityClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">คำยื่นรออนุมัติ</p><p className="text-2xl font-bold mt-1">{teamPendingRequests.length}</p></CardContent></Card>
-          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">ทำงาน</p><p className="text-2xl font-bold mt-1">{teamPresentToday}</p></CardContent></Card>
-          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">สาย</p><p className="text-2xl font-bold mt-1">{teamLateToday}</p></CardContent></Card>
-          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">ขาด</p><p className="text-2xl font-bold mt-1">{teamAbsentToday}</p></CardContent></Card>
-          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">ลา</p><p className="text-2xl font-bold mt-1">{teamLeaveToday}</p></CardContent></Card>
-          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">สมาชิกในทีม</p><p className="text-2xl font-bold mt-1">{teamMembers.length}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass} ${roleTheme.priorityClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.manager.cards.pendingApprovals")}</p><p className="text-2xl font-bold mt-1">{teamPendingRequests.length}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.manager.cards.present")}</p><p className="text-2xl font-bold mt-1">{teamPresentToday}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.manager.cards.late")}</p><p className="text-2xl font-bold mt-1">{teamLateToday}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.manager.cards.absent")}</p><p className="text-2xl font-bold mt-1">{teamAbsentToday}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.manager.cards.leave")}</p><p className="text-2xl font-bold mt-1">{teamLeaveToday}</p></CardContent></Card>
+          <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.manager.cards.teamMembers")}</p><p className="text-2xl font-bold mt-1">{teamMembers.length}</p></CardContent></Card>
         </div>
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base font-semibold">กราฟ OT ของทีม</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("dashboard.manager.teamOtChart")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
@@ -485,12 +487,12 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base font-semibold">คำยื่นจากลูกน้อง (Pending Approval)</CardTitle>
+              <CardTitle className="text-base font-semibold">{t("dashboard.manager.pendingRequests")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {teamPendingRequests.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-6 text-center">ไม่มีคำยื่นที่รออนุมัติ</p>
+                  <p className="text-sm text-muted-foreground py-6 text-center">{t("dashboard.common.noPendingApprovals")}</p>
                 ) : (
                   teamPendingRequests.slice(0, 8).map((item: any) => (
                     <div key={item.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-muted/20">
@@ -499,7 +501,7 @@ const Dashboard = () => {
                         <p className="text-xs text-muted-foreground mt-0.5">{item.approval_type || "request"} • {item.department_name || "-"}</p>
                         <p className="text-xs text-muted-foreground">{item.request_reason || "-"}</p>
                       </div>
-                      <Badge variant="outline">รออนุมัติ</Badge>
+                      <Badge variant="outline">{t("dashboard.common.pending")}</Badge>
                     </div>
                   ))
                 )}
@@ -509,12 +511,12 @@ const Dashboard = () => {
 
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base font-semibold">คำขอลาจากลูกน้อง (ล่าสุด)</CardTitle>
+              <CardTitle className="text-base font-semibold">{t("dashboard.manager.latestTeamLeave")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {pendingLeaveRequestsFromTeam.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-6 text-center">ไม่มีคำขอลาที่รออนุมัติ</p>
+                  <p className="text-sm text-muted-foreground py-6 text-center">{t("dashboard.common.noPendingLeave")}</p>
                 ) : (
                   pendingLeaveRequestsFromTeam.slice(0, 8).map((lr: any) => (
                     <div key={lr.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-muted/20">
@@ -523,7 +525,7 @@ const Dashboard = () => {
                         <p className="text-xs text-muted-foreground mt-0.5">{lr.leave_type_name || "Leave"} • {lr.start_date} - {lr.end_date}</p>
                         <p className="text-xs text-muted-foreground">{lr.reason || "-"}</p>
                       </div>
-                      <Badge variant="outline">รออนุมัติ</Badge>
+                      <Badge variant="outline">{t("dashboard.common.pending")}</Badge>
                     </div>
                   ))
                 )}
@@ -574,7 +576,7 @@ const Dashboard = () => {
         {/* Department Distribution Donut Chart */}
         <Card className="shadow-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Employee Distribution by Department</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("dashboard.charts.employeeDistribution")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
@@ -602,7 +604,7 @@ const Dashboard = () => {
         {/* Attendance Status Chart */}
         <Card className="shadow-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Attendance Status</CardTitle>
+            <CardTitle className="text-base font-semibold">{t("dashboard.charts.attendanceStatus")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
@@ -625,13 +627,13 @@ const Dashboard = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <FileWarning className="h-5 w-5 text-orange-600" />
-              Contracts Expiring Soon (30-60 Days)
+              {t("dashboard.alerts.expiringContracts")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {expiringContracts.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-8 text-center">No expiring contracts</p>
+                <p className="text-sm text-muted-foreground py-8 text-center">{t("dashboard.alerts.noExpiringContracts")}</p>
               ) : (
                 expiringContracts.slice(0, 5).map((c: any) => (
                   <div key={c.id} className="flex items-center justify-between p-3 rounded-lg border border-orange-200 bg-orange-50">
@@ -654,13 +656,13 @@ const Dashboard = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-blue-600" />
-              Pending Approvals
+              {t("dashboard.alerts.pendingApprovals")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {(pendingApprovals || []).length === 0 ? (
-                <p className="text-sm text-muted-foreground py-8 text-center">No pending approvals</p>
+                <p className="text-sm text-muted-foreground py-8 text-center">{t("dashboard.alerts.noPendingApprovals")}</p>
               ) : (
                 (pendingApprovals || []).slice(0, 5).map((approval: any) => (
                   <div key={approval.id} className="flex items-center justify-between p-3 rounded-lg border border-blue-200 bg-blue-50">
@@ -684,13 +686,13 @@ const Dashboard = () => {
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Calendar className="h-5 w-5 text-green-600" />
-            Upcoming Public Holidays (Next 30 Days)
+            {t("dashboard.alerts.upcomingHolidays")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {upcomingHolidays.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center col-span-full">No upcoming holidays</p>
+              <p className="text-sm text-muted-foreground py-4 text-center col-span-full">{t("dashboard.alerts.noUpcomingHolidays")}</p>
             ) : (
               upcomingHolidays.map((holiday: any) => (
                 <div key={holiday.id} className="p-3 rounded-lg border border-green-200 bg-green-50">

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
   group: { icon: Building2, color: "text-primary" },
@@ -99,6 +100,7 @@ const TreeNode = ({ node, level = 0 }: { node: OrgNode; level?: number }) => {
 };
 
 const OrganizationStructure = () => {
+  const { t } = useLanguage();
   const { hasRole, hasPermission, user } = useAuth();
   const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
   const canManageOrg = hasPermission(Permission.MANAGE_ORGANIZATION) || isSuperAdmin;
@@ -276,7 +278,7 @@ const OrganizationStructure = () => {
     setCompanies(nextCompanies);
     setData(buildTree(nextCompanies, departments, positions));
     setCompanyForm({ code: "", name_th: "", name_en: "", tax_id: "", logo_url: "", address: "", phone: "" });
-    setMessage("เพิ่มบริษัทใหม่ในหน้าเดโมสำเร็จ (ยังไม่บันทึกลงฐานข้อมูล)");
+    setMessage(t("organizationStructure.messages.companyAddedDemo"));
   };
 
   const handleAddDepartment = () => {
@@ -296,7 +298,7 @@ const OrganizationStructure = () => {
     setDepartments(nextDepartments);
     setData(buildTree(companies, nextDepartments, positions));
     setDepartmentForm({ code: "", name_th: "", company_id: "", parent_dept_id: "", cost_center: "" });
-    setMessage("เพิ่มแผนกใหม่ในหน้าเดโมสำเร็จ (ยังไม่บันทึกลงฐานข้อมูล)");
+    setMessage(t("organizationStructure.messages.departmentAddedDemo"));
   };
 
   const handleAddPosition = () => {
@@ -316,72 +318,72 @@ const OrganizationStructure = () => {
     setPositions(nextPositions);
     setData(buildTree(companies, departments, nextPositions));
     setPositionForm({ code: "", title_th: "", level: "Staff", company_id: "", department_id: "" });
-    setMessage("เพิ่มตำแหน่งใหม่ในหน้าเดโมสำเร็จ (ยังไม่บันทึกลงฐานข้อมูล)");
+    setMessage(t("organizationStructure.messages.positionAddedDemo"));
   };
 
-  if (loading) return <div className="p-6 text-center">Loading organization structure... </div>
-  if (error) return <div className="p-6 text-center text-red-600">Error: {error}</div>;
-  if (!data) return <div className="p-6 text-center">No organization structure data available.</div>;
+  if (loading) return <div className="p-6 text-center">{t("organizationStructure.loading")}</div>
+  if (error) return <div className="p-6 text-center text-red-600">{t("organizationStructure.errorPrefix")}: {error}</div>;
+  if (!data) return <div className="p-6 text-center">{t("organizationStructure.noData")}</div>;
   return (
     <div className="space-y-6 animate-fade-in">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          {canUseMasterTabs && <TabsTrigger value="companies">Company</TabsTrigger>}
-          {canUseMasterTabs && <TabsTrigger value="departments">Department</TabsTrigger>}
-          {canUseMasterTabs && <TabsTrigger value="positions">Position</TabsTrigger>}
-          <TabsTrigger value="org-chart">Org Chart</TabsTrigger>
+          {canUseMasterTabs && <TabsTrigger value="companies">{t("organizationStructure.tabs.company")}</TabsTrigger>}
+          {canUseMasterTabs && <TabsTrigger value="departments">{t("organizationStructure.tabs.department")}</TabsTrigger>}
+          {canUseMasterTabs && <TabsTrigger value="positions">{t("organizationStructure.tabs.position")}</TabsTrigger>}
+          <TabsTrigger value="org-chart">{t("organizationStructure.tabs.orgChart")}</TabsTrigger>
         </TabsList>
 
         {canUseMasterTabs && <TabsContent value="companies" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">Company Information</CardTitle>
+              <CardTitle className="text-base">{t("organizationStructure.company.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {message && <div className="text-sm text-primary">{message}</div>}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>รหัสบริษัท (Code)</Label>
+                  <Label>{t("organizationStructure.company.fields.code")}</Label>
                   <Input value={companyForm.code} onChange={(e) => setCompanyForm((p) => ({ ...p, code: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>ชื่อบริษัทภาษาไทย</Label>
+                  <Label>{t("organizationStructure.company.fields.nameTh")}</Label>
                   <Input value={companyForm.name_th} onChange={(e) => setCompanyForm((p) => ({ ...p, name_th: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>ชื่อบริษัทภาษาอังกฤษ</Label>
+                  <Label>{t("organizationStructure.company.fields.nameEn")}</Label>
                   <Input value={companyForm.name_en} onChange={(e) => setCompanyForm((p) => ({ ...p, name_en: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>เลขประจำตัวผู้เสียภาษี</Label>
+                  <Label>{t("organizationStructure.company.fields.taxId")}</Label>
                   <Input value={companyForm.tax_id} onChange={(e) => setCompanyForm((p) => ({ ...p, tax_id: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>โลโก้บริษัท (URL)</Label>
+                  <Label>{t("organizationStructure.company.fields.logoUrl")}</Label>
                   <Input value={companyForm.logo_url} onChange={(e) => setCompanyForm((p) => ({ ...p, logo_url: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>เบอร์ติดต่อ</Label>
+                  <Label>{t("organizationStructure.company.fields.phone")}</Label>
                   <Input value={companyForm.phone} onChange={(e) => setCompanyForm((p) => ({ ...p, phone: e.target.value }))} />
                 </div>
                 <div className="md:col-span-2">
-                  <Label>ที่อยู่</Label>
+                  <Label>{t("organizationStructure.company.fields.address")}</Label>
                   <Textarea value={companyForm.address} onChange={(e) => setCompanyForm((p) => ({ ...p, address: e.target.value }))} />
                 </div>
               </div>
               {canManageOrg && (
-                <Button className="gap-1.5" onClick={handleAddCompany}><Plus className="h-4 w-4" /> Add New Company</Button>
+                <Button className="gap-1.5" onClick={handleAddCompany}><Plus className="h-4 w-4" /> {t("organizationStructure.company.add")}</Button>
               )}
 
               <div className="border rounded-md overflow-hidden mt-4">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted/30 border-b">
-                      <th className="text-left px-3 py-2">Code</th>
-                      <th className="text-left px-3 py-2">ชื่อไทย</th>
-                      <th className="text-left px-3 py-2">ชื่ออังกฤษ</th>
-                      <th className="text-left px-3 py-2">Tax ID</th>
-                      <th className="text-left px-3 py-2">Contact</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.company.table.code")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.company.table.nameTh")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.company.table.nameEn")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.company.table.taxId")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.company.table.contact")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -404,22 +406,22 @@ const OrganizationStructure = () => {
         {canUseMasterTabs && <TabsContent value="departments" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">Department Information</CardTitle>
+              <CardTitle className="text-base">{t("organizationStructure.department.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>รหัสแผนก</Label>
+                  <Label>{t("organizationStructure.department.fields.code")}</Label>
                   <Input value={departmentForm.code} onChange={(e) => setDepartmentForm((p) => ({ ...p, code: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>ชื่อแผนก</Label>
+                  <Label>{t("organizationStructure.department.fields.name")}</Label>
                   <Input value={departmentForm.name_th} onChange={(e) => setDepartmentForm((p) => ({ ...p, name_th: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>บริษัท</Label>
+                  <Label>{t("organizationStructure.department.fields.company")}</Label>
                   <Select value={departmentForm.company_id} onValueChange={(val) => setDepartmentForm((p) => ({ ...p, company_id: val }))}>
-                    <SelectTrigger><SelectValue placeholder="เลือกบริษัท" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("organizationStructure.department.placeholders.selectCompany")} /></SelectTrigger>
                     <SelectContent>
                       {companies.map((c) => (
                         <SelectItem key={c.id} value={String(c.id)}>{c.name_th || c.code}</SelectItem>
@@ -428,11 +430,11 @@ const OrganizationStructure = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label>แผนกหลัก (Parent Department)</Label>
+                  <Label>{t("organizationStructure.department.fields.parent")}</Label>
                   <Select value={departmentForm.parent_dept_id || "none"} onValueChange={(val) => setDepartmentForm((p) => ({ ...p, parent_dept_id: val === "none" ? "" : val }))}>
-                    <SelectTrigger><SelectValue placeholder="เลือกแผนกหลัก" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("organizationStructure.department.placeholders.selectParent")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">ไม่มี</SelectItem>
+                      <SelectItem value="none">{t("organizationStructure.none")}</SelectItem>
                       {deptOptions.map((d) => (
                         <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                       ))}
@@ -440,23 +442,23 @@ const OrganizationStructure = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label>Cost Center</Label>
+                  <Label>{t("organizationStructure.department.fields.costCenter")}</Label>
                   <Input value={departmentForm.cost_center} onChange={(e) => setDepartmentForm((p) => ({ ...p, cost_center: e.target.value }))} />
                 </div>
               </div>
               {canManageOrg && (
-                <Button className="gap-1.5" onClick={handleAddDepartment}><Plus className="h-4 w-4" /> Add Department</Button>
+                <Button className="gap-1.5" onClick={handleAddDepartment}><Plus className="h-4 w-4" /> {t("organizationStructure.department.add")}</Button>
               )}
 
               <div className="border rounded-md overflow-hidden mt-4">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted/30 border-b">
-                      <th className="text-left px-3 py-2">Code</th>
-                      <th className="text-left px-3 py-2">Department</th>
-                      <th className="text-left px-3 py-2">Company</th>
-                      <th className="text-left px-3 py-2">Parent</th>
-                      <th className="text-left px-3 py-2">Cost Center</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.department.table.code")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.department.table.department")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.department.table.company")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.department.table.parent")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.department.table.costCenter")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -479,22 +481,22 @@ const OrganizationStructure = () => {
         {canUseMasterTabs && <TabsContent value="positions" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">Position Information</CardTitle>
+              <CardTitle className="text-base">{t("organizationStructure.position.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>รหัสตำแหน่ง</Label>
+                  <Label>{t("organizationStructure.position.fields.code")}</Label>
                   <Input value={positionForm.code} onChange={(e) => setPositionForm((p) => ({ ...p, code: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>ชื่อตำแหน่ง</Label>
+                  <Label>{t("organizationStructure.position.fields.title")}</Label>
                   <Input value={positionForm.title_th} onChange={(e) => setPositionForm((p) => ({ ...p, title_th: e.target.value }))} />
                 </div>
                 <div>
-                  <Label>ระดับขั้น</Label>
+                  <Label>{t("organizationStructure.position.fields.level")}</Label>
                   <Select value={positionForm.level} onValueChange={(val) => setPositionForm((p) => ({ ...p, level: val }))}>
-                    <SelectTrigger><SelectValue placeholder="เลือกระดับ" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("organizationStructure.position.placeholders.selectLevel")} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Staff">Staff</SelectItem>
                       <SelectItem value="Manager">Manager</SelectItem>
@@ -503,9 +505,9 @@ const OrganizationStructure = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label>บริษัท</Label>
+                  <Label>{t("organizationStructure.position.fields.company")}</Label>
                   <Select value={positionForm.company_id} onValueChange={(val) => setPositionForm((p) => ({ ...p, company_id: val }))}>
-                    <SelectTrigger><SelectValue placeholder="เลือกบริษัท" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("organizationStructure.position.placeholders.selectCompany")} /></SelectTrigger>
                     <SelectContent>
                       {companies.map((c) => (
                         <SelectItem key={c.id} value={String(c.id)}>{c.name_th || c.code}</SelectItem>
@@ -514,11 +516,11 @@ const OrganizationStructure = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label>แผนก</Label>
+                  <Label>{t("organizationStructure.position.fields.department")}</Label>
                   <Select value={positionForm.department_id || "none"} onValueChange={(val) => setPositionForm((p) => ({ ...p, department_id: val === "none" ? "" : val }))}>
-                    <SelectTrigger><SelectValue placeholder="เลือกแผนก" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("organizationStructure.position.placeholders.selectDepartment")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">ไม่ระบุ</SelectItem>
+                      <SelectItem value="none">{t("organizationStructure.unspecified")}</SelectItem>
                       {deptOptions.map((d) => (
                         <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                       ))}
@@ -527,17 +529,17 @@ const OrganizationStructure = () => {
                 </div>
               </div>
               {canManageOrg && (
-                <Button className="gap-1.5" onClick={handleAddPosition}><Plus className="h-4 w-4" /> Add Position</Button>
+                <Button className="gap-1.5" onClick={handleAddPosition}><Plus className="h-4 w-4" /> {t("organizationStructure.position.add")}</Button>
               )}
 
               <div className="border rounded-md overflow-hidden mt-4">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted/30 border-b">
-                      <th className="text-left px-3 py-2">Code</th>
-                      <th className="text-left px-3 py-2">Title</th>
-                      <th className="text-left px-3 py-2">Level</th>
-                      <th className="text-left px-3 py-2">Company</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.position.table.code")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.position.table.title")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.position.table.level")}</th>
+                      <th className="text-left px-3 py-2">{t("organizationStructure.position.table.company")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -560,13 +562,13 @@ const OrganizationStructure = () => {
           {canUseMasterTabs && (isSuperAdmin || companies.length > 0) && (
             <Card className="shadow-card">
               <CardHeader>
-                <CardTitle className="text-base">Organization Admin Tools</CardTitle>
+                <CardTitle className="text-base">{t("organizationStructure.adminTools.title")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Button onClick={() => setActiveTab("companies")}>Add New Company</Button>
-                  <Button variant="outline" onClick={() => setActiveTab("departments")}>Create Department</Button>
-                  <Button variant="outline" onClick={() => setActiveTab("positions")}>Create Position</Button>
+                  <Button onClick={() => setActiveTab("companies")}>{t("organizationStructure.adminTools.addCompany")}</Button>
+                  <Button variant="outline" onClick={() => setActiveTab("departments")}>{t("organizationStructure.adminTools.createDepartment")}</Button>
+                  <Button variant="outline" onClick={() => setActiveTab("positions")}>{t("organizationStructure.adminTools.createPosition")}</Button>
                 </div>
               </CardContent>
             </Card>
@@ -574,7 +576,7 @@ const OrganizationStructure = () => {
 
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">Org Chart (Tree View)</CardTitle>
+              <CardTitle className="text-base">{t("organizationStructure.orgChartTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
               <TreeNode node={data} />

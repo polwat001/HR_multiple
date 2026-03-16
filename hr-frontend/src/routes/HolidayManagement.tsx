@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
 
 type HolidayItem = {
@@ -43,6 +44,7 @@ const normalizeHoliday = (raw: any): HolidayItem => ({
 });
 
 const HolidayManagement = () => {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const roleViewKey = resolveRoleViewKey(user as any);
   const canManage = roleViewKey === "hr_company" || roleViewKey === "central_hr" || roleViewKey === "super_admin";
@@ -65,7 +67,7 @@ const HolidayManagement = () => {
       const items = Array.isArray(data) ? data : data?.data || [];
       setHolidays(items.map(normalizeHoliday));
     } catch (error: any) {
-      alert(error?.message || "ไม่สามารถโหลดข้อมูลวันหยุดได้");
+      alert(error?.message || t("holidayManagement.fetchFailed"));
     } finally {
       setLoading(false);
     }
@@ -93,7 +95,7 @@ const HolidayManagement = () => {
 
   const handleSaveHoliday = async () => {
     if (!canManage) {
-      alert("คุณไม่มีสิทธิ์จัดการวันหยุด");
+      alert(t("holidayManagement.noManagePermission"));
       return;
     }
     if (!canSave) return;
@@ -117,7 +119,7 @@ const HolidayManagement = () => {
       resetForm();
       await loadHolidays();
     } catch (error: any) {
-      alert(error?.message || "บันทึกวันหยุดไม่สำเร็จ");
+      alert(error?.message || t("holidayManagement.saveFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -125,16 +127,16 @@ const HolidayManagement = () => {
 
   const handleDelete = async (id: number) => {
     if (!canManage) {
-      alert("คุณไม่มีสิทธิ์ลบวันหยุด");
+      alert(t("holidayManagement.noDeletePermission"));
       return;
     }
-    if (!confirm("ยืนยันการลบวันหยุดรายการนี้?")) return;
+    if (!confirm(t("holidayManagement.deleteConfirm"))) return;
 
     try {
       await apiDelete(`/holidays/${id}`);
       await loadHolidays();
     } catch (error: any) {
-      alert(error?.message || "ลบวันหยุดไม่สำเร็จ");
+      alert(error?.message || t("holidayManagement.deleteFailed"));
     }
   };
 
@@ -143,19 +145,19 @@ const HolidayManagement = () => {
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" /> Holiday Data
+            <CalendarDays className="h-4 w-4" /> {t("holidayManagement.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {!canManage && (
             <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-              สิทธิ์ของคุณเป็นแบบดูข้อมูลเท่านั้น
+              {t("holidayManagement.readOnlyNotice")}
             </div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">วัน/เดือน/ปี</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("holidayManagement.fields.date")}</p>
               <Input
                 type="date"
                 value={form.holiday_date}
@@ -164,7 +166,7 @@ const HolidayManagement = () => {
               />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">ชื่อวันหยุด (TH)</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("holidayManagement.fields.nameTh")}</p>
               <Input
                 value={form.holiday_name_th}
                 disabled={!canManage}
@@ -172,7 +174,7 @@ const HolidayManagement = () => {
               />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">ชื่อวันหยุด (EN)</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("holidayManagement.fields.nameEn")}</p>
               <Input
                 value={form.holiday_name_en}
                 disabled={!canManage}
@@ -180,19 +182,19 @@ const HolidayManagement = () => {
               />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">ประเภทการจ่าย</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("holidayManagement.fields.payType")}</p>
               <select
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                 disabled={!canManage}
                 value={form.is_paid}
                 onChange={(e) => setForm((p) => ({ ...p, is_paid: e.target.value }))}
               >
-                <option value="1">Paid Holiday</option>
-                <option value="0">Unpaid Holiday</option>
+                <option value="1">{t("holidayManagement.payType.paidHoliday")}</option>
+                <option value="0">{t("holidayManagement.payType.unpaidHoliday")}</option>
               </select>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">รายละเอียด</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("holidayManagement.fields.description")}</p>
               <Input
                 value={form.description}
                 disabled={!canManage}
@@ -204,11 +206,11 @@ const HolidayManagement = () => {
           <div className="flex flex-wrap gap-2">
             <Button className="gap-1.5" onClick={handleSaveHoliday} disabled={!canManage || !canSave || submitting}>
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              {editingId ? "Save Changes" : "Add Holiday"}
+              {editingId ? t("holidayManagement.actions.saveChanges") : t("holidayManagement.actions.addHoliday")}
             </Button>
             {editingId && (
               <Button variant="outline" onClick={resetForm} disabled={submitting}>
-                Cancel Edit
+                {t("holidayManagement.actions.cancelEdit")}
               </Button>
             )}
           </div>
@@ -217,27 +219,27 @@ const HolidayManagement = () => {
 
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="text-base">Holiday Calendar</CardTitle>
+          <CardTitle className="text-base">{t("holidayManagement.calendarTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Holiday Name (TH)</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Holiday Name (EN)</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Actions</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("holidayManagement.table.date")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("holidayManagement.table.nameTh")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("holidayManagement.table.nameEn")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("holidayManagement.table.type")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("holidayManagement.table.actions")}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">Loading holidays...</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">{t("holidayManagement.loading")}</td>
                 </tr>
               ) : holidays.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No holiday data</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">{t("holidayManagement.empty")}</td>
                 </tr>
               ) : (
                 holidays.map((h) => (
@@ -246,7 +248,7 @@ const HolidayManagement = () => {
                     <td className="px-4 py-3">{h.holiday_name_th}</td>
                     <td className="px-4 py-3">{h.holiday_name_en || "-"}</td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className="text-xs">{Number(h.is_paid ?? 1) === 1 ? "Paid" : "Unpaid"}</Badge>
+                      <Badge variant="outline" className="text-xs">{Number(h.is_paid ?? 1) === 1 ? t("holidayManagement.payType.paid") : t("holidayManagement.payType.unpaid")}</Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -257,7 +259,7 @@ const HolidayManagement = () => {
                           className="gap-1"
                           onClick={() => startEdit(h)}
                         >
-                          <Pencil className="h-3.5 w-3.5" /> Edit
+                          <Pencil className="h-3.5 w-3.5" /> {t("holidayManagement.actions.edit")}
                         </Button>
                         <Button
                           size="sm"
@@ -266,7 +268,7 @@ const HolidayManagement = () => {
                           className="gap-1"
                           onClick={() => handleDelete(h.id)}
                         >
-                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                          <Trash2 className="h-3.5 w-3.5" /> {t("holidayManagement.actions.delete")}
                         </Button>
                       </div>
                     </td>

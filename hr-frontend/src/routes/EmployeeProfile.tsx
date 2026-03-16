@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Paperclip, Plus, Save, Trash2, Upload } from "lucide-react";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface EmployeeForm {
   id?: string;
@@ -99,6 +100,7 @@ const normalizeList = (payload: any): any[] => {
 };
 
 const EmployeeProfile = () => {
+  const { t } = useLanguage();
   const params = useParams();
   const router = useRouter();
   const employeeId = String(params?.id || "");
@@ -210,7 +212,7 @@ const EmployeeProfile = () => {
 
   const handleAddHistory = () => {
     if (!newHistory.changed_at || !newHistory.old_value || !newHistory.new_value) {
-      alert("กรุณากรอกข้อมูล History Log ให้ครบ");
+      alert(t("employeeProfile.historyRequired"));
       return;
     }
 
@@ -265,28 +267,28 @@ const EmployeeProfile = () => {
       } else {
         await apiPut(`/employees/${employeeId}`, payload);
       }
-      alert("บันทึกข้อมูลพนักงานเรียบร้อย");
+      alert(t("employeeProfile.saveSuccess"));
       router.push("/employees");
     } catch (error) {
       console.error("Save employee failed:", error);
-      alert("ระบบยังไม่รองรับการบันทึกบางฟิลด์บนฐานข้อมูล แต่ข้อมูลในหน้าจอได้รับการอัปเดตแล้ว");
+      alert(t("employeeProfile.savePartialWarning"));
     } finally {
       setIsSaving(false);
     }
   };
 
   if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground animate-pulse">กำลังโหลดข้อมูลพนักงาน...</div>;
+    return <div className="p-8 text-center text-muted-foreground animate-pulse">{t("employeeProfile.loading")}</div>;
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <Button variant="ghost" size="sm" onClick={() => router.push("/employees")} className="gap-2">
-          <ArrowLeft className="h-4 w-4" /> กลับไปรายการพนักงาน
+          <ArrowLeft className="h-4 w-4" /> {t("employeeProfile.backToList")}
         </Button>
         <Button size="sm" className="gap-2" onClick={handleSave} disabled={isSaving}>
-          <Save className="h-4 w-4" /> {isSaving ? "กำลังบันทึก..." : "บันทึกข้อมูลพนักงาน"}
+          <Save className="h-4 w-4" /> {isSaving ? t("employeeProfile.saving") : t("employeeProfile.save")}
         </Button>
       </div>
 
@@ -298,16 +300,16 @@ const EmployeeProfile = () => {
               {form.avatar_url ? (
                 <img src={form.avatar_url} alt="avatar" className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">Avatar</div>
+                <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">{t("employeeProfile.avatar")}</div>
               )}
             </div>
             <div className="flex-1 pt-2 sm:pt-4">
               <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="text-xl font-bold">{form.firstname_th || "ชื่อ"} {form.lastname_th || "นามสกุล"}</h2>
+                <h2 className="text-xl font-bold">{form.firstname_th || t("employeeProfile.firstName")} {form.lastname_th || t("employeeProfile.lastName")}</h2>
                 <Badge variant="outline" className="text-xs capitalize">{form.status || "active"}</Badge>
               </div>
               <p className="text-muted-foreground text-sm mt-1">
-                {form.position_name || "ตำแหน่ง"} • {form.department_name || "แผนก"}
+                {form.position_name || t("employeeProfile.position")} • {form.department_name || t("employeeProfile.department")}
               </p>
             </div>
             <div className="w-full sm:w-auto">
@@ -315,7 +317,7 @@ const EmployeeProfile = () => {
                 <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
                 <Button size="sm" variant="outline" className="gap-2" asChild>
                   <span>
-                    <Upload className="h-4 w-4" /> อัปโหลดรูปโปรไฟล์
+                    <Upload className="h-4 w-4" /> {t("employeeProfile.uploadProfile")}
                   </span>
                 </Button>
               </label>
@@ -326,48 +328,48 @@ const EmployeeProfile = () => {
 
       <Tabs defaultValue="personal">
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="personal">Personal Info</TabsTrigger>
-          <TabsTrigger value="work">Work Info</TabsTrigger>
-          <TabsTrigger value="attachments">Attachments</TabsTrigger>
-          <TabsTrigger value="history">History Log</TabsTrigger>
+          <TabsTrigger value="personal">{t("employeeProfile.tabs.personal")}</TabsTrigger>
+          <TabsTrigger value="work">{t("employeeProfile.tabs.work")}</TabsTrigger>
+          <TabsTrigger value="attachments">{t("employeeProfile.tabs.attachments")}</TabsTrigger>
+          <TabsTrigger value="history">{t("employeeProfile.tabs.history")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">ข้อมูลส่วนตัว (Personal Info)</CardTitle>
+              <CardTitle className="text-base">{t("employeeProfile.personalTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input placeholder="ชื่อ" value={form.firstname_th} onChange={(e) => onChange("firstname_th", e.target.value)} />
-              <Input placeholder="นามสกุล" value={form.lastname_th} onChange={(e) => onChange("lastname_th", e.target.value)} />
-              <Input placeholder="ชื่อเล่น" value={form.nickname} onChange={(e) => onChange("nickname", e.target.value)} />
-              <Input placeholder="รหัสบัตรประชาชน" value={form.national_id} onChange={(e) => onChange("national_id", e.target.value)} />
-              <Input type="date" placeholder="วันเกิด" value={form.birth_date} onChange={(e) => onChange("birth_date", e.target.value)} />
+              <Input placeholder={t("employeeProfile.firstName")} value={form.firstname_th} onChange={(e) => onChange("firstname_th", e.target.value)} />
+              <Input placeholder={t("employeeProfile.lastName")} value={form.lastname_th} onChange={(e) => onChange("lastname_th", e.target.value)} />
+              <Input placeholder={t("employeeProfile.nickname")} value={form.nickname} onChange={(e) => onChange("nickname", e.target.value)} />
+              <Input placeholder={t("employeeProfile.nationalId")} value={form.national_id} onChange={(e) => onChange("national_id", e.target.value)} />
+              <Input type="date" placeholder={t("employeeProfile.birthDate")} value={form.birth_date} onChange={(e) => onChange("birth_date", e.target.value)} />
               <Select value={form.gender || "unspecified"} onValueChange={(value) => onChange("gender", value === "unspecified" ? "" : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="เพศ" />
+                  <SelectValue placeholder={t("employeeProfile.gender")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unspecified">ไม่ระบุ</SelectItem>
-                  <SelectItem value="male">ชาย</SelectItem>
-                  <SelectItem value="female">หญิง</SelectItem>
-                  <SelectItem value="other">อื่นๆ</SelectItem>
+                  <SelectItem value="unspecified">{t("employeeProfile.genderOption.unspecified")}</SelectItem>
+                  <SelectItem value="male">{t("employeeProfile.genderOption.male")}</SelectItem>
+                  <SelectItem value="female">{t("employeeProfile.genderOption.female")}</SelectItem>
+                  <SelectItem value="other">{t("employeeProfile.genderOption.other")}</SelectItem>
                 </SelectContent>
               </Select>
-              <Input placeholder="เบอร์โทร" value={form.phone} onChange={(e) => onChange("phone", e.target.value)} />
-              <Input placeholder="อีเมล" value={form.email} onChange={(e) => onChange("email", e.target.value)} />
+              <Input placeholder={t("employeeProfile.phone")} value={form.phone} onChange={(e) => onChange("phone", e.target.value)} />
+              <Input placeholder={t("employeeProfile.email")} value={form.email} onChange={(e) => onChange("email", e.target.value)} />
               <Input
-                placeholder="ชื่อผู้ติดต่อฉุกเฉิน"
+                placeholder={t("employeeProfile.emergencyName")}
                 value={form.emergency_name}
                 onChange={(e) => onChange("emergency_name", e.target.value)}
               />
               <Input
-                placeholder="เบอร์ผู้ติดต่อฉุกเฉิน"
+                placeholder={t("employeeProfile.emergencyPhone")}
                 value={form.emergency_phone}
                 onChange={(e) => onChange("emergency_phone", e.target.value)}
               />
               <Input
-                placeholder="ความสัมพันธ์ผู้ติดต่อฉุกเฉิน"
+                placeholder={t("employeeProfile.emergencyRelation")}
                 value={form.emergency_relation}
                 onChange={(e) => onChange("emergency_relation", e.target.value)}
               />
@@ -378,20 +380,21 @@ const EmployeeProfile = () => {
         <TabsContent value="work" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">ข้อมูลการทำงาน (Work Info)</CardTitle>
+              <CardTitle className="text-base">{t("employeeProfile.workTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                placeholder="รหัสพนักงาน (Employee Code)"
+                placeholder={t("employeeProfile.employeeCode")}
                 value={form.employee_code}
                 onChange={(e) => onChange("employee_code", e.target.value)}
               />
               <Select value={form.company_id || "none"} onValueChange={(value) => onChange("company_id", value === "none" ? "" : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="สังกัดบริษัท" />
+                  <SelectValue placeholder={t("employeeProfile.company")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">ไม่ระบุ</SelectItem>
+                  <SelectItem value="none">{t("employeeProfile.unspecified")}</SelectItem>
                   {companies.map((row) => (
                     <SelectItem key={String(row.id)} value={String(row.id)}>{row.name_th || `Company ${row.id}`}</SelectItem>
                   ))}
@@ -402,10 +405,10 @@ const EmployeeProfile = () => {
                 onValueChange={(value) => onChange("department_id", value === "none" ? "" : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="แผนก" />
+                  <SelectValue placeholder={t("employeeProfile.department")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">ไม่ระบุ</SelectItem>
+                  <SelectItem value="none">{t("employeeProfile.unspecified")}</SelectItem>
                   {departments.map((row) => (
                     <SelectItem key={String(row.id)} value={String(row.id)}>{row.name_th || `Department ${row.id}`}</SelectItem>
                   ))}
@@ -413,10 +416,10 @@ const EmployeeProfile = () => {
               </Select>
               <Select value={form.position_id || "none"} onValueChange={(value) => onChange("position_id", value === "none" ? "" : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="ตำแหน่ง" />
+                  <SelectValue placeholder={t("employeeProfile.position")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">ไม่ระบุ</SelectItem>
+                  <SelectItem value="none">{t("employeeProfile.unspecified")}</SelectItem>
                   {positions.map((row) => (
                     <SelectItem key={String(row.id)} value={String(row.id)}>{row.title_th || `Position ${row.id}`}</SelectItem>
                   ))}
@@ -424,10 +427,10 @@ const EmployeeProfile = () => {
               </Select>
               <Select value={form.manager_id || "none"} onValueChange={(value) => onChange("manager_id", value === "none" ? "" : value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="หัวหน้างาน (Report to)" />
+                  <SelectValue placeholder={t("employeeProfile.reportTo")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">ไม่ระบุ</SelectItem>
+                  <SelectItem value="none">{t("employeeProfile.unspecified")}</SelectItem>
                   {managerOptions.map((row) => (
                     <SelectItem key={String(row.id)} value={String(row.id)}>
                       {row.firstname_th} {row.lastname_th}
@@ -443,20 +446,20 @@ const EmployeeProfile = () => {
               />
               <Select value={form.employee_type} onValueChange={(value) => onChange("employee_type", value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="ประเภทพนักงาน" />
+                  <SelectValue placeholder={t("employeeProfile.employeeType")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="monthly">รายเดือน</SelectItem>
-                  <SelectItem value="daily">รายวัน</SelectItem>
+                  <SelectItem value="monthly">{t("employeeProfile.employeeTypeOption.monthly")}</SelectItem>
+                  <SelectItem value="daily">{t("employeeProfile.employeeTypeOption.daily")}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={form.status} onValueChange={(value) => onChange("status", value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="สถานะ" />
+                  <SelectValue placeholder={t("employeeProfile.status")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="resigned">Resigned</SelectItem>
+                  <SelectItem value="active">{t("employeeProfile.statusOption.active")}</SelectItem>
+                  <SelectItem value="resigned">{t("employeeProfile.statusOption.resigned")}</SelectItem>
                 </SelectContent>
               </Select>
             </CardContent>
@@ -466,7 +469,7 @@ const EmployeeProfile = () => {
         <TabsContent value="attachments" className="mt-4">
           <Card className="shadow-card">
             <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">เอกสารแนบ (Attachments)</CardTitle>
+              <CardTitle className="text-base">{t("employeeProfile.attachmentsTitle")}</CardTitle>
               <label className="inline-flex">
                 <input
                   type="file"
@@ -477,14 +480,14 @@ const EmployeeProfile = () => {
                 />
                 <Button size="sm" variant="outline" className="gap-2" asChild>
                   <span>
-                    <Paperclip className="h-4 w-4" /> อัปโหลดไฟล์
+                    <Paperclip className="h-4 w-4" /> {t("employeeProfile.uploadFile")}
                   </span>
                 </Button>
               </label>
             </CardHeader>
             <CardContent>
               {attachments.length === 0 ? (
-                <div className="text-sm text-muted-foreground">ยังไม่มีไฟล์แนบ</div>
+                <div className="text-sm text-muted-foreground">{t("employeeProfile.noAttachments")}</div>
               ) : (
                 <div className="space-y-2">
                   {attachments.map((item) => (
@@ -509,7 +512,7 @@ const EmployeeProfile = () => {
         <TabsContent value="history" className="mt-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">ประวัติการทำงาน (History Log)</CardTitle>
+              <CardTitle className="text-base">{t("employeeProfile.historyTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -523,36 +526,36 @@ const EmployeeProfile = () => {
                   onValueChange={(value) => setNewHistory((prev) => ({ ...prev, event_type: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="ประเภท" />
+                    <SelectValue placeholder={t("employeeProfile.type")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="promote">เลื่อนตำแหน่ง</SelectItem>
-                    <SelectItem value="salary_adjust">ปรับเงินเดือน</SelectItem>
-                    <SelectItem value="transfer_department">ย้ายแผนก</SelectItem>
+                    <SelectItem value="promote">{t("employeeProfile.historyEvent.promote")}</SelectItem>
+                    <SelectItem value="salary_adjust">{t("employeeProfile.historyEvent.salaryAdjust")}</SelectItem>
+                    <SelectItem value="transfer_department">{t("employeeProfile.historyEvent.transferDepartment")}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input
-                  placeholder="ตำแหน่ง/ค่าเดิม"
+                  placeholder={t("employeeProfile.oldValue")}
                   value={newHistory.old_value}
                   onChange={(e) => setNewHistory((prev) => ({ ...prev, old_value: e.target.value }))}
                 />
                 <Input
-                  placeholder="ตำแหน่ง/ค่าใหม่"
+                  placeholder={t("employeeProfile.newValue")}
                   value={newHistory.new_value}
                   onChange={(e) => setNewHistory((prev) => ({ ...prev, new_value: e.target.value }))}
                 />
                 <Button variant="outline" className="gap-2" onClick={handleAddHistory}>
-                  <Plus className="h-4 w-4" /> เพิ่มรายการ
+                  <Plus className="h-4 w-4" /> {t("employeeProfile.addItem")}
                 </Button>
               </div>
               <Textarea
-                placeholder="หมายเหตุเพิ่มเติม"
+                placeholder={t("employeeProfile.note")}
                 value={newHistory.note}
                 onChange={(e) => setNewHistory((prev) => ({ ...prev, note: e.target.value }))}
               />
 
               {historyLogs.length === 0 ? (
-                <div className="text-sm text-muted-foreground">ยังไม่มีประวัติการเปลี่ยนแปลง</div>
+                <div className="text-sm text-muted-foreground">{t("employeeProfile.noHistory")}</div>
               ) : (
                 <div className="space-y-2">
                   {historyLogs.map((item) => (

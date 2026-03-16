@@ -10,19 +10,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Permission, UserRole } from "@/types/roles";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
-
-const leaveTypes = [
-  { type: "Vacation (พักร้อน)", companyA: 6, companyB: 10, companyC: 8 },
-  { type: "Sick Leave (ลาป่วย)", companyA: 30, companyB: 30, companyC: 30 },
-  { type: "Personal Leave (ลากิจ)", companyA: 3, companyB: 5, companyC: 3 },
-  { type: "Maternity (ลาคลอด)", companyA: 90, companyB: 90, companyC: 90 },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const leaveTypeOptions = [
-  { id: 1, name: "Vacation (พักร้อน)" },
-  { id: 2, name: "Sick Leave (ลาป่วย)" },
-  { id: 3, name: "Personal Leave (ลากิจ)" },
-  { id: 4, name: "Maternity (ลาคลอด)" },
+  { id: 1 },
+  { id: 2 },
+  { id: 3 },
+  { id: 4 },
 ];
 
 const initialPolicyRows = [
@@ -32,24 +26,25 @@ const initialPolicyRows = [
 ];
 
 const holidays = [
-  { date: "2026-01-01", name: "วันขึ้นปีใหม่" },
-  { date: "2026-02-26", name: "วันมาฆบูชา" },
-  { date: "2026-04-06", name: "วันจักรี" },
-  { date: "2026-04-13", name: "วันสงกรานต์" },
-  { date: "2026-04-14", name: "วันสงกรานต์" },
-  { date: "2026-04-15", name: "วันสงกรานต์" },
-  { date: "2026-05-01", name: "วันแรงงาน" },
-  { date: "2026-05-04", name: "วันฉัตรมงคล" },
-  { date: "2026-06-03", name: "วันเฉลิมพระชนมพรรษา ร.10" },
-  { date: "2026-07-28", name: "วันเฉลิมพระชนมพรรษา ร.10 (ชดเชย)" },
-  { date: "2026-08-12", name: "วันแม่แห่งชาติ" },
-  { date: "2026-10-23", name: "วันปิยมหาราช" },
-  { date: "2026-12-05", name: "วันพ่อแห่งชาติ" },
-  { date: "2026-12-10", name: "วันรัฐธรรมนูญ" },
-  { date: "2026-12-31", name: "วันสิ้นปี" },
+  { date: "2026-01-01", nameKey: "newYear" },
+  { date: "2026-02-26", nameKey: "makhaBucha" },
+  { date: "2026-04-06", nameKey: "chakri" },
+  { date: "2026-04-13", nameKey: "songkran" },
+  { date: "2026-04-14", nameKey: "songkran" },
+  { date: "2026-04-15", nameKey: "songkran" },
+  { date: "2026-05-01", nameKey: "labour" },
+  { date: "2026-05-04", nameKey: "coronation" },
+  { date: "2026-06-03", nameKey: "queenSuthidaBirthday" },
+  { date: "2026-07-28", nameKey: "kingBirthdaySubstitute" },
+  { date: "2026-08-12", nameKey: "mothersDay" },
+  { date: "2026-10-23", nameKey: "chulalongkorn" },
+  { date: "2026-12-05", nameKey: "fathersDay" },
+  { date: "2026-12-10", nameKey: "constitution" },
+  { date: "2026-12-31", nameKey: "yearEnd" },
 ];
 
 const LeaveManagement = () => {
+  const { t } = useLanguage();
   const { hasPermission, hasRole, user } = useAuth();
   const roleViewKey = resolveRoleViewKey(user as any);
   const isManagerView = roleViewKey === "manager";
@@ -80,10 +75,10 @@ const LeaveManagement = () => {
 
   const getStatusLabel = (status?: string) => {
     const s = String(status || "").toLowerCase();
-    if (s === "approved") return "อนุมัติ";
-    if (s === "pending") return "รออนุมัติ";
-    if (s === "rejected") return "ไม่อนุมัติ";
-    return status || "-";
+    if (s === "approved") return t("leaveManagement.status.approved");
+    if (s === "pending") return t("leaveManagement.status.pending");
+    if (s === "rejected") return t("leaveManagement.status.rejected");
+    return status || t("leaveManagement.common.na");
   };
 
   const getStatusClass = (status?: string) => {
@@ -145,7 +140,7 @@ const LeaveManagement = () => {
   const leaveBalanceByType = useMemo(() => {
     const grouped = new Map<string, { quota: number; used: number; pending: number; balance: number }>();
     (balances || []).forEach((row: any) => {
-      const name = row.leave_type_name || "Unknown";
+      const name = row.leave_type_name || t("leaveManagement.common.unknown");
       const prev = grouped.get(name) || { quota: 0, used: 0, pending: 0, balance: 0 };
       grouped.set(name, {
         quota: prev.quota + Number(row.quota || 0),
@@ -196,7 +191,7 @@ const LeaveManagement = () => {
 
     const totalDaysNumber = Number(leaveForm.totalDays || 0);
     if (!leaveForm.leaveTypeId || !leaveForm.startDate || !leaveForm.endDate || !totalDaysNumber || !leaveForm.reason) {
-      setRequestError("กรุณากรอกข้อมูลใบลาให้ครบถ้วน");
+      setRequestError(t("leaveManagement.messages.fillRequired"));
       return;
     }
 
@@ -211,7 +206,7 @@ const LeaveManagement = () => {
         attachment_name: leaveForm.attachmentName || null,
       });
 
-      setRequestSuccess("ส่งคำร้องขอลางานเรียบร้อยแล้ว");
+      setRequestSuccess(t("leaveManagement.messages.requestSubmitted"));
       setLeaveForm({
         leaveTypeId: "1",
         startDate: "",
@@ -229,7 +224,7 @@ const LeaveManagement = () => {
       const rows = Array.isArray(res) ? res : res?.data || [];
       setRequests(rows);
     } catch (error: any) {
-      const message = error instanceof Error ? error.message : "ไม่สามารถส่งคำร้องได้";
+      const message = error instanceof Error ? error.message : t("leaveManagement.messages.requestFailed");
       setRequestError(message);
     } finally {
       setFormLoading(false);
@@ -249,7 +244,7 @@ const LeaveManagement = () => {
       const approvedOverlap = Number(warning?.approved || 0);
       if (approvedOverlap > 0) {
         const confirmApprove = window.confirm(
-          `คำเตือน: มีพนักงานในทีมลาซ้อนช่วงวันเดียวกันที่อนุมัติแล้ว ${approvedOverlap} คน\nต้องการอนุมัติต่อหรือไม่?`
+          t("leaveManagement.approval.confirmOverlap").replace("{{count}}", String(approvedOverlap))
         );
         if (!confirmApprove) return;
       }
@@ -297,25 +292,25 @@ const LeaveManagement = () => {
               onClick={() => setEmployeeView("request")}
               className={`inline-flex items-center rounded-full px-3 py-1 font-medium transition-colors ${employeeView === "request" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
             >
-              พนักงาน
+              {t("leaveManagement.employee.tab")}
             </button>
             <button
               type="button"
               onClick={() => setEmployeeView("history")}
               className={`inline-flex items-center rounded-full px-3 py-1 font-medium transition-colors ${employeeView === "history" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
             >
-              ประวัติการลาของคุณ
+              {t("leaveManagement.employee.historyTab")}
             </button>
           </div>
           <Button size="sm" onClick={() => { setShowEmployeeRequestForm((v) => !v); setEmployeeView("request"); }} className="gap-1.5">
-            <Plus className="h-4 w-4" /> ขอลา
+            <Plus className="h-4 w-4" /> {t("leaveManagement.employee.requestLeave")}
           </Button>
         </div>
 
         {(showEmployeeRequestForm || employeeView === "request") && (
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">คำขอลางาน</CardTitle>
+              <CardTitle className="text-base">{t("leaveManagement.employee.requestTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {requestError ? <p className="text-sm text-destructive">{requestError}</p> : null}
@@ -323,29 +318,29 @@ const LeaveManagement = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">ประเภทการลา</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.leaveType")}</p>
                   <select
                     className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                     value={leaveForm.leaveTypeId}
                     onChange={(e) => setLeaveForm((prev) => ({ ...prev, leaveTypeId: e.target.value }))}
                   >
                     {leaveTypeOptions.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name}</option>
+                      <option key={item.id} value={item.id}>{t(`leaveManagement.leaveTypes.${item.id}`)}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">จำนวนวัน/ชั่วโมง</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.totalDaysHours")}</p>
                   <Input
                     type="number"
                     step="0.5"
                     value={leaveForm.totalDays}
                     onChange={(e) => setLeaveForm((prev) => ({ ...prev, totalDays: e.target.value }))}
-                    placeholder="เช่น 1 หรือ 0.5"
+                    placeholder={t("leaveManagement.fields.totalDaysPlaceholder")}
                   />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">วันที่เริ่มต้น</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.startDate")}</p>
                   <Input
                     type="date"
                     value={leaveForm.startDate}
@@ -353,7 +348,7 @@ const LeaveManagement = () => {
                   />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">วันที่สิ้นสุด</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.endDate")}</p>
                   <Input
                     type="date"
                     value={leaveForm.endDate}
@@ -363,20 +358,20 @@ const LeaveManagement = () => {
               </div>
 
               <div>
-                <p className="text-sm text-muted-foreground mb-1">เหตุผลการลา</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.reason")}</p>
                 <Textarea
                   value={leaveForm.reason}
                   onChange={(e) => setLeaveForm((prev) => ({ ...prev, reason: e.target.value }))}
-                  placeholder="ระบุเหตุผลการลา"
+                  placeholder={t("leaveManagement.fields.reasonPlaceholder")}
                 />
               </div>
 
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleCreateLeaveRequest} disabled={formLoading}>
-                  {formLoading ? "กำลังส่งคำร้อง..." : "ยืนยันส่งคำขอ"}
+                  {formLoading ? t("leaveManagement.actions.submitting") : t("leaveManagement.actions.confirmSubmit")}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setShowEmployeeRequestForm(false)}>
-                  ยกเลิก
+                  {t("leaveManagement.actions.cancel")}
                 </Button>
               </div>
             </CardContent>
@@ -386,21 +381,21 @@ const LeaveManagement = () => {
         <Card className="shadow-card">
           <CardHeader>
             <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-base">ประวัติการลา</CardTitle>
+              <CardTitle className="text-base">{t("leaveManagement.employee.leaveHistory")}</CardTitle>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-xs text-muted-foreground">
-                  ทั้งหมด {leaveStatusCounts.all} | รอ {leaveStatusCounts.pending} | อนุมัติ {leaveStatusCounts.approved} | ไม่อนุมัติ {leaveStatusCounts.rejected}
+                  {t("leaveManagement.history.summary")} {leaveStatusCounts.all} | {t("leaveManagement.status.pending")} {leaveStatusCounts.pending} | {t("leaveManagement.status.approved")} {leaveStatusCounts.approved} | {t("leaveManagement.status.rejected")} {leaveStatusCounts.rejected}
                 </span>
-                <span className="text-muted-foreground">สถานะ:</span>
+                <span className="text-muted-foreground">{t("leaveManagement.fields.status")}:</span>
                 <select
                   className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                   value={employeeStatusFilter}
                   onChange={(e) => setEmployeeStatusFilter(e.target.value as "all" | "pending" | "approved" | "rejected")}
                 >
-                  <option value="all">ทั้งหมด</option>
-                  <option value="pending">รออนุมัติ</option>
-                  <option value="approved">อนุมัติ</option>
-                  <option value="rejected">ไม่อนุมัติ</option>
+                  <option value="all">{t("leaveManagement.status.all")}</option>
+                  <option value="pending">{t("leaveManagement.status.pending")}</option>
+                  <option value="approved">{t("leaveManagement.status.approved")}</option>
+                  <option value="rejected">{t("leaveManagement.status.rejected")}</option>
                 </select>
               </div>
             </div>
@@ -409,27 +404,27 @@ const LeaveManagement = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">ประเภท</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">วันที่</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">จำนวน</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">สถานะ</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.type")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.date")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.total")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.status")}</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingRequests ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">กำลังโหลดข้อมูล...</td>
+                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">{t("leaveManagement.loading")}</td>
                   </tr>
                 ) : filteredMyLeaveHistory.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">ไม่พบประวัติการลา</td>
+                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">{t("leaveManagement.noHistory")}</td>
                   </tr>
                 ) : (
                   filteredMyLeaveHistory.slice(0, 10).map((r: any) => (
                     <tr key={r.id} className="border-b last:border-b-0">
                       <td className="px-4 py-3">{r.leave_type_name || "-"}</td>
                       <td className="px-4 py-3 font-mono text-xs">{r.start_date} - {r.end_date}</td>
-                      <td className="px-4 py-3">{r.total_days || 0} วัน</td>
+                      <td className="px-4 py-3">{r.total_days || 0} {t("leaveManagement.common.day")}</td>
                       <td className="px-4 py-3">
                         <Badge variant="outline" className={getStatusClass(r.status)}>{getStatusLabel(r.status)}</Badge>
                       </td>
@@ -448,34 +443,34 @@ const LeaveManagement = () => {
     <div className="space-y-6 animate-fade-in">
       <Tabs defaultValue="my-leave">
         <TabsList>
-          <TabsTrigger value="my-leave">My Leave</TabsTrigger>
-          {canRequestLeave && <TabsTrigger value="request">Request Leave</TabsTrigger>}
-          {canManageLeave && <TabsTrigger value="approval">คำร้องของลูกทีม</TabsTrigger>}
-          {canManageLeavePolicy && <TabsTrigger value="balance-adjust">Leave Balance Adjustment</TabsTrigger>}
-          {canManageLeavePolicy && <TabsTrigger value="policy">Leave Policy</TabsTrigger>}
-          <TabsTrigger value="calendar">Leave Calendar</TabsTrigger>
-          {canManageHoliday && <TabsTrigger value="holidays">Holiday Management</TabsTrigger>}
+          <TabsTrigger value="my-leave">{t("leaveManagement.tabs.myLeave")}</TabsTrigger>
+          {canRequestLeave && <TabsTrigger value="request">{t("leaveManagement.tabs.requestLeave")}</TabsTrigger>}
+          {canManageLeave && <TabsTrigger value="approval">{t("leaveManagement.tabs.teamRequests")}</TabsTrigger>}
+          {canManageLeavePolicy && <TabsTrigger value="balance-adjust">{t("leaveManagement.tabs.balanceAdjustment")}</TabsTrigger>}
+          {canManageLeavePolicy && <TabsTrigger value="policy">{t("leaveManagement.tabs.leavePolicy")}</TabsTrigger>}
+          <TabsTrigger value="calendar">{t("leaveManagement.tabs.leaveCalendar")}</TabsTrigger>
+          {canManageHoliday && <TabsTrigger value="holidays">{t("leaveManagement.tabs.holidayManagement")}</TabsTrigger>}
         </TabsList>
 
       <TabsContent value="my-leave" className="mt-4">
         <div className="space-y-4">
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">Leave Balance (แยกตามประเภทการลา)</CardTitle>
+                <CardTitle className="text-base">{t("leaveManagement.myLeave.balanceTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">ประเภทการลา</th>
-                  <th className="text-center px-4 py-3 font-medium text-muted-foreground">Quota</th>
-                  <th className="text-center px-4 py-3 font-medium text-muted-foreground">Used</th>
-                  <th className="text-center px-4 py-3 font-medium text-muted-foreground">Pending</th>
-                  <th className="text-center px-4 py-3 font-medium text-muted-foreground">Balance</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.leaveType")}</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.quota")}</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.used")}</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.pending")}</th>
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.balance")}</th>
                 </tr></thead>
                 <tbody>
                   {leaveBalanceByType.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">ไม่พบข้อมูลโควต้าการลา</td>
+                        <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">{t("leaveManagement.myLeave.emptyBalance")}</td>
                     </tr>
                   ) : (
                     leaveBalanceByType.map((row) => (
@@ -495,20 +490,20 @@ const LeaveManagement = () => {
 
           <Card className="shadow-card">
             <CardHeader>
-              <CardTitle className="text-base">Leave History</CardTitle>
+              <CardTitle className="text-base">{t("leaveManagement.myLeave.historyTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
               {loadingRequests ? (
-                <p className="text-sm text-muted-foreground">กำลังโหลดข้อมูล...</p>
+                <p className="text-sm text-muted-foreground">{t("leaveManagement.loading")}</p>
               ) : myLeaveHistory.length === 0 ? (
-                <p className="text-sm text-muted-foreground">ไม่พบประวัติการลา</p>
+                <p className="text-sm text-muted-foreground">{t("leaveManagement.noHistory")}</p>
               ) : (
                 <div className="space-y-3">
                   {myLeaveHistory.slice(0, 8).map((r: any) => (
                     <div key={r.id} className="rounded-md border border-border p-3 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium">{r.leave_type_name || "Leave"}</p>
-                        <p className="text-xs text-muted-foreground">{r.start_date} - {r.end_date} ({r.total_days} วัน)</p>
+                        <p className="text-sm font-medium">{r.leave_type_name || t("leaveManagement.labels.leave")}</p>
+                        <p className="text-xs text-muted-foreground">{r.start_date} - {r.end_date} ({r.total_days} {t("leaveManagement.common.day")})</p>
                       </div>
                       <Badge variant="secondary" className="capitalize">{r.status || "-"}</Badge>
                     </div>
@@ -524,7 +519,7 @@ const LeaveManagement = () => {
       <TabsContent value="request" className="mt-4">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">Create Leave Request</CardTitle>
+            <CardTitle className="text-base">{t("leaveManagement.request.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {requestError ? <p className="text-sm text-destructive">{requestError}</p> : null}
@@ -532,29 +527,29 @@ const LeaveManagement = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">ประเภทการลา</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.leaveType")}</p>
                 <select
                   className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                   value={leaveForm.leaveTypeId}
                   onChange={(e) => setLeaveForm((prev) => ({ ...prev, leaveTypeId: e.target.value }))}
                 >
                   {leaveTypeOptions.map((item) => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
+                    <option key={item.id} value={item.id}>{t(`leaveManagement.leaveTypes.${item.id}`)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">จำนวนวัน/ชั่วโมง</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.totalDaysHours")}</p>
                 <Input
                   type="number"
                   step="0.5"
                   value={leaveForm.totalDays}
                   onChange={(e) => setLeaveForm((prev) => ({ ...prev, totalDays: e.target.value }))}
-                  placeholder="เช่น 1 หรือ 0.5"
+                  placeholder={t("leaveManagement.fields.totalDaysPlaceholder")}
                 />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">วันที่เริ่มต้น</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.startDate")}</p>
                 <Input
                   type="date"
                   value={leaveForm.startDate}
@@ -562,7 +557,7 @@ const LeaveManagement = () => {
                 />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">วันที่สิ้นสุด</p>
+                <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.endDate")}</p>
                 <Input
                   type="date"
                   value={leaveForm.endDate}
@@ -572,24 +567,24 @@ const LeaveManagement = () => {
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground mb-1">เหตุผลการลา</p>
+              <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.reason")}</p>
               <Textarea
                 value={leaveForm.reason}
                 onChange={(e) => setLeaveForm((prev) => ({ ...prev, reason: e.target.value }))}
-                placeholder="ระบุเหตุผลการลา"
+                placeholder={t("leaveManagement.fields.reasonPlaceholder")}
               />
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground mb-1">แนบไฟล์ (เช่น ใบรับรองแพทย์)</p>
+              <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.request.attachment")}</p>
               <Input type="file" onChange={handleLeaveAttachment} />
               {leaveForm.attachmentName ? (
-                <p className="text-xs text-muted-foreground mt-1">ไฟล์ที่เลือก: {leaveForm.attachmentName}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("leaveManagement.request.selectedFile")}: {leaveForm.attachmentName}</p>
               ) : null}
             </div>
 
             <Button size="sm" onClick={handleCreateLeaveRequest} disabled={formLoading}>
-              {formLoading ? "กำลังส่งคำร้อง..." : "Create Leave Request"}
+              {formLoading ? t("leaveManagement.actions.submitting") : t("leaveManagement.request.create")}
             </Button>
           </CardContent>
         </Card>
@@ -600,21 +595,21 @@ const LeaveManagement = () => {
       <TabsContent value="approval" className="mt-4">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">คำร้องของลูกทีม (Leave)</CardTitle>
+            <CardTitle className="text-base">{t("leaveManagement.approval.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             {loadingRequests ? (
-              <p className="text-sm text-muted-foreground">กำลังโหลดคำร้อง...</p>
+              <p className="text-sm text-muted-foreground">{t("leaveManagement.approval.loading")}</p>
             ) : teamPendingRequests.length === 0 ? (
-              <p className="text-sm text-muted-foreground">ไม่มีคำร้องที่รออนุมัติ</p>
+              <p className="text-sm text-muted-foreground">{t("leaveManagement.approval.empty")}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead><tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">พนักงาน</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">ประเภทการลา</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">ช่วงวันที่ลา</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Overlap Warning</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.employee")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.leaveType")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.dateRange")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.overlapWarning")}</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.action")}</th>
                 </tr></thead>
                 <tbody>
                   {teamPendingRequests.map((r: any) => {
@@ -623,22 +618,23 @@ const LeaveManagement = () => {
                     return (
                       <tr key={r.id} className="border-b last:border-b-0">
                         <td className="px-4 py-3">{r.firstname_th || ""} {r.lastname_th || ""}</td>
-                        <td className="px-4 py-3">{r.leave_type_name || "Leave"}</td>
-                        <td className="px-4 py-3 text-xs">{r.start_date} - {r.end_date} ({r.total_days} วัน)</td>
+                        <td className="px-4 py-3">{r.leave_type_name || t("leaveManagement.labels.leave")}</td>
+                        <td className="px-4 py-3 text-xs">{r.start_date} - {r.end_date} ({r.total_days} {t("leaveManagement.common.day")})</td>
                         <td className="px-4 py-3">
                           {overlapCount > 0 ? (
                             <div className="rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning">
-                              Warning: วันที่ลาซ้อนรวม {overlapCount} รายการ
-                              {Number(overlap.approved || 0) > 0 ? ` (อนุมัติแล้ว ${overlap.approved})` : ""}
+                              {t("leaveManagement.approval.overlapWarning")
+                                .replace("{{count}}", String(overlapCount))
+                                .replace("{{approved}}", String(overlap.approved || 0))}
                             </div>
                           ) : (
-                            <span className="text-xs text-muted-foreground">ไม่มีการลาซ้อน</span>
+                            <span className="text-xs text-muted-foreground">{t("leaveManagement.approval.noOverlap")}</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Button size="sm" variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => handleUpdateLeaveStatus(r, "rejected")}>Reject</Button>
-                            <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => handleUpdateLeaveStatus(r, "approved")}>Approve</Button>
+                            <Button size="sm" variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => handleUpdateLeaveStatus(r, "rejected")}>{t("leaveManagement.actions.reject")}</Button>
+                            <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => handleUpdateLeaveStatus(r, "approved")}>{t("leaveManagement.actions.approve")}</Button>
                           </div>
                         </td>
                       </tr>
@@ -656,20 +652,20 @@ const LeaveManagement = () => {
       <TabsContent value="balance-adjust" className="mt-4">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">ปรับยอด Leave Balance ของพนักงาน</CardTitle>
+            <CardTitle className="text-base">{t("leaveManagement.balanceAdjust.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             {balances.length === 0 ? (
-              <p className="text-sm text-muted-foreground">ไม่พบข้อมูล Leave Balance</p>
+              <p className="text-sm text-muted-foreground">{t("leaveManagement.balanceAdjust.empty")}</p>
             ) : (
               <div className="space-y-3">
                 {balances.slice(0, 12).map((b: any) => (
                   <div key={b.id} className="rounded-md border border-border p-3 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium">{b.firstname_th || ""} {b.lastname_th || ""} - {b.leave_type_name || "Leave"}</p>
-                      <p className="text-xs text-muted-foreground">Quota: {b.quota} | Used: {b.used} | Balance: {b.balance}</p>
+                      <p className="text-sm font-medium">{b.firstname_th || ""} {b.lastname_th || ""} - {b.leave_type_name || t("leaveManagement.labels.leave")}</p>
+                      <p className="text-xs text-muted-foreground">{t("leaveManagement.balanceAdjust.summary").replace("{{quota}}", String(b.quota || 0)).replace("{{used}}", String(b.used || 0)).replace("{{balance}}", String(b.balance || 0))}</p>
                     </div>
-                    <Button size="sm" variant="outline">Adjust</Button>
+                    <Button size="sm" variant="outline">{t("leaveManagement.balanceAdjust.adjust")}</Button>
                   </div>
                 ))}
               </div>
@@ -683,15 +679,15 @@ const LeaveManagement = () => {
       <TabsContent value="policy" className="mt-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4" /> Leave Configuration by Company</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4" /> {t("leaveManagement.policy.title")}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">อายุงานขั้นต่ำ (ปี)</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">พักร้อนที่ได้ (วัน/ปี)</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">ลาป่วยเกินกี่วันต้องแนบใบรับรองแพทย์</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.policy.table.company")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.policy.table.serviceYears")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.policy.table.vacationDays")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.policy.table.sickCert")}</th>
               </tr></thead>
               <tbody>
                 {policyRows.map((row, index) => (
@@ -714,7 +710,7 @@ const LeaveManagement = () => {
               </tbody>
             </table>
             <div className="p-4 border-t">
-              <Button size="sm">Save Leave Policy</Button>
+              <Button size="sm">{t("leaveManagement.policy.save")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -727,7 +723,7 @@ const LeaveManagement = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-center py-10 text-muted-foreground">
               <Calendar className="h-10 w-10 mr-3 opacity-40" />
-              <p className="text-sm">Leave Calendar view - showing team leave overview (demo placeholder)</p>
+              <p className="text-sm">{t("leaveManagement.calendar.placeholder")}</p>
             </div>
           </CardContent>
         </Card>
@@ -738,23 +734,23 @@ const LeaveManagement = () => {
       <TabsContent value="holidays" className="mt-4">
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Holiday Calendar 2026</CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5"><Plus className="h-4 w-4" /> Add Holiday</Button>
+            <CardTitle className="text-base">{t("leaveManagement.holidays.title")}</CardTitle>
+            <Button size="sm" variant="outline" className="gap-1.5"><Plus className="h-4 w-4" /> {t("leaveManagement.holidays.add")}</Button>
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Holiday Name</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.holidays.table.date")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.holidays.table.name")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.holidays.table.action")}</th>
               </tr></thead>
               <tbody>
                 {holidays.map((h, i) => (
                   <tr key={i} className="border-b last:border-b-0 hover:bg-muted/30">
                     <td className="px-4 py-3 font-mono text-xs">{h.date}</td>
-                    <td className="px-4 py-3">{h.name}</td>
+                    <td className="px-4 py-3">{t(`leaveManagement.holidays.names.${h.nameKey}`)}</td>
                     <td className="px-4 py-3">
-                      <Button size="sm" variant="outline">Edit</Button>
+                      <Button size="sm" variant="outline">{t("leaveManagement.holidays.edit")}</Button>
                     </td>
                   </tr>
                 ))}
