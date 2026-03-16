@@ -18,20 +18,10 @@ const reports = [
   { id: "leave-usage", icon: CalendarCheck2 },
 ];
 
-const mockCompanies = [
-  { value: "all" },
-  { value: "abc" },
-  { value: "xyz" },
-  { value: "def" },
-];
-
-const mockDepartments = [
-  { value: "all" },
-  { value: "hr" },
-  { value: "it" },
-  { value: "acc" },
-  { value: "ops" },
-];
+type FilterOption = {
+  value: string;
+  label: string;
+};
 
 const employeeStatuses = [
   { value: "all" },
@@ -55,6 +45,8 @@ const Reports = () => {
   const [employeeStatus, setEmployeeStatus] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [companyOptions, setCompanyOptions] = useState<FilterOption[]>([]);
+  const [departmentOptions, setDepartmentOptions] = useState<FilterOption[]>([]);
   const [employeeSummaryLoading, setEmployeeSummaryLoading] = useState(false);
   const [employeeSummary, setEmployeeSummary] = useState({
     attendanceRecords: 0,
@@ -73,6 +65,48 @@ const Reports = () => {
       : reports;
 
   const exportLabel = format === "pdf" ? t("reports.exportPdf") : t("reports.exportXlsx");
+
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const [companiesRes, departmentsRes] = await Promise.all([
+          apiGet<any>("/organization/companies"),
+          apiGet<any>("/organization/departments"),
+        ]);
+
+        const companyRows = Array.isArray(companiesRes) ? companiesRes : companiesRes?.data || [];
+        const departmentRows = Array.isArray(departmentsRes) ? departmentsRes : departmentsRes?.data || [];
+
+        const nextCompanyOptions: FilterOption[] = [
+          { value: "all", label: t("reports.filters.companies.all") },
+          ...companyRows.map((company: any) => ({
+            value: String(company?.code || company?.id || "all").toLowerCase(),
+            label: String(company?.name_th || company?.name || company?.code || "-").trim(),
+          })),
+        ];
+
+        const nextDepartmentOptions: FilterOption[] = [
+          { value: "all", label: t("reports.filters.departments.all") },
+          ...departmentRows.map((department: any) => {
+            const name = String(department?.name_th || department?.name || department?.code || "-").trim();
+            return {
+              value: name.toLowerCase(),
+              label: name,
+            };
+          }),
+        ];
+
+        setCompanyOptions(nextCompanyOptions);
+        setDepartmentOptions(nextDepartmentOptions);
+      } catch (error) {
+        console.error("Failed to fetch report filter options:", error);
+        setCompanyOptions([{ value: "all", label: t("reports.filters.companies.all") }]);
+        setDepartmentOptions([{ value: "all", label: t("reports.filters.departments.all") }]);
+      }
+    };
+
+    fetchFilterOptions();
+  }, [t]);
 
   const filterManagerTeamRows = useCallback(
     <T extends Record<string, any>>(rows: T[]): T[] => {
@@ -399,8 +433,8 @@ const Reports = () => {
                 value={companyFilter}
                 onChange={(e) => setCompanyFilter(e.target.value)}
               >
-                {mockCompanies.map((item) => (
-                  <option key={item.value} value={item.value}>{t(`reports.filters.companies.${item.value}`)}</option>
+                {companyOptions.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
                 ))}
               </select>
             )}
@@ -416,8 +450,8 @@ const Reports = () => {
                 value={departmentFilter}
                 onChange={(e) => setDepartmentFilter(e.target.value)}
               >
-                {mockDepartments.map((item) => (
-                  <option key={item.value} value={item.value}>{t(`reports.filters.departments.${item.value}`)}</option>
+                {departmentOptions.map((item) => (
+                  <option key={item.value} value={item.value}>{item.label}</option>
                 ))}
               </select>
             )}

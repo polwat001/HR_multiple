@@ -1,5 +1,20 @@
 import { useState, createContext, useContext, type ReactNode } from "react";
-import { companies, type Company } from "@/data/mockData";
+
+export interface Company {
+  id: string;
+  name: string;
+  shortName: string;
+  logo: string;
+  color: string;
+}
+
+const DEFAULT_COMPANY: Company = {
+  id: "all",
+  name: "All Companies",
+  shortName: "ALL",
+  logo: "🏢",
+  color: "hsl(215 70% 45%)",
+};
 
 interface CompanyContextType {
   selectedCompany: Company;
@@ -15,7 +30,7 @@ export const useCompany = () => {
 };
 
 export const CompanyProvider = ({ children }: { children: ReactNode }) => {
-  const [selectedCompany, setSelectedCompany] = useState<Company>(companies[0]);
+  const [selectedCompany, setSelectedCompany] = useState<Company>(DEFAULT_COMPANY);
   return (
     <CompanyContext.Provider value={{ selectedCompany, setSelectedCompany }}>
       {children}
