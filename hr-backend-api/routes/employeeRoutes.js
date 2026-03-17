@@ -12,4 +12,27 @@ router.get('/',
     employeeController.getAllEmployees
 );
 
+router.get('/:id',
+    authMiddleware,
+    employeeController.getEmployeeById
+);
+
+router.post('/',
+    authMiddleware,
+    roleMiddleware(['Super Admin', 'Central HR', 'HR Company']),
+    employeeController.createEmployee
+);
+
+router.put('/:id',
+    authMiddleware,
+    roleMiddleware(['Super Admin', 'Central HR', 'HR Company']),
+    employeeController.updateEmployee
+);
+
+router.delete('/:id',
+    authMiddleware,
+    roleMiddleware(['Super Admin', 'Central HR', 'HR Company']),
+    employeeController.deleteEmployee
+);
+
 module.exports = router;

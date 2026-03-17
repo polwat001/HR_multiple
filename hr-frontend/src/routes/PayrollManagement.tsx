@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/types/roles";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import * as XLSX from "xlsx";
+import { apiGet, apiPut } from "@/lib/api";
 
 type PayrollStatus = "draft" | "processing" | "waiting_approval" | "completed";
 
@@ -60,96 +61,11 @@ type EmployeeSettingRow = {
 
 type BankExportFormat = "KTB_TXT" | "SCB_CSV" | "GENERIC_CSV";
 
-const samplePayrollRows: PayrollCycleRow[] = [
-  {
-    month: "2026-01",
-    company: "ABC",
-    employees: 128,
-    otAmount: 124500,
-    allowanceAmount: 845000,
-    deductionAmount: 196200,
-    netAmount: 5984300,
-    paymentDate: "2026-01-31",
-    status: "completed",
-  },
-  {
-    month: "2026-02",
-    company: "ABC",
-    employees: 132,
-    otAmount: 142000,
-    allowanceAmount: 910000,
-    deductionAmount: 205100,
-    netAmount: 6210250,
-    paymentDate: "2026-02-28",
-    status: "completed",
-  },
-  {
-    month: "2026-03",
-    company: "ABC",
-    employees: 136,
-    otAmount: 196000,
-    allowanceAmount: 1245000,
-    deductionAmount: 241700,
-    netAmount: 6889200,
-    paymentDate: "2026-03-31",
-    status: "waiting_approval",
-    note: "มีจ่ายโบนัสรายไตรมาส",
-  },
-];
-
-const sampleRunDataRows: RunDataRow[] = [
-  { id: 1, employeeCode: "EMP-001", employeeName: "สมหญิง ใจดี", baseSalary: 35000, presentDays: 21, absentDays: 0, otHours: 12, leaveDays: 1, missingScanDays: 0 },
-  { id: 2, employeeCode: "EMP-002", employeeName: "วิทยา พรหม", baseSalary: 42000, presentDays: 19, absentDays: 1, otHours: 8, leaveDays: 2, missingScanDays: 2 },
-  { id: 3, employeeCode: "EMP-003", employeeName: "กมลพร ศรีสุข", baseSalary: 28000, presentDays: 22, absentDays: 0, otHours: 4, leaveDays: 0, missingScanDays: 0 },
-  { id: 4, employeeCode: "EMP-004", employeeName: "นพดล รัตน์", baseSalary: 52000, presentDays: 20, absentDays: 0, otHours: 15, leaveDays: 1, missingScanDays: 1 },
-];
-
-const sampleEmployeeSettings: EmployeeSettingRow[] = [
-  {
-    id: 1,
-    employeeCode: "EMP-001",
-    employeeName: "สมหญิง ใจดี",
-    basicSalary: 35000,
-    bankName: "SCB",
-    bankAccountNo: "123-456-7890",
-    taxDependent: 1,
-    lifeInsuranceDeduction: 12000,
-    ssoEnabled: true,
-  },
-  {
-    id: 2,
-    employeeCode: "EMP-002",
-    employeeName: "วิทยา พรหม",
-    basicSalary: 42000,
-    bankName: "KTB",
-    bankAccountNo: "111-222-3333",
-    taxDependent: 2,
-    lifeInsuranceDeduction: 15000,
-    ssoEnabled: true,
-  },
-  {
-    id: 3,
-    employeeCode: "EMP-003",
-    employeeName: "กมลพร ศรีสุข",
-    basicSalary: 28000,
-    bankName: "KTB",
-    bankAccountNo: "444-555-6666",
-    taxDependent: 0,
-    lifeInsuranceDeduction: 8000,
-    ssoEnabled: true,
-  },
-  {
-    id: 4,
-    employeeCode: "EMP-004",
-    employeeName: "นพดล รัตน์",
-    basicSalary: 52000,
-    bankName: "BBL",
-    bankAccountNo: "777-888-9999",
-    taxDependent: 1,
-    lifeInsuranceDeduction: 20000,
-    ssoEnabled: true,
-  },
-];
+const getMonthEndDate = (month: string) => {
+  const [year, mon] = month.split("-").map(Number);
+  const date = new Date(year, mon, 0);
+  return `${year}-${String(mon).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
 
 export default function PayrollManagement() {
   const { hasRole } = useAuth();
@@ -159,25 +75,123 @@ export default function PayrollManagement() {
   const isSystemAdmin = hasRole(UserRole.SUPER_ADMIN);
   const isReadOnly = isCentralHr || isSystemAdmin;
 
-  const [selectedMonth, setSelectedMonth] = useState("2026-03");
-  const [rows] = useState(samplePayrollRows);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [rows, setRows] = useState<PayrollCycleRow[]>([]);
   const [wizardStep, setWizardStep] = useState(1);
   const [lastSyncAt, setLastSyncAt] = useState("-");
-  const [runRows, setRunRows] = useState<RunDataRow[]>(sampleRunDataRows);
-  const [extraPayRows, setExtraPayRows] = useState<ExtraPayRow[]>(
-    sampleRunDataRows.map((row) => ({
-      id: row.id,
-      commission: 0,
-      travel: 1200,
-      bonus: row.id === 2 ? 10000 : 0,
-      lateDeduction: row.missingScanDays > 0 ? 500 : 0,
-      loanDeduction: row.id === 4 ? 2000 : 0,
-    }))
-  );
-  const [settingsRows, setSettingsRows] = useState<EmployeeSettingRow[]>(sampleEmployeeSettings);
-  const [selectedSettingId, setSelectedSettingId] = useState<number>(sampleEmployeeSettings[0].id);
+  const [runRows, setRunRows] = useState<RunDataRow[]>([]);
+  const [extraPayRows, setExtraPayRows] = useState<ExtraPayRow[]>([]);
+  const [settingsRows, setSettingsRows] = useState<EmployeeSettingRow[]>([]);
+  const [selectedSettingId, setSelectedSettingId] = useState<number>(0);
   const [reportDepartment, setReportDepartment] = useState("all");
   const [bankExportFormat, setBankExportFormat] = useState<BankExportFormat>("KTB_TXT");
+
+  useEffect(() => {
+    const fetchPayrollData = async () => {
+      try {
+        const [employeesRes, attendanceRes, leaveReqRes, otReqRes, payrollSettingsRes] = await Promise.all([
+          apiGet<any>("/employees"),
+          apiGet<any>("/attendance"),
+          apiGet<any>("/leaves/requests"),
+          apiGet<any>(`/ot/requests?month=${selectedMonth}`),
+          apiGet<any>("/admin/payroll-settings"),
+        ]);
+
+        const employees = Array.isArray(employeesRes) ? employeesRes : employeesRes?.data || [];
+        const attendanceRows = Array.isArray(attendanceRes) ? attendanceRes : attendanceRes?.data || [];
+        const leaveRows = Array.isArray(leaveReqRes) ? leaveReqRes : leaveReqRes?.data || [];
+        const otRows = Array.isArray(otReqRes) ? otReqRes : otReqRes?.data || [];
+        const settingRows = Array.isArray(payrollSettingsRes) ? payrollSettingsRes : payrollSettingsRes?.data || [];
+
+        const settingsMap = new Map<number, any>();
+        settingRows.forEach((row: any) => settingsMap.set(Number(row.employee_id), row));
+
+        const runData: RunDataRow[] = employees.map((employee: any) => {
+          const employeeId = Number(employee.id);
+          const employeeCode = String(employee.employee_code || "");
+          const employeeAttendance = attendanceRows.filter((row: any) => String(row?.employee_code || "") === employeeCode);
+          const presentDays = employeeAttendance.filter((row: any) => ["present", "late"].includes(String(row.status || "").toLowerCase())).length;
+          const absentDays = employeeAttendance.filter((row: any) => String(row.status || "").toLowerCase() === "absent").length;
+          const missingScanDays = employeeAttendance.filter((row: any) => !row.check_in_time || !row.check_out_time).length;
+
+          const employeeLeaves = leaveRows.filter((row: any) => String(row?.employee_code || "") === employeeCode && String(row.status || "").toLowerCase() === "approved");
+          const leaveDays = employeeLeaves.reduce((sum: number, row: any) => sum + Number(row.total_days || 0), 0);
+
+          const employeeOts = otRows.filter((row: any) => String(row?.employee_code || "") === employeeCode && String(row.status || "").toLowerCase() !== "rejected");
+          const otHours = employeeOts.reduce((sum: number, row: any) => sum + Number(row.total_hours || 0), 0);
+
+          const setting = settingsMap.get(employeeId);
+          return {
+            id: employeeId,
+            employeeCode,
+            employeeName: `${employee.firstname_th || ""} ${employee.lastname_th || ""}`.trim(),
+            baseSalary: Number(setting?.basic_salary || 0),
+            presentDays,
+            absentDays,
+            otHours,
+            leaveDays,
+            missingScanDays,
+          };
+        });
+
+        const settingData: EmployeeSettingRow[] = runData.map((row) => {
+          const setting = settingsMap.get(row.id);
+          return {
+            id: row.id,
+            employeeCode: row.employeeCode,
+            employeeName: row.employeeName,
+            basicSalary: Number(setting?.basic_salary || row.baseSalary || 0),
+            bankName: String(setting?.bank_name || "SCB"),
+            bankAccountNo: String(setting?.bank_account_no || ""),
+            taxDependent: Number(setting?.tax_dependent || 0),
+            lifeInsuranceDeduction: Number(setting?.life_insurance_deduction || 0),
+            ssoEnabled: Boolean(Number(setting?.sso_enabled ?? 1)),
+          };
+        });
+
+        const extraRows: ExtraPayRow[] = runData.map((row) => ({
+          id: row.id,
+          commission: 0,
+          travel: 0,
+          bonus: 0,
+          lateDeduction: row.missingScanDays > 0 ? 500 : 0,
+          loanDeduction: 0,
+        }));
+
+        const monthEnd = getMonthEndDate(selectedMonth);
+        const totalBase = settingData.reduce((sum, row) => sum + Number(row.basicSalary || 0), 0);
+        const totalOt = runData.reduce((sum, row) => sum + Number(row.otHours || 0) * 220, 0);
+        const totalDeduction = runData.reduce((sum, row) => sum + Number(row.absentDays || 0) * 350, 0);
+        const cycleRows: PayrollCycleRow[] = [
+          {
+            month: selectedMonth,
+            company: "Current Scope",
+            employees: runData.length,
+            otAmount: Math.round(totalOt),
+            allowanceAmount: 0,
+            deductionAmount: Math.round(totalDeduction),
+            netAmount: Math.round(Math.max(0, totalBase + totalOt - totalDeduction)),
+            paymentDate: monthEnd,
+            status: "processing",
+          },
+        ];
+
+        setRunRows(runData);
+        setSettingsRows(settingData);
+        setSelectedSettingId(settingData[0]?.id || 0);
+        setExtraPayRows(extraRows);
+        setRows(cycleRows);
+      } catch (error) {
+        console.error("Failed to fetch payroll data:", error);
+        setRunRows([]);
+        setSettingsRows([]);
+        setExtraPayRows([]);
+        setRows([]);
+      }
+    };
+
+    fetchPayrollData();
+  }, [selectedMonth]);
 
   const currentRow = useMemo(() => rows.find((r) => r.month === selectedMonth) || rows[0], [rows, selectedMonth]);
   const previousRow = useMemo(() => rows.find((r) => r.month < selectedMonth) || rows[1] || rows[0], [rows, selectedMonth]);
@@ -221,7 +235,7 @@ export default function PayrollManagement() {
   }, [extraPayRows, runRows]);
 
   const selectedSetting = useMemo(
-    () => settingsRows.find((row) => row.id === selectedSettingId) || settingsRows[0],
+    () => settingsRows.find((row) => row.id === selectedSettingId) || settingsRows[0] || null,
     [selectedSettingId, settingsRows]
   );
 
@@ -231,6 +245,7 @@ export default function PayrollManagement() {
   };
 
   const updateSelectedSetting = (field: keyof EmployeeSettingRow, value: string | boolean) => {
+    if (!selectedSetting) return;
     setSettingsRows((prev) =>
       prev.map((row) => {
         if (row.id !== selectedSetting.id) return row;
@@ -243,6 +258,24 @@ export default function PayrollManagement() {
         return { ...row, [field]: value };
       })
     );
+  };
+
+  const handleSaveSetting = async () => {
+    if (!selectedSetting) return;
+
+    try {
+      await apiPut(`/admin/payroll-settings/${selectedSetting.id}`, {
+        basic_salary: selectedSetting.basicSalary,
+        bank_name: selectedSetting.bankName,
+        bank_account_no: selectedSetting.bankAccountNo,
+        tax_dependent: selectedSetting.taxDependent,
+        life_insurance_deduction: selectedSetting.lifeInsuranceDeduction,
+        sso_enabled: selectedSetting.ssoEnabled,
+      });
+      window.alert("Saved payroll setting");
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to save payroll setting");
+    }
   };
 
   const runSyncData = () => {
@@ -731,6 +764,7 @@ export default function PayrollManagement() {
                   <CardTitle className="text-base">Employee Payroll Settings</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {selectedSetting ? null : <p className="text-sm text-muted-foreground lg:col-span-2">No payroll settings data</p>}
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Employee</p>
                     <select
@@ -744,41 +778,41 @@ export default function PayrollManagement() {
                     </select>
                   </div>
                   <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm">
-                    {selectedSetting.employeeName} ({selectedSetting.employeeCode})
+                    {selectedSetting ? `${selectedSetting.employeeName} (${selectedSetting.employeeCode})` : "-"}
                   </div>
 
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Basic Salary</p>
-                    <Input type="number" value={selectedSetting.basicSalary} onChange={(e) => updateSelectedSetting("basicSalary", e.target.value)} />
+                    <Input type="number" value={selectedSetting?.basicSalary || 0} onChange={(e) => updateSelectedSetting("basicSalary", e.target.value)} />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Bank Name</p>
-                    <Input value={selectedSetting.bankName} onChange={(e) => updateSelectedSetting("bankName", e.target.value)} />
+                    <Input value={selectedSetting?.bankName || ""} onChange={(e) => updateSelectedSetting("bankName", e.target.value)} />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Bank Account No.</p>
-                    <Input value={selectedSetting.bankAccountNo} onChange={(e) => updateSelectedSetting("bankAccountNo", e.target.value)} />
+                    <Input value={selectedSetting?.bankAccountNo || ""} onChange={(e) => updateSelectedSetting("bankAccountNo", e.target.value)} />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Tax Dependent (children)</p>
-                    <Input type="number" value={selectedSetting.taxDependent} onChange={(e) => updateSelectedSetting("taxDependent", e.target.value)} />
+                    <Input type="number" value={selectedSetting?.taxDependent || 0} onChange={(e) => updateSelectedSetting("taxDependent", e.target.value)} />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Life Insurance Deduction</p>
-                    <Input type="number" value={selectedSetting.lifeInsuranceDeduction} onChange={(e) => updateSelectedSetting("lifeInsuranceDeduction", e.target.value)} />
+                    <Input type="number" value={selectedSetting?.lifeInsuranceDeduction || 0} onChange={(e) => updateSelectedSetting("lifeInsuranceDeduction", e.target.value)} />
                   </div>
                   <div className="flex items-center gap-2 pt-6">
                     <input
                       id="sso-enabled"
                       type="checkbox"
-                      checked={selectedSetting.ssoEnabled}
+                      checked={selectedSetting?.ssoEnabled || false}
                       onChange={(e) => updateSelectedSetting("ssoEnabled", e.target.checked)}
                     />
                     <label htmlFor="sso-enabled" className="text-sm">Enable SSO Deduction</label>
                   </div>
 
                   <div className="lg:col-span-2 flex justify-end">
-                    <Button>Save Payroll Setting</Button>
+                    <Button onClick={handleSaveSetting} disabled={!selectedSetting}>Save Payroll Setting</Button>
                   </div>
                 </CardContent>
               </Card>

@@ -55,6 +55,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     Permission.MANAGE_COMPANY_CONTRACTS,
     // Organization
     Permission.VIEW_COMPANY_ORGANIZATION,
+    Permission.MANAGE_ORGANIZATION,
     // Reports
     Permission.VIEW_COMPANY_REPORTS,
     // Holidays

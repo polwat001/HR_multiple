@@ -130,7 +130,7 @@ export const MODULE_ACCESS_MATRIX: Record<ModuleKey, ModuleAccessConfig> = {
     key: "organization",
     label: "Organization",
     path: "/organization",
-    roles: [UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.HR_COMPANY, UserRole.CENTRAL_HR, UserRole.SUPER_ADMIN],
+    roles: [UserRole.HR_COMPANY, UserRole.CENTRAL_HR, UserRole.SUPER_ADMIN],
     showInNav: true,
   },
   positions: {
@@ -186,7 +186,7 @@ export const MODULE_ACCESS_MATRIX: Record<ModuleKey, ModuleAccessConfig> = {
     key: "reports",
     label: "Reports",
     path: "/reports",
-    roles: [UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.HR_COMPANY, UserRole.CENTRAL_HR, UserRole.SUPER_ADMIN],
+    roles: [UserRole.MANAGER, UserRole.HR_COMPANY, UserRole.CENTRAL_HR, UserRole.SUPER_ADMIN],
     showInNav: true,
   },
   payroll: {

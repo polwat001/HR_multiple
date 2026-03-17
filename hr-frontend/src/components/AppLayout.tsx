@@ -46,7 +46,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const location = router.pathname;
   const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
   const isCentralHr = hasRole(UserRole.CENTRAL_HR);
-  const canSwitchCompany = isCentralHr;
+  const canSwitchCompany = isCentralHr || isSuperAdmin;
   const roleLabel = (user as any)?.role || (user as any)?.role_name || t("app.unknownUser");
 
   const handleLogout = () => {

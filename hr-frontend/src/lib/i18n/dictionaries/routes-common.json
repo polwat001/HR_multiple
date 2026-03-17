@@ -151,6 +151,7 @@
       "addEmployee": "เพิ่มพนักงานใหม่",
       "title": "รายชื่อพนักงาน",
       "table": {
+        "profile": "โปรไฟล์",
         "employeeCode": "รหัสพนักงาน",
         "fullName": "ชื่อ-นามสกุล",
         "company": "บริษัท",
@@ -220,6 +221,12 @@
       "leaveQuota": "โควต้าวันลา",
       "used": "ใช้แล้ว",
       "remaining": "คงเหลือ",
+      "leaveTypeCodes": {
+        "annual": "ลาพักร้อน",
+        "sick": "ลาป่วย",
+        "personal": "ลากิจ",
+        "maternity": "ลาคลอด"
+      },
       "noLeaveQuota": "ไม่พบข้อมูลโควต้าวันลา",
       "attendance": {
         "title": "ปฏิทินเข้างาน",
@@ -707,6 +714,12 @@
         "3": "Personal Leave (ลากิจ)",
         "4": "Maternity (ลาคลอด)"
       },
+      "leaveTypeCodes": {
+        "annual": "ลาพักร้อน",
+        "sick": "ลาป่วย",
+        "personal": "ลากิจ",
+        "maternity": "ลาคลอด"
+      },
       "labels": {
         "leave": "ลา"
       },
@@ -1182,6 +1195,7 @@
       "addEmployee": "Add New Employee",
       "title": "Employee List",
       "table": {
+        "profile": "Profile",
         "employeeCode": "Employee Code",
         "fullName": "Full Name",
         "company": "Company",
@@ -1251,6 +1265,12 @@
       "leaveQuota": "Leave Quota",
       "used": "Used",
       "remaining": "Remaining",
+      "leaveTypeCodes": {
+        "annual": "Annual Leave",
+        "sick": "Sick Leave",
+        "personal": "Personal Leave",
+        "maternity": "Maternity Leave"
+      },
       "noLeaveQuota": "No leave quota data",
       "attendance": {
         "title": "Attendance Calendar",
@@ -1737,6 +1757,12 @@
         "2": "Sick Leave",
         "3": "Personal Leave",
         "4": "Maternity"
+      },
+      "leaveTypeCodes": {
+        "annual": "Annual Leave",
+        "sick": "Sick Leave",
+        "personal": "Personal Leave",
+        "maternity": "Maternity Leave"
       },
       "labels": {
         "leave": "Leave"

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -5,24 +6,50 @@ import { Plus } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/types/roles";
+import { apiGet } from "@/lib/api";
 
-const positions = [
-  { id: 1, title: "HR Director", level: "Executive", companies: ["ABC", "XYZ", "DEF"], status: "active" },
-  { id: 2, title: "HR Manager", level: "Manager", companies: ["ABC", "XYZ", "DEF"], status: "active" },
-  { id: 3, title: "HR Officer", level: "Staff", companies: ["ABC", "XYZ"], status: "active" },
-  { id: 4, title: "IT Support", level: "Staff", companies: ["ABC"], status: "active" },
-  { id: 5, title: "Senior Developer", level: "Senior", companies: ["ABC", "DEF"], status: "active" },
-  { id: 6, title: "Production Manager", level: "Manager", companies: ["DEF"], status: "active" },
-  { id: 7, title: "Accounting Manager", level: "Manager", companies: ["ABC", "XYZ"], status: "active" },
-  { id: 8, title: "QA Engineer", level: "Staff", companies: ["DEF"], status: "active" },
-  { id: 9, title: "Marketing Manager", level: "Manager", companies: ["ABC"], status: "active" },
-  { id: 10, title: "Sales Executive", level: "Staff", companies: ["XYZ"], status: "inactive" },
-];
+type PositionRow = {
+  id: number;
+  title: string;
+  level: string;
+  companies: string[];
+  status: "active" | "inactive";
+};
 
 const PositionMaster = () => {
   const { hasRole } = useAuth();
   const { t } = useLanguage();
   const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
+  const [rows, setRows] = useState<PositionRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        setLoading(true);
+        const res = await apiGet<any>("/organization/positions");
+        const items = Array.isArray(res) ? res : res?.data || [];
+        setRows(
+          items.map((item: any) => ({
+            id: Number(item.id),
+            title: String(item.title_th || item.title || "-"),
+            level: String(item.level || "-"),
+            companies: [String(item.company_name || "-")],
+            status: "active" as const,
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch positions:", error);
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPositions();
+  }, []);
+
+  const positions = useMemo(() => rows, [rows]);
 
   return (
   <div className="space-y-6 animate-fade-in">
@@ -46,6 +73,15 @@ const PositionMaster = () => {
               </tr>
             </thead>
             <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">Loading...</td>
+                </tr>
+              ) : positions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No position data</td>
+                </tr>
+              ) : null}
               {positions.map((p) => (
                 <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 text-muted-foreground">{p.id}</td>

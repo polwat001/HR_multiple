@@ -2,8 +2,11 @@ const db = require('../config/db');
 
 exports.getAllCompanies = async (req, res) => {
   try {
+    const roleLevel = Number(req.user?.role_level || 0);
+    const companyId = Number(req.user?.company_id || 0);
+
     // ปรับให้ตรงกับโครงสร้างจริงในภาพ
-    const query = `
+    let query = `
       SELECT 
         id, 
         name_th AS name,       -- เปลี่ยนจาก name_th เป็น name
@@ -12,8 +15,17 @@ exports.getAllCompanies = async (req, res) => {
         'hsl(215 70% 45%)' AS color 
       FROM companies
     `;
+    const params = [];
 
-    const [rows] = await db.query(query);
+    if (roleLevel < 80) {
+      if (!companyId) {
+        return res.status(403).json({ message: 'ไม่สามารถกำหนดขอบเขตบริษัทของผู้ใช้งานได้' });
+      }
+      query += ' WHERE id = ?';
+      params.push(companyId);
+    }
+
+    const [rows] = await db.query(query, params);
     res.status(200).json(rows);
   } catch (err) {
     console.error("❌ SQL Error:", err.message);

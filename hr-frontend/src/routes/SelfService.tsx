@@ -48,9 +48,20 @@ interface AttendanceRow {
 
 interface LeaveBalanceRow {
   id: number;
+  leave_type_id?: number;
+  leave_type_code?: string;
+  user_id?: number;
   quota: number;
   used: number;
+  pending?: number;
+  balance?: number;
   leave_type_name: string;
+}
+
+interface LeaveTypeRow {
+  id: number;
+  leave_type_code?: string;
+  name: string;
 }
 
 interface OtRequestRow {
@@ -69,10 +80,28 @@ interface OtSummary {
 }
 
 const normalizeText = (value?: string | null) => String(value || "").trim().toLowerCase();
+const inferLeaveTypeCode = (code?: string, name?: string, id?: number) => {
+  const normalizedCode = normalizeText(code);
+  if (normalizedCode) return normalizedCode;
+
+  const normalizedName = normalizeText(name);
+  if (normalizedName.includes("vacation") || normalizedName.includes("annual") || normalizedName.includes("พักร้อน") || normalizedName.includes("พักผ่อน")) return "annual";
+  if (normalizedName.includes("sick") || normalizedName.includes("ป่วย")) return "sick";
+  if (normalizedName.includes("personal") || normalizedName.includes("กิจ")) return "personal";
+  if (normalizedName.includes("maternity") || normalizedName.includes("คลอด")) return "maternity";
+  return `custom_${Number(id || 0)}`;
+};
 
 const SelfService = () => {
   const { user: authUser } = useAuth();
   const { language, t } = useLanguage();
+  const getLeaveTypeLabel = (code?: string, fallbackName?: string, id?: number) => {
+    const leaveTypeCode = inferLeaveTypeCode(code, fallbackName, id);
+    const key = `selfService.leaveTypeCodes.${leaveTypeCode}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+    return fallbackName || t("selfService.leaveQuota");
+  };
   const statusLabels: Record<string, string> = {
     present: t("selfService.attendance.present"),
     late: t("selfService.attendance.late"),
@@ -86,6 +115,7 @@ const SelfService = () => {
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalanceRow[]>([]);
+  const [leaveTypes, setLeaveTypes] = useState<LeaveTypeRow[]>([]);
   const [otRecords, setOtRecords] = useState<OtRequestRow[]>([]);
   const [otSummary, setOtSummary] = useState<OtSummary>({
     total_hours: 0,
@@ -104,16 +134,18 @@ const SelfService = () => {
         }
 
         const month = selectedMonth;
-        const [empRes, attendanceRes, balanceRes, otReqRes] = await Promise.all([
+        const [empRes, attendanceRes, balanceRes, leaveTypeRes, otReqRes] = await Promise.all([
           apiGet<any>("/employees"),
           apiGet<any>("/attendance"),
           apiGet<any>("/leaves/balances"),
+          apiGet<any>("/leaves/types"),
           apiGet<any>(`/ot/requests?month=${month}`),
         ]);
 
         const empList: EmployeeProfile[] = Array.isArray(empRes) ? empRes : (empRes?.data || []);
         const attendanceList: AttendanceRow[] = Array.isArray(attendanceRes) ? attendanceRes : (attendanceRes?.data || []);
         const balanceList: LeaveBalanceRow[] = Array.isArray(balanceRes) ? balanceRes : (balanceRes?.data || []);
+        const leaveTypeList: LeaveTypeRow[] = Array.isArray(leaveTypeRes) ? leaveTypeRes : (leaveTypeRes?.data || []);
         const otList: OtRequestRow[] = Array.isArray(otReqRes) ? otReqRes : (otReqRes?.data || []);
         const ownProfile =
           empList.find((e) => String(e.user_id) === String(authUser?.user_id)) ||
@@ -126,29 +158,38 @@ const SelfService = () => {
         const ownDisplayName = normalizeText([ownProfile?.firstname_th, ownProfile?.lastname_th].filter(Boolean).join(" "));
 
         const ownAttendance = attendanceList.filter((row: any) => {
+          const rowUserId = String(row?.user_id || "");
           const rowCode = normalizeText(row?.employee_code);
           const rowName = normalizeText([row?.firstname_th, row?.lastname_th].filter(Boolean).join(" "));
 
+          if (authUser?.user_id && rowUserId) return rowUserId === String(authUser.user_id);
           if (ownEmployeeCode && rowCode) return rowCode === ownEmployeeCode;
           if (ownDisplayName && rowName) return rowName === ownDisplayName;
           return true;
         });
 
         const ownLeaveBalances = balanceList.filter((row: any) => {
+          const rowUserId = String(row?.user_id || "");
           const rowFirst = normalizeText(row?.firstname_th);
           const rowLast = normalizeText(row?.lastname_th);
+
+          if (authUser?.user_id && rowUserId) {
+            return rowUserId === String(authUser.user_id);
+          }
 
           if (ownFirstName || ownLastName) {
             return rowFirst === ownFirstName && rowLast === ownLastName;
           }
 
-          return true;
+          return false;
         });
 
         const ownOtRecords = otList.filter((row: any) => {
+          const rowUserId = String(row?.user_id || "");
           const rowCode = normalizeText(row?.employee_code);
           const rowName = normalizeText([row?.firstname_th, row?.lastname_th].filter(Boolean).join(" "));
 
+          if (authUser?.user_id && rowUserId) return rowUserId === String(authUser.user_id);
           if (ownEmployeeCode && rowCode) return rowCode === ownEmployeeCode;
           if (ownDisplayName && rowName) return rowName === ownDisplayName;
           return true;
@@ -168,6 +209,7 @@ const SelfService = () => {
         setProfile(ownProfile);
         setAttendanceRows(ownAttendance);
         setLeaveBalances(ownLeaveBalances);
+        setLeaveTypes(leaveTypeList);
         setOtRecords(
           ownOtRecords.map((r: any) => ({
             id: Number(r.id),
@@ -239,6 +281,46 @@ const SelfService = () => {
 
   const otTotal = otSummary.total_hours;
   const otAmount = otSummary.estimated_total_amount;
+
+  const leaveQuotaForDisplay: LeaveBalanceRow[] = useMemo(() => {
+    if (leaveTypes.length > 0) {
+      return leaveTypes.map((leaveType) => {
+        const leaveTypeCode = inferLeaveTypeCode(leaveType.leave_type_code, leaveType.name, leaveType.id);
+        const matched = leaveBalances.find(
+          (balance) => inferLeaveTypeCode(balance.leave_type_code, balance.leave_type_name, balance.leave_type_id || balance.id) === leaveTypeCode
+        );
+
+        return {
+          id: matched?.id || -Number(leaveType.id),
+          leave_type_id: leaveType.id,
+          leave_type_code: leaveTypeCode,
+          user_id: matched?.user_id,
+          leave_type_name: getLeaveTypeLabel(leaveTypeCode, leaveType.name, leaveType.id),
+          quota: Number(matched?.quota || 0),
+          used: Number(matched?.used || 0),
+          pending: Number(matched?.pending || 0),
+          balance: Number(matched?.balance || 0),
+        };
+      });
+    }
+
+    if (leaveBalances.length > 0) {
+      return leaveBalances;
+    }
+
+    return [
+      {
+        id: 0,
+        user_id: Number(authUser?.user_id || 0),
+        leave_type_code: "none",
+        leave_type_name: t("selfService.leaveQuota"),
+        quota: 0,
+        used: 0,
+        pending: 0,
+        balance: 0,
+      },
+    ];
+  }, [authUser?.user_id, leaveBalances, leaveTypes, t]);
 
   if (initialLoading) {
     return <div className="p-6 text-center text-muted-foreground">{t("selfService.loading")}</div>;
@@ -321,10 +403,18 @@ const SelfService = () => {
             )}
             {!monthLoading && (
               <>
-                {leaveBalances.map((lq, i) => {
+                {leaveQuotaForDisplay.map((lq, i) => {
+                  const quota = Number(lq.quota || 0);
+                  const used = Number(lq.used || 0);
+                  const remaining = Number(
+                    lq.balance !== undefined
+                      ? lq.balance
+                      : Math.max(0, quota - used)
+                  );
+                  const hasAnyQuota = quota > 0 || used > 0 || remaining > 0;
                   const pieData = [
-                    { name: t("selfService.used"), value: lq.used },
-                    { name: t("selfService.remaining"), value: lq.quota - lq.used },
+                    { name: t("selfService.used"), value: used },
+                    { name: t("selfService.remaining"), value: remaining },
                   ];
                   return (
                     <div key={lq.id} className="flex items-center gap-4">
@@ -332,7 +422,7 @@ const SelfService = () => {
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie data={pieData} cx="50%" cy="50%" innerRadius={18} outerRadius={28} dataKey="value" strokeWidth={0}>
-                              <Cell fill={LEAVE_COLORS[i % LEAVE_COLORS.length]} />
+                              <Cell fill={hasAnyQuota ? LEAVE_COLORS[i % LEAVE_COLORS.length] : "hsl(var(--muted-foreground))"} />
                               <Cell fill="hsl(var(--muted))" />
                             </Pie>
                             <Tooltip />
@@ -340,9 +430,9 @@ const SelfService = () => {
                         </ResponsiveContainer>
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-foreground">{lq.leave_type_name}</div>
+                        <div className="text-sm font-medium text-foreground">{getLeaveTypeLabel(lq.leave_type_code, lq.leave_type_name, lq.leave_type_id || lq.id)}</div>
                         <div className="text-xs text-muted-foreground">
-                          {t("selfService.used")} {lq.used} / {lq.quota} {t("selfService.dayUnit")} - {t("selfService.remaining")} {Math.max(0, lq.quota - lq.used)} {t("selfService.dayUnit")}
+                          {t("selfService.used")} {used} / {quota} {t("selfService.dayUnit")} - {t("selfService.remaining")} {remaining} {t("selfService.dayUnit")}
                         </div>
                       </div>
                     </div>

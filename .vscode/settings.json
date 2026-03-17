@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^Set-Location \"c:\\\\MyProject\\\\Github\\\\HR_multiple\\\\hr-backend-api\"; @'\nconst db = require\\('\\./config/db'\\);\n\\(async \\(\\) => \\{\n  try \\{\n    const tables = \\['leave_requests','attendances','ot_requests','approvals','public_holidays','leave_balances'\\];\n    const summary = \\{\\};\n    for \\(const t of tables\\) \\{\n      const \\[rows\\] = await db\\.query\\(`SELECT COUNT\\(\\*\\) AS cnt FROM \\$\\{t\\}`\\);\n      summary\\[t\\] = Number\\(rows\\[0\\]\\.cnt \\|\\| 0\\);\n    \\}\n\n    const \\[pendingApprovals\\] = await db\\.query\\(`SELECT COUNT\\(\\*\\) AS cnt FROM approvals WHERE status = 'pending'`\\);\n    const \\[thisMonthOt\\] = await db\\.query\\(\n      `SELECT COUNT\\(\\*\\) AS cnt FROM ot_requests WHERE request_date BETWEEN \\? AND \\?`,\n      \\[`\\$\\{new Date\\(\\)\\.getFullYear\\(\\)\\}-\\$\\{String\\(new Date\\(\\)\\.getMonth\\(\\) \\+ 1\\)\\.padStart\\(2, '0'\\)\\}-01`, `\\$\\{new Date\\(\\)\\.getFullYear\\(\\)\\}-\\$\\{String\\(new Date\\(\\)\\.getMonth\\(\\) \\+ 1\\)\\.padStart\\(2, '0'\\)\\}-\\$\\{String\\(new Date\\(new Date\\(\\)\\.getFullYear\\(\\), new Date\\(\\)\\.getMonth\\(\\) \\+ 1, 0\\)\\.getDate\\(\\)\\)\\.padStart\\(2, '0'\\)\\}`\\]\n    \\);\n\n    console\\.log\\(JSON\\.stringify\\(\\{\n      row_counts: summary,\n      pending_approvals: Number\\(pendingApprovals\\[0\\]\\.cnt \\|\\| 0\\),\n      ot_requests_this_month: Number\\(thisMonthOt\\[0\\]\\.cnt \\|\\| 0\\)\n    \\}, null, 2\\)\\);\n  \\} catch \\(error\\) \\{\n    console\\.error\\('FAILED', error\\.message\\);\n    process\\.exitCode = 1;\n  \\} finally \\{\n    await db\\.end\\(\\);\n  \\}\n\\}\\)\\(\\);\n'@ \\| node$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "Get-Command": true
+    }
+}

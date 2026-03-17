@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Search, Filter, Plus, Pencil, Trash2 } from "lucide-react";
 import { apiDelete, apiGet } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
@@ -18,6 +19,7 @@ import { resolveRoleViewKey } from "@/lib/accessMatrix";
 // 1. Interface
 interface Employee {
   id: string;
+  avatar_url?: string;
   employee_code: string;
   firstname_th: string;
   lastname_th: string;
@@ -165,71 +167,106 @@ const EmployeeList = () => {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.employeeCode")}</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.fullName")}</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.company")}</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.department")}</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.position")}</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.status")}</th>
-                  {(canManageEmployees || canTransferCrossCompany) && <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.manage")}</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length > 0 ? (
-                  filtered.map((emp) => {
-                    return (
-                      <tr
-                        key={emp.id}
-                        className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors"
-                        onClick={() => router.push(`/employees/${emp.id}`)}
-                      >
-                        <td className="px-4 py-3 font-mono text-xs">{emp.employee_code || t("employeeList.na")}</td>
-                        <td className="px-4 py-3">
-                          <span className="font-medium text-foreground">{emp.firstname_th} {emp.lastname_th}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                            {emp.company_name || t("employeeList.na")}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">{emp.department_name || t("employeeList.na")}</td>
-                        <td className="px-4 py-3">{emp.position_name || t("employeeList.na")}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline" className={statusStyles[emp.status?.toLowerCase() || ""] || ""}>
-                            {emp.status || t("employeeList.na")}
-                          </Badge>
-                        </td>
-                        {(canManageEmployees || canTransferCrossCompany) && (
-                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex gap-2">
-                              {canManageEmployees ? (
-                                <>
-                                  <Button size="sm" variant="outline" className="h-8 w-8 p-0" title={t("employeeList.actions.edit")} onClick={() => router.push(`/employees/${emp.id}`)}>
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button size="sm" variant="destructive" className="h-8 w-8 p-0" title={t("employeeList.actions.delete")} onClick={() => handleDeleteEmployee(String(emp.id))}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button size="sm" variant="outline">{t("employeeList.actions.transferCompany")}</Button>
-                              )}
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={(canManageEmployees || canTransferCrossCompany) ? 7 : 6} className="p-8 text-center text-muted-foreground">{t("employeeList.empty")}</td>
+            <TooltipProvider delayDuration={120}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.profile")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.employeeCode")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.fullName")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.company")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.department")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.position")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.status")}</th>
+                    {(canManageEmployees || canTransferCrossCompany) && <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.manage")}</th>}
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.length > 0 ? (
+                    filtered.map((emp) => {
+                      return (
+                        <tr
+                          key={emp.id}
+                          className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors"
+                          onClick={() => router.push(`/employees/${emp.id}`)}
+                        >
+                          <td className="px-4 py-3">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="inline-flex">
+                                  {emp.avatar_url ? (
+                                    <img
+                                      src={emp.avatar_url}
+                                      alt={`${emp.firstname_th} ${emp.lastname_th}`}
+                                      className="h-9 w-9 rounded-full object-cover border"
+                                    />
+                                  ) : (
+                                    <div className="h-9 w-9 rounded-full bg-muted text-muted-foreground border flex items-center justify-center text-xs font-semibold">
+                                      {`${emp.firstname_th?.[0] || ""}${emp.lastname_th?.[0] || ""}`.toUpperCase() || "-"}
+                                    </div>
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="p-2">
+                                {emp.avatar_url ? (
+                                  <img
+                                    src={emp.avatar_url}
+                                    alt={`${emp.firstname_th} ${emp.lastname_th}`}
+                                    className="h-28 w-28 rounded-md object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-28 w-28 rounded-md bg-muted text-muted-foreground border flex items-center justify-center text-3xl font-semibold">
+                                    {`${emp.firstname_th?.[0] || ""}${emp.lastname_th?.[0] || ""}`.toUpperCase() || "-"}
+                                  </div>
+                                )}
+                              </TooltipContent>
+                            </Tooltip>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs">{emp.employee_code || t("employeeList.na")}</td>
+                          <td className="px-4 py-3">
+                            <span className="font-medium text-foreground">{emp.firstname_th} {emp.lastname_th}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                              {emp.company_name || t("employeeList.na")}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">{emp.department_name || t("employeeList.na")}</td>
+                          <td className="px-4 py-3">{emp.position_name || t("employeeList.na")}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className={statusStyles[emp.status?.toLowerCase() || ""] || ""}>
+                              {emp.status || t("employeeList.na")}
+                            </Badge>
+                          </td>
+                          {(canManageEmployees || canTransferCrossCompany) && (
+                            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex gap-2">
+                                {canManageEmployees ? (
+                                  <>
+                                    <Button size="sm" variant="outline" className="h-8 w-8 p-0" title={t("employeeList.actions.edit")} onClick={() => router.push(`/employees/${emp.id}`)}>
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="destructive" className="h-8 w-8 p-0" title={t("employeeList.actions.delete")} onClick={() => handleDeleteEmployee(String(emp.id))}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button size="sm" variant="outline">{t("employeeList.actions.transferCompany")}</Button>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={(canManageEmployees || canTransferCrossCompany) ? 8 : 7} className="p-8 text-center text-muted-foreground">{t("employeeList.empty")}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </TooltipProvider>
           </div>
         </CardContent>
       </Card>

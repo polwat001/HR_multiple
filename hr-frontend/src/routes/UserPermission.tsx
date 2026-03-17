@@ -6,8 +6,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Shield, Plus, Users, ClipboardList, UserCog } from "lucide-react";
-import { apiGet, apiPut } from "@/lib/api";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+type UserRow = {
+  id: number;
+  username: string;
+  email: string;
+  displayName: string;
+  lastLogin: string;
+  status: string;
+  roles: string;
+  companies: string;
+};
+
+type AuditLogRow = {
+  id: number;
+  user: string;
+  action: string;
+  target: string;
+  when: string;
+};
 
 const rolesCatalog = [
   {
@@ -25,39 +44,6 @@ const rolesCatalog = [
   {
     id: 5, name: "Employee", description: "View own data, submit leave/OT",
   },
-];
-
-const initialUsers = [
-  {
-    id: 1,
-    username: "admin_central",
-    email: "admin.central@hrgroup.local",
-    displayName: "สมชาย วงศ์สวัสดิ์",
-    lastLogin: "2026-03-10 09:12",
-    status: "active",
-  },
-  {
-    id: 2,
-    username: "hr_company_abc",
-    email: "hr.abc@hrgroup.local",
-    displayName: "นภา สุขสันต์",
-    lastLogin: "2026-03-10 08:40",
-    status: "active",
-  },
-  {
-    id: 3,
-    username: "mgr_acc_abc",
-    email: "manager.acc@hrgroup.local",
-    displayName: "วิชัย พงษ์ทอง",
-    lastLogin: "2026-03-09 18:10",
-    status: "locked",
-  },
-];
-
-const initialAssignments = [
-  { userId: 1, role: "Super Admin", companyScope: "All Companies", departmentScope: "All Departments" },
-  { userId: 2, role: "HR Manager", companyScope: "ABC", departmentScope: "All Departments" },
-  { userId: 3, role: "Line Manager", companyScope: "ABC", departmentScope: "Accounting" },
 ];
 
 const modules = [
@@ -83,41 +69,18 @@ const initialPermissionMatrix = modules.reduce((acc, moduleName) => {
   return acc;
 }, {} as Record<string, { view: boolean; create: boolean; edit: boolean; delete: boolean }>);
 
-const transactionLogs = [
-  {
-    id: 1,
-    user: "admin_central",
-    action: "UPDATE_EMPLOYEE",
-    target: "EMP-00023 (นภา สุขสันต์)",
-    when: "2026-03-10 10:14",
-  },
-  {
-    id: 2,
-    user: "hr_company_abc",
-    action: "ASSIGN_ROLE",
-    target: "user mgr_acc_abc -> Line Manager",
-    when: "2026-03-10 09:50",
-  },
-  {
-    id: 3,
-    user: "admin_central",
-    action: "LOCK_ACCOUNT",
-    target: "user mgr_acc_abc",
-    when: "2026-03-09 18:12",
-  },
-];
-
 const UserPermissions = () => {
   const { t } = useLanguage();
   const [selectedRole, setSelectedRole] = useState(0);
-  const [users, setUsers] = useState(initialUsers);
-  const [assignments, setAssignments] = useState(initialAssignments);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [logs, setLogs] = useState<AuditLogRow[]>([]);
   const [matrix, setMatrix] = useState(initialPermissionMatrix);
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [matrixSaving, setMatrixSaving] = useState(false);
   const [matrixMessage, setMatrixMessage] = useState<string | null>(null);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
-    userId: String(initialUsers[0].id),
+    userId: "",
     role: rolesCatalog[0].name,
     companyScope: "All Companies",
     departmentScope: "All Departments",
@@ -129,7 +92,71 @@ const UserPermissions = () => {
     return map;
   }, [users]);
 
+  const assignments = useMemo(() => {
+    return users
+      .filter((u) => !!u.roles)
+      .map((u) => ({
+        userId: u.id,
+        role: u.roles,
+        companyScope: u.companies || "-",
+        departmentScope: "-",
+      }));
+  }, [users]);
+
   const selectedRoleName = rolesCatalog[selectedRole]?.name;
+
+  const fetchUsers = async () => {
+    try {
+      setUsersLoading(true);
+      const res = await apiGet<any>("/users");
+      const rows = Array.isArray(res) ? res : res?.data || [];
+      const mapped = rows.map((row: any) => ({
+        id: Number(row.id),
+        username: String(row.username || ""),
+        email: String(row.email || ""),
+        displayName: String(row.username || row.email || "-"),
+        lastLogin: row.last_login ? String(row.last_login) : "-",
+        status: String(row.status || "active").toLowerCase() === "locked" ? "locked" : String(row.status || "active").toLowerCase(),
+        roles: String(row.roles || ""),
+        companies: String(row.companies || ""),
+      }));
+
+      setUsers(mapped);
+      setNewAssignment((prev) => ({ ...prev, userId: mapped[0] ? String(mapped[0].id) : "" }));
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      setUsers([]);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await apiGet<any>("/admin/audit-logs?limit=100");
+        const rows = Array.isArray(res) ? res : res?.data || [];
+        setLogs(
+          rows.map((row: any) => ({
+            id: Number(row.id),
+            user: String(row.username || row.user_id || "-"),
+            action: String(row.action || "-"),
+            target: String(row.target || "-"),
+            when: String(row.created_at || "-"),
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch audit logs:", error);
+        setLogs([]);
+      }
+    };
+
+    fetchLogs();
+  }, []);
 
   useEffect(() => {
     const fetchMatrix = async () => {
@@ -151,8 +178,14 @@ const UserPermissions = () => {
     fetchMatrix();
   }, [selectedRoleName]);
 
-  const toggleUserStatus = (id: number) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: u.status === "active" ? "locked" : "active" } : u)));
+  const toggleUserStatus = async (id: number, currentStatus: string) => {
+    const nextStatus = currentStatus === "active" ? "locked" : "active";
+    try {
+      await apiPut(`/users/${id}`, { status: nextStatus });
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: nextStatus } : u)));
+    } catch (error) {
+      console.error("Failed to update user status:", error);
+    }
   };
 
   const handlePermissionToggle = (
@@ -169,15 +202,14 @@ const UserPermissions = () => {
   };
 
   const handleAddAssignment = () => {
-    setAssignments((prev) => [
-      {
-        userId: Number(newAssignment.userId),
-        role: newAssignment.role,
-        companyScope: newAssignment.companyScope,
-        departmentScope: newAssignment.departmentScope,
-      },
-      ...prev,
-    ]);
+    const roleId = rolesCatalog.find((r) => r.name === newAssignment.role)?.id;
+    if (!newAssignment.userId || !roleId) return;
+
+    apiPost(`/users/${newAssignment.userId}/assign-role`, {
+      role_id: roleId,
+    })
+      .then(() => fetchUsers())
+      .catch((error) => console.error("Failed to assign role:", error));
   };
 
   const handleSaveMatrix = async () => {
@@ -221,6 +253,11 @@ const UserPermissions = () => {
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.accounts.table.action")}</th>
                 </tr></thead>
                 <tbody>
+                  {usersLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">Loading...</td>
+                    </tr>
+                  ) : null}
                   {users.map((u) => (
                     <tr key={u.id} className="border-b last:border-b-0 hover:bg-muted/30">
                       <td className="px-4 py-3">
@@ -235,7 +272,7 @@ const UserPermissions = () => {
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
-                        <Button size="sm" variant="outline" onClick={() => toggleUserStatus(u.id)}>
+                        <Button size="sm" variant="outline" onClick={() => toggleUserStatus(u.id, u.status)}>
                           {u.status === "active" ? t("userPermission.accounts.actions.lock") : t("userPermission.accounts.actions.unlock")}
                         </Button>
                       </td>
@@ -400,7 +437,7 @@ const UserPermissions = () => {
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.logs.table.datetime")}</th>
                 </tr></thead>
                 <tbody>
-                  {transactionLogs.map((log) => (
+                  {logs.map((log) => (
                     <tr key={log.id} className="border-b last:border-b-0 hover:bg-muted/30">
                       <td className="px-4 py-3">{log.user}</td>
                       <td className="px-4 py-3"><Badge variant="secondary" className="text-xs">{log.action}</Badge></td>

@@ -1,15 +1,58 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 
 const SystemSettings = () => {
   const { t } = useLanguage();
-  const [groupName, setGroupName] = useState("HR Group Holding");
-  const [defaultTimezone, setDefaultTimezone] = useState("Asia/Bangkok");
+  const [groupName, setGroupName] = useState("");
+  const [defaultTimezone, setDefaultTimezone] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await apiGet<any>("/admin/system-settings");
+        const data = res?.data || {};
+        setGroupName(String(data.groupName || ""));
+        setDefaultTimezone(String(data.defaultTimezone || "Asia/Bangkok"));
+      } catch (error) {
+        console.error("Failed to load system settings:", error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  const handleSaveSettings = async () => {
+    try {
+      setSaving(true);
+      await apiPut("/admin/system-settings", {
+        settings: {
+          groupName,
+          defaultTimezone,
+        },
+      });
+      window.alert("Saved system settings");
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSystemAction = async (actionKey: string) => {
+    try {
+      await apiPost(`/admin/system-actions/${actionKey}`, {});
+      window.alert(`Executed action: ${actionKey}`);
+    } catch (error: any) {
+      window.alert(error?.message || `Failed action: ${actionKey}`);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -34,7 +77,7 @@ const SystemSettings = () => {
                 <Label htmlFor="timezone">{t("systemSettings.defaultTimezone")}</Label>
                 <Input id="timezone" value={defaultTimezone} onChange={(e) => setDefaultTimezone(e.target.value)} />
               </div>
-              <Button>{t("systemSettings.saveSettings")}</Button>
+              <Button onClick={handleSaveSettings} disabled={saving}>{saving ? "Saving..." : t("systemSettings.saveSettings")}</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -49,9 +92,9 @@ const SystemSettings = () => {
                 {t("systemSettings.dataCorrectionDesc")}
               </p>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline">{t("systemSettings.recalculateLeave")}</Button>
-                <Button variant="outline">{t("systemSettings.reindexAttendance")}</Button>
-                <Button variant="destructive">{t("systemSettings.deleteInvalid")}</Button>
+                <Button variant="outline" onClick={() => handleSystemAction("recalculate-leave")}>{t("systemSettings.recalculateLeave")}</Button>
+                <Button variant="outline" onClick={() => handleSystemAction("reindex-attendance")}>{t("systemSettings.reindexAttendance")}</Button>
+                <Button variant="destructive" onClick={() => handleSystemAction("delete-invalid")}>{t("systemSettings.deleteInvalid")}</Button>
               </div>
             </CardContent>
           </Card>
@@ -65,9 +108,9 @@ const SystemSettings = () => {
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">{t("systemSettings.securityDesc")}</p>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline">{t("systemSettings.forceLogout")}</Button>
-                <Button variant="outline">{t("systemSettings.rotateApiKeys")}</Button>
-                <Button>{t("systemSettings.applyPolicy")}</Button>
+                <Button variant="outline" onClick={() => handleSystemAction("force-logout")}>{t("systemSettings.forceLogout")}</Button>
+                <Button variant="outline" onClick={() => handleSystemAction("rotate-api-keys")}>{t("systemSettings.rotateApiKeys")}</Button>
+                <Button onClick={() => handleSystemAction("apply-security-policy")}>{t("systemSettings.applyPolicy")}</Button>
               </div>
             </CardContent>
           </Card>

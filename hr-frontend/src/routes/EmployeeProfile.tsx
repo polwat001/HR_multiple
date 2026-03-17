@@ -165,6 +165,42 @@ const EmployeeProfile = () => {
               status: (selected.status || "active").toLowerCase(),
             });
           }
+
+          try {
+            const detailRes = await apiGet<any>(`/employees/${employeeId}`);
+            const detail = detailRes?.data || detailRes;
+            if (detail) {
+              setForm((prev) => ({
+                ...prev,
+                avatar_url: detail.avatar_url || prev.avatar_url,
+                firstname_th: detail.firstname_th || prev.firstname_th,
+                lastname_th: detail.lastname_th || prev.lastname_th,
+                nickname: detail.nickname || "",
+                national_id: detail.national_id || "",
+                birth_date: detail.birth_date ? String(detail.birth_date).slice(0, 10) : "",
+                gender: detail.gender || "",
+                phone: detail.phone || "",
+                email: detail.email || "",
+                emergency_name: detail.emergency_name || "",
+                emergency_phone: detail.emergency_phone || "",
+                emergency_relation: detail.emergency_relation || "",
+                employee_code: detail.employee_code || prev.employee_code,
+                company_id: String(detail.company_id || prev.company_id || ""),
+                department_id: String(detail.department_id || prev.department_id || ""),
+                position_id: String(detail.position_id || prev.position_id || ""),
+                manager_id: String(detail.manager_id || prev.manager_id || ""),
+                start_date: detail.start_date ? String(detail.start_date).slice(0, 10) : "",
+                probation_end_date: detail.probation_end_date ? String(detail.probation_end_date).slice(0, 10) : "",
+                employee_type: detail.employee_type || prev.employee_type,
+                status: (detail.status || prev.status || "active").toLowerCase(),
+              }));
+
+              setAttachments(Array.isArray(detail.attachments) ? detail.attachments : []);
+              setHistoryLogs(Array.isArray(detail.history_logs) ? detail.history_logs : []);
+            }
+          } catch (detailError) {
+            console.error("Load employee detail failed:", detailError);
+          }
         }
       } catch (error) {
         console.error("Load employee master data failed:", error);

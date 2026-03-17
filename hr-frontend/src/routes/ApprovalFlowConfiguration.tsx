@@ -2,25 +2,77 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/types/roles";
+import { apiGet, apiPut } from "@/lib/api";
 
-const initialFlowRows = [
-  { module: "Leave", level1: "Manager", level2: "HR Company", level3: "Central HR" },
-  { module: "OT", level1: "Manager", level2: "HR Company", level3: "Central HR" },
-  { module: "Payroll", level1: "HR Company", level2: "Central HR", level3: "-" },
+const emptyFlowRows = [
+  { module: "Leave", level1: "", level2: "", level3: "" },
+  { module: "OT", level1: "", level2: "", level3: "" },
+  { module: "Payroll", level1: "", level2: "", level3: "" },
 ];
 
 export default function ApprovalFlowConfiguration() {
   const { hasRole } = useAuth();
   const { t } = useLanguage();
   const isSystemAdmin = hasRole(UserRole.SUPER_ADMIN);
-  const [rows, setRows] = useState(initialFlowRows);
+  const [rows, setRows] = useState(emptyFlowRows);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchFlows = async () => {
+      try {
+        const res = await apiGet<any>("/admin/approval-flows");
+        const data = res?.data || {};
+        setRows([
+          {
+            module: "Leave",
+            level1: data?.leave?.level1 || "",
+            level2: data?.leave?.level2 || "",
+            level3: data?.leave?.level3 || "",
+          },
+          {
+            module: "OT",
+            level1: data?.ot?.level1 || "",
+            level2: data?.ot?.level2 || "",
+            level3: data?.ot?.level3 || "",
+          },
+          {
+            module: "Payroll",
+            level1: data?.payroll?.level1 || "",
+            level2: data?.payroll?.level2 || "",
+            level3: data?.payroll?.level3 || "",
+          },
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch approval flows:", error);
+      }
+    };
+
+    fetchFlows();
+  }, []);
 
   const updateField = (index: number, field: "level1" | "level2" | "level3", value: string) => {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const flowMap = {
+        leave: rows.find((row) => row.module === "Leave"),
+        ot: rows.find((row) => row.module === "OT"),
+        payroll: rows.find((row) => row.module === "Payroll"),
+      };
+      await apiPut("/admin/approval-flows", { flowMap });
+      window.alert("Saved approval flow");
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to save approval flow");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -56,7 +108,7 @@ export default function ApprovalFlowConfiguration() {
           </table>
 
           <div className="mt-4 flex justify-end">
-            <Button>{t("approvalFlow.save")}</Button>
+            <Button onClick={handleSave} disabled={!isSystemAdmin || saving}>{saving ? "Saving..." : t("approvalFlow.save")}</Button>
           </div>
         </CardContent>
       </Card>

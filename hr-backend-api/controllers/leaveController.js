@@ -1,8 +1,171 @@
 const db = require('../config/db');
 
+let leaveTypeCodeSchemaReady = false;
+
+const inferLeaveTypeCodeFromName = (leaveTypeName) => {
+    const name = String(leaveTypeName || '').toLowerCase();
+
+    if (name.includes('vacation') || name.includes('annual') || name.includes('พักร้อน') || name.includes('พักผ่อน')) {
+        return 'annual';
+    }
+    if (name.includes('sick') || name.includes('ป่วย')) {
+        return 'sick';
+    }
+    if (name.includes('personal') || name.includes('กิจ')) {
+        return 'personal';
+    }
+    if (name.includes('maternity') || name.includes('คลอด')) {
+        return 'maternity';
+    }
+    return 'other';
+};
+
+const buildLeaveTypeCodeSql = (alias = 'lt') => `
+    COALESCE(
+        NULLIF(${alias}.leave_type_code, ''),
+        CASE
+            WHEN LOWER(${alias}.name) LIKE '%vacation%' OR LOWER(${alias}.name) LIKE '%annual%' OR ${alias}.name LIKE '%พักร้อน%' OR ${alias}.name LIKE '%พักผ่อน%' THEN 'annual'
+            WHEN LOWER(${alias}.name) LIKE '%sick%' OR ${alias}.name LIKE '%ป่วย%' THEN 'sick'
+            WHEN LOWER(${alias}.name) LIKE '%personal%' OR ${alias}.name LIKE '%กิจ%' THEN 'personal'
+            WHEN LOWER(${alias}.name) LIKE '%maternity%' OR ${alias}.name LIKE '%คลอด%' THEN 'maternity'
+            ELSE CONCAT('custom_', ${alias}.id)
+        END
+    )`;
+
+const ensureLeaveTypeCodeSchema = async () => {
+    if (leaveTypeCodeSchemaReady) return;
+
+    await db.query(`ALTER TABLE leave_types ADD COLUMN leave_type_code VARCHAR(32) NULL AFTER name`).catch(() => {});
+    await db.query(
+        `UPDATE leave_types
+         SET leave_type_code = CASE
+           WHEN LOWER(name) LIKE '%vacation%' OR LOWER(name) LIKE '%annual%' OR name LIKE '%พักร้อน%' OR name LIKE '%พักผ่อน%' THEN 'annual'
+           WHEN LOWER(name) LIKE '%sick%' OR name LIKE '%ป่วย%' THEN 'sick'
+           WHEN LOWER(name) LIKE '%personal%' OR name LIKE '%กิจ%' THEN 'personal'
+           WHEN LOWER(name) LIKE '%maternity%' OR name LIKE '%คลอด%' THEN 'maternity'
+           ELSE CONCAT('custom_', id)
+         END
+         WHERE leave_type_code IS NULL OR leave_type_code = ''`
+    ).catch(() => {});
+    await db.query(`ALTER TABLE leave_types MODIFY leave_type_code VARCHAR(32) NOT NULL`).catch(() => {});
+    await db.query(`ALTER TABLE leave_types ADD UNIQUE KEY uniq_leave_type_company_code (company_id, leave_type_code)`).catch(() => {});
+
+    leaveTypeCodeSchemaReady = true;
+};
+
+const inferDefaultQuotaByLeaveType = (leaveTypeCode, leaveTypeName, vacationDays) => {
+    const code = String(leaveTypeCode || '').toLowerCase() || inferLeaveTypeCodeFromName(leaveTypeName);
+
+    if (code === 'annual') {
+        return Number(vacationDays || 6);
+    }
+    if (code === 'sick') {
+        return 30;
+    }
+    if (code === 'personal') {
+        return 3;
+    }
+    if (code === 'maternity') {
+        return 98;
+    }
+    return Number(vacationDays || 6);
+};
+
+const buildEmployeeScope = (user, employeeAlias = 'e') => {
+    const { user_id, role_level, company_id } = user;
+    let clause = '';
+    const params = [];
+
+    if (role_level >= 80) {
+        // Super Admin & Central HR
+    } else if (role_level === 50) {
+        clause = ` AND ${employeeAlias}.company_id = ?`;
+        params.push(company_id);
+    } else if (role_level === 20) {
+        clause = ` AND (${employeeAlias}.user_id = ? OR ${employeeAlias}.manager_id = (SELECT id FROM employees WHERE user_id = ?))`;
+        params.push(user_id, user_id);
+    } else {
+        clause = ` AND ${employeeAlias}.user_id = ?`;
+        params.push(user_id);
+    }
+
+    return { clause, params };
+};
+
+const ensureLeaveBalancesForYear = async (user, year) => {
+    await ensureLeaveTypeCodeSchema();
+
+    const scope = buildEmployeeScope(user, 'e');
+
+    const [employees] = await db.query(
+        `SELECT e.id, e.company_id
+         FROM employees e
+         WHERE 1=1 ${scope.clause}`,
+        scope.params
+    );
+
+    if (!employees.length) return;
+
+    const [leaveTypes] = await db.query(
+        `SELECT id, name, company_id, leave_type_code
+         FROM leave_types
+         ORDER BY id ASC`
+    );
+
+    if (!leaveTypes.length) return;
+
+    const [policyRows] = await db.query(
+        `SELECT company_id, vacation_days
+         FROM leave_policy_configs
+         WHERE is_active = 1`
+    );
+    const policyByCompany = new Map(policyRows.map((row) => [Number(row.company_id), Number(row.vacation_days || 6)]));
+
+    for (const employee of employees) {
+        const employeeId = Number(employee.id);
+        const companyId = Number(employee.company_id || 0);
+        const vacationDays = policyByCompany.get(companyId) || 6;
+
+        const allowedLeaveTypes = leaveTypes.filter((leaveType) => Number(leaveType.company_id || 0) === companyId);
+
+        for (const leaveType of allowedLeaveTypes) {
+            const leaveTypeId = Number(leaveType.id);
+            const quota = inferDefaultQuotaByLeaveType(leaveType.leave_type_code, leaveType.name, vacationDays);
+
+            await db.query(
+                `INSERT INTO leave_balances (employee_id, leave_type_id, year, quota, used, pending, balance)
+                 VALUES (?, ?, ?, ?, 0, 0, ?)
+                 ON DUPLICATE KEY UPDATE
+                    quota = quota`,
+                [employeeId, leaveTypeId, year, quota, quota]
+            );
+        }
+    }
+
+    await db.query(
+        `UPDATE leave_balances lb
+         JOIN (
+           SELECT lr.employee_id, lr.leave_type_id,
+                  SUM(CASE WHEN lr.status = 'approved' THEN lr.total_days ELSE 0 END) AS used_days,
+                  SUM(CASE WHEN lr.status = 'pending' THEN lr.total_days ELSE 0 END) AS pending_days
+           FROM leave_requests lr
+           WHERE YEAR(lr.start_date) = ?
+           GROUP BY lr.employee_id, lr.leave_type_id
+         ) req
+           ON req.employee_id = lb.employee_id AND req.leave_type_id = lb.leave_type_id
+         SET lb.used = COALESCE(req.used_days, 0),
+             lb.pending = COALESCE(req.pending_days, 0),
+             lb.balance = GREATEST(lb.quota - COALESCE(req.used_days, 0) - COALESCE(req.pending_days, 0), 0)
+         WHERE lb.year = ?`,
+        [year, year]
+    );
+};
+
 // 1. ดึงข้อมูลประวัติคำร้องขอลางาน (Leave Requests)
 exports.getLeaveRequests = async (req, res) => {
     try {
+        await ensureLeaveTypeCodeSchema();
+
         const { user_id, role_level, company_id } = req.user;
         const leaveApprovalScope = req.user?.module_scopes?.leave_approval_scope;
         
@@ -15,6 +178,7 @@ exports.getLeaveRequests = async (req, res) => {
                 lr.reason, 
                 lr.status, 
                 lr.created_at,
+                ${buildLeaveTypeCodeSql('lt')} AS leave_type_code,
                 lt.name AS leave_type_name,
                 e.user_id,
                 e.employee_code, 
@@ -30,7 +194,7 @@ exports.getLeaveRequests = async (req, res) => {
 
         // ⭐️ กรองข้อมูลตามสิทธิ์ (RBAC)
         if (leaveApprovalScope === 'manager') {
-            // Overlapping role demo: if user is both HR Company + Manager, use manager scope for leave approval queue.
+            // Overlapping role case: if user is both HR Company + Manager, use manager scope for leave approval queue.
             sql += ` AND (e.user_id = ? OR e.manager_id = (SELECT id FROM employees WHERE user_id = ?))`;
             params.push(user_id, user_id);
         } else if (role_level >= 80) {
@@ -68,8 +232,12 @@ exports.getLeaveRequests = async (req, res) => {
 // 2. ดึงข้อมูลกระเป๋าวันลาคงเหลือ (Leave Balances) ประจำปี
 exports.getLeaveBalances = async (req, res) => {
     try {
+        await ensureLeaveTypeCodeSchema();
+
         const { user_id, role_level, company_id } = req.user;
         const currentYear = new Date().getFullYear(); // ดึงปีปัจจุบัน (เช่น 2026)
+
+        await ensureLeaveBalancesForYear(req.user, currentYear);
         
         let sql = `
             SELECT 
@@ -79,6 +247,7 @@ exports.getLeaveBalances = async (req, res) => {
                 lb.used, 
                 lb.pending, 
                 lb.balance,
+                ${buildLeaveTypeCodeSql('lt')} AS leave_type_code,
                 lt.name AS leave_type_name,
                 e.user_id,
                 e.firstname_th, 
@@ -115,6 +284,71 @@ exports.getLeaveBalances = async (req, res) => {
     } catch (error) {
         console.error('Get Leave Balances Error:', error);
         res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงยอดวันลาคงเหลือ' });
+    }
+};
+
+exports.getLeaveTypes = async (req, res) => {
+    try {
+        await ensureLeaveTypeCodeSchema();
+
+        const { role_level, company_id, user_id } = req.user;
+
+        let sql = `
+            SELECT lt.id, lt.name, ${buildLeaveTypeCodeSql('lt')} AS leave_type_code
+            FROM leave_types lt
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (Number(role_level || 0) >= 80) {
+            // Super Admin & Central HR can read all leave types.
+        } else if (Number(role_level || 0) === 50) {
+            sql += ` AND lt.company_id = ?`;
+            params.push(company_id);
+        } else {
+            const [empRows] = await db.query(
+                `SELECT company_id
+                 FROM employees
+                 WHERE user_id = ?
+                 LIMIT 1`,
+                [user_id]
+            );
+
+            if (!empRows.length) {
+                return res.status(404).json({ message: 'ไม่พบข้อมูลพนักงานสำหรับผู้ใช้งานนี้' });
+            }
+
+            sql += ` AND lt.company_id = ?`;
+            params.push(empRows[0].company_id);
+        }
+
+        sql += ` ORDER BY lt.id ASC`;
+
+        const [rows] = await db.query(sql, params);
+        const dedupedByCode = new Map();
+
+        rows.forEach((row) => {
+            const code = String(row.leave_type_code || `custom_${row.id}`);
+            const existing = dedupedByCode.get(code);
+            if (!existing || Number(row.id) < Number(existing.id)) {
+                dedupedByCode.set(code, {
+                    id: Number(row.id),
+                    name: row.name,
+                    leave_type_code: code,
+                });
+            }
+        });
+
+        const normalizedRows = Array.from(dedupedByCode.values()).sort((a, b) => a.id - b.id);
+
+        res.status(200).json({
+            message: 'ดึงประเภทการลาสำเร็จ',
+            count: normalizedRows.length,
+            data: normalizedRows,
+        });
+    } catch (error) {
+        console.error('Get Leave Types Error:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงประเภทการลา' });
     }
 };
 // 3. สร้างคำร้องขอลางานใหม่ (Create Leave Request)

@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronRight, ChevronDown, Building2, Building, GitBranch, FolderOpen, Briefcase, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiGet } from "@/lib/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Permission, UserRole } from "@/types/roles";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
@@ -14,6 +14,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
   group: { icon: Building2, color: "text-primary" },
@@ -25,8 +36,11 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
 
 interface OrgNode {
   id: string;
+  rawId: string;
   NAME: string;
   type: string;
+  companyId?: string;
+  departmentId?: string;
   costCenter?: string;
   children: OrgNode[];
 }
@@ -62,20 +76,94 @@ interface Position {
   department_id?: string;
 }
 
-const TreeNode = ({ node, level = 0 }: { node: OrgNode; level?: number }) => {
+type DragPayload = {
+  sourceType: "department" | "position";
+  sourceId: string;
+  sourceCompanyId?: string;
+};
+
+type TreeNodeProps = {
+  node: OrgNode;
+  level?: number;
+  canManageOrg: boolean;
+  onMoveDepartment: (sourceDepartmentId: string, targetParentDepartmentId: string | null, targetCompanyId: string) => Promise<void>;
+  onMovePosition: (sourcePositionId: string, targetDepartmentId: string | null, targetCompanyId: string) => Promise<void>;
+};
+
+const TreeNode = ({ node, level = 0, canManageOrg, onMoveDepartment, onMovePosition }: TreeNodeProps) => {
   const [expanded, setExpanded] = useState(level < 2);
+  const [isDropActive, setIsDropActive] = useState(false);
   const config = typeConfig[node.type] || typeConfig.department;
   const Icon = config.icon;
   const hasChildren = node.children && node.children.length > 0;
+
+  const canDrag = canManageOrg && (node.type === "department" || node.type === "position");
+  const canDrop = canManageOrg && (node.type === "company" || node.type === "department");
+
+  const onDragStart = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!canDrag) return;
+    const payload: DragPayload = {
+      sourceType: node.type as "department" | "position",
+      sourceId: node.rawId,
+      sourceCompanyId: node.companyId,
+    };
+    event.dataTransfer.setData("application/org-node", JSON.stringify(payload));
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!canDrop) return;
+    event.preventDefault();
+    setIsDropActive(true);
+  };
+
+  const onDragLeave = () => {
+    if (!canDrop) return;
+    setIsDropActive(false);
+  };
+
+  const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    if (!canDrop) return;
+    event.preventDefault();
+    setIsDropActive(false);
+
+    const raw = event.dataTransfer.getData("application/org-node");
+    if (!raw) return;
+
+    try {
+      const payload = JSON.parse(raw) as DragPayload;
+      if (!payload?.sourceId || !payload?.sourceType) return;
+
+      const targetCompanyId = node.type === "company" ? (node.rawId || "") : (node.companyId || "");
+      if (!targetCompanyId) return;
+
+      if (payload.sourceType === "department") {
+        if (payload.sourceId === node.rawId) return;
+        const targetParentDepartmentId = node.type === "department" ? node.rawId : null;
+        await onMoveDepartment(payload.sourceId, targetParentDepartmentId, targetCompanyId);
+      } else if (payload.sourceType === "position") {
+        const targetDepartmentId = node.type === "department" ? node.rawId : null;
+        await onMovePosition(payload.sourceId, targetDepartmentId, targetCompanyId);
+      }
+    } catch (dropError) {
+      console.error("Drop parse error", dropError);
+    }
+  };
 
   return (
     <div>
       <div
         className={cn(
           "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors",
+          isDropActive && "ring-1 ring-primary bg-primary/5",
         )}
         style={{ paddingLeft: `${level * 24 + 12}px` }}
         onClick={() => setExpanded(!expanded)}
+        draggable={canDrag}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
       >
         {hasChildren ? (
           expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -91,7 +179,14 @@ const TreeNode = ({ node, level = 0 }: { node: OrgNode; level?: number }) => {
       {expanded && hasChildren && (
         <div>
           {node.children.map((child) => (
-            <TreeNode key={child.id} node={child} level={level + 1} />
+            <TreeNode
+              key={child.id}
+              node={child}
+              level={level + 1}
+              canManageOrg={canManageOrg}
+              onMoveDepartment={onMoveDepartment}
+              onMovePosition={onMovePosition}
+            />
           ))}
         </div>
       )}
@@ -101,6 +196,7 @@ const TreeNode = ({ node, level = 0 }: { node: OrgNode; level?: number }) => {
 
 const OrganizationStructure = () => {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const { hasRole, hasPermission, user } = useAuth();
   const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
   const canManageOrg = hasPermission(Permission.MANAGE_ORGANIZATION) || isSuperAdmin;
@@ -110,6 +206,7 @@ const OrganizationStructure = () => {
     roleViewKey === "hr_company" ||
     roleViewKey === "central_hr" ||
     roleViewKey === "super_admin";
+  const canManageCompanyMaster = roleViewKey === "central_hr" || roleViewKey === "super_admin";
 
   const [data, setData] = useState<OrgNode | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -142,8 +239,17 @@ const OrganizationStructure = () => {
 
   const [activeTab, setActiveTab] = useState(isEmployeeView ? "org-chart" : "companies");
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(null);
+  const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    open: boolean;
+    type: "department" | "position";
+    id: string;
+    label: string;
+  }>({ open: false, type: "department", id: "", label: "" });
 
   const normalizeRows = <T,>(raw: any): T[] => {
     if (Array.isArray(raw)) return raw as T[];
@@ -163,8 +269,11 @@ const OrganizationStructure = () => {
       deptsInCompany.forEach((d) => {
         deptNodeMap.set(String(d.id), {
           id: `dept-${d.id}`,
+          rawId: String(d.id),
           NAME: `${d.name_th}${d.cost_center ? ` (${d.cost_center})` : ""}`,
           type: "department",
+          companyId: String(d.company_id || c.id),
+          departmentId: String(d.id),
           costCenter: d.cost_center,
           children: [],
         });
@@ -192,8 +301,11 @@ const OrganizationStructure = () => {
       positionsInCompany.forEach((p) => {
         const posNode: OrgNode = {
           id: `position-${p.id}`,
+          rawId: String(p.id),
           NAME: `${p.title_th}${p.level ? ` [${p.level}]` : ""}`,
           type: "position",
+          companyId: String(p.company_id || c.id),
+          departmentId: p.department_id ? String(p.department_id) : undefined,
           children: [],
         };
 
@@ -210,8 +322,10 @@ const OrganizationStructure = () => {
 
       return {
         id: `company-${c.id}`,
+        rawId: String(c.id),
         NAME: `${c.name_th || c.code}${c.code ? ` (${c.code})` : ""}`,
         type: "company",
+        companyId: String(c.id),
         costCenter: c.code,
         children: rootDeptNodes,
       };
@@ -219,38 +333,44 @@ const OrganizationStructure = () => {
 
     return {
       id: "root",
+      rawId: "root",
       NAME: "Organization",
       type: "group",
       children: companyNodes,
     };
   };
 
+  const fetchData = async () => {
+    try {
+      const [companyRes, departmentRes, positionRes] = await Promise.all([
+        apiGet<any>("/organization/companies"),
+        apiGet<any>("/organization/departments"),
+        apiGet<any>("/organization/positions"),
+      ]);
+
+      const companyRows = normalizeRows<Company>(companyRes);
+      const deptRows = normalizeRows<Department>(departmentRes);
+      const positionRows = normalizeRows<Position>(positionRes);
+
+      setCompanies(companyRows);
+      setDepartments(deptRows);
+      setPositions(positionRows);
+      setData(buildTree(companyRows, deptRows, positionRows));
+      setError(null);
+    } catch (fetchError) {
+      const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+      console.error("Failed to fetch org structure:", fetchError);
+      setError(errorMsg);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [companyRes, departmentRes, positionRes] = await Promise.all([
-          apiGet<any>("/organization/companies"),
-          apiGet<any>("/organization/departments"),
-          apiGet<any>("/organization/positions"),
-        ]);
-
-        const companyRows = normalizeRows<Company>(companyRes);
-        const deptRows = normalizeRows<Department>(departmentRes);
-        const positionRows = normalizeRows<Position>(positionRes);
-
-        setCompanies(companyRows);
-        setDepartments(deptRows);
-        setPositions(positionRows);
-        setData(buildTree(companyRows, deptRows, positionRows));
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error("Failed to fetch org structure:", error);
-        setError(errorMsg);
-      } finally {
-        setLoading(false);
-      }
+    const load = async () => {
+      setLoading(true);
+      await fetchData();
+      setLoading(false);
     };
-    fetchData();
+    load();
   }, []);
 
   useEffect(() => {
@@ -262,63 +382,197 @@ const OrganizationStructure = () => {
   const deptOptions = useMemo(() => departments.map((d) => ({ label: d.name_th, value: String(d.id) })), [departments]);
 
   const handleAddCompany = () => {
-    if (!companyForm.code || !companyForm.name_th) return;
-    const newCompany: Company = {
-      id: `new-${Date.now()}`,
-      code: companyForm.code,
-      name_th: companyForm.name_th,
-      name_en: companyForm.name_en,
-      tax_id: companyForm.tax_id,
-      logo_url: companyForm.logo_url,
-      address: companyForm.address,
-      phone: companyForm.phone,
-    };
-
-    const nextCompanies = [newCompany, ...companies];
-    setCompanies(nextCompanies);
-    setData(buildTree(nextCompanies, departments, positions));
-    setCompanyForm({ code: "", name_th: "", name_en: "", tax_id: "", logo_url: "", address: "", phone: "" });
     setMessage(t("organizationStructure.messages.companyAddedDemo"));
   };
 
-  const handleAddDepartment = () => {
-    if (!departmentForm.code || !departmentForm.name_th) return;
-    const linkedCompany = companies.find((c) => String(c.id) === departmentForm.company_id);
-    const newDept: Department = {
-      id: `new-${Date.now()}`,
-      code: departmentForm.code,
-      name_th: departmentForm.name_th,
-      company_id: departmentForm.company_id || undefined,
-      company_name: linkedCompany?.name_th,
-      parent_dept_id: departmentForm.parent_dept_id || null,
-      cost_center: departmentForm.cost_center,
-    };
-
-    const nextDepartments = [newDept, ...departments];
-    setDepartments(nextDepartments);
-    setData(buildTree(companies, nextDepartments, positions));
+  const resetDepartmentForm = () => {
     setDepartmentForm({ code: "", name_th: "", company_id: "", parent_dept_id: "", cost_center: "" });
-    setMessage(t("organizationStructure.messages.departmentAddedDemo"));
+    setEditingDepartmentId(null);
   };
 
-  const handleAddPosition = () => {
-    if (!positionForm.code || !positionForm.title_th) return;
-    const linkedCompany = companies.find((c) => String(c.id) === positionForm.company_id);
-    const newPosition: Position = {
-      id: `new-${Date.now()}`,
-      code: positionForm.code,
-      title_th: positionForm.title_th,
-      level: positionForm.level,
-      company_id: positionForm.company_id || undefined,
-      company_name: linkedCompany?.name_th,
-      department_id: positionForm.department_id || undefined,
-    };
-
-    const nextPositions = [newPosition, ...positions];
-    setPositions(nextPositions);
-    setData(buildTree(companies, departments, nextPositions));
+  const resetPositionForm = () => {
     setPositionForm({ code: "", title_th: "", level: "Staff", company_id: "", department_id: "" });
-    setMessage(t("organizationStructure.messages.positionAddedDemo"));
+    setEditingPositionId(null);
+  };
+
+  const handleAddDepartment = async () => {
+    if (!departmentForm.code || !departmentForm.name_th) return;
+    try {
+      setSubmitting(true);
+      if (editingDepartmentId) {
+        await apiPut(`/organization/departments/${editingDepartmentId}`, {
+          code: departmentForm.code,
+          name_th: departmentForm.name_th,
+          company_id: departmentForm.company_id || null,
+          parent_dept_id: departmentForm.parent_dept_id || null,
+          cost_center: departmentForm.cost_center || null,
+        });
+      } else {
+        await apiPost("/organization/departments", {
+          code: departmentForm.code,
+          name_th: departmentForm.name_th,
+          company_id: departmentForm.company_id || null,
+          parent_dept_id: departmentForm.parent_dept_id || null,
+          cost_center: departmentForm.cost_center || null,
+        });
+      }
+
+      await fetchData();
+      resetDepartmentForm();
+      toast({
+        title: editingDepartmentId ? "Department updated" : "Department created",
+        description: departmentForm.name_th,
+      });
+    } catch (submitError: any) {
+      toast({
+        title: "Failed to save department",
+        description: submitError?.message || "Unexpected error",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditDepartment = (row: Department) => {
+    setEditingDepartmentId(String(row.id));
+    setDepartmentForm({
+      code: row.code || "",
+      name_th: row.name_th || "",
+      company_id: String(row.company_id || ""),
+      parent_dept_id: String(row.parent_dept_id || ""),
+      cost_center: row.cost_center || "",
+    });
+    setActiveTab("departments");
+  };
+
+  const handleDeleteDepartment = async (id: string) => {
+    try {
+      await apiDelete(`/organization/departments/${id}`);
+      await fetchData();
+      toast({ title: "Department deleted" });
+    } catch (deleteError: any) {
+      toast({
+        title: "Failed to delete department",
+        description: deleteError?.message || "Unexpected error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddPosition = async () => {
+    if (!positionForm.code || !positionForm.title_th) return;
+
+    try {
+      setSubmitting(true);
+      if (editingPositionId) {
+        await apiPut(`/organization/positions/${editingPositionId}`, {
+          code: positionForm.code,
+          title_th: positionForm.title_th,
+          level: positionForm.level,
+          company_id: positionForm.company_id || null,
+          department_id: positionForm.department_id || null,
+        });
+      } else {
+        await apiPost("/organization/positions", {
+          code: positionForm.code,
+          title_th: positionForm.title_th,
+          level: positionForm.level,
+          company_id: positionForm.company_id || null,
+          department_id: positionForm.department_id || null,
+        });
+      }
+
+      await fetchData();
+      resetPositionForm();
+      toast({
+        title: editingPositionId ? "Position updated" : "Position created",
+        description: positionForm.title_th,
+      });
+    } catch (submitError: any) {
+      toast({
+        title: "Failed to save position",
+        description: submitError?.message || "Unexpected error",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditPosition = (row: Position) => {
+    setEditingPositionId(String(row.id));
+    setPositionForm({
+      code: row.code || "",
+      title_th: row.title_th || "",
+      level: row.level || "Staff",
+      company_id: String(row.company_id || ""),
+      department_id: String(row.department_id || ""),
+    });
+    setActiveTab("positions");
+  };
+
+  const handleDeletePosition = async (id: string) => {
+    try {
+      await apiDelete(`/organization/positions/${id}`);
+      await fetchData();
+      toast({ title: "Position deleted" });
+    } catch (deleteError: any) {
+      toast({
+        title: "Failed to delete position",
+        description: deleteError?.message || "Unexpected error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMoveDepartment = async (sourceDepartmentId: string, targetParentDepartmentId: string | null, targetCompanyId: string) => {
+    const source = departments.find((d) => String(d.id) === String(sourceDepartmentId));
+    if (!source) return;
+
+    await apiPut(`/organization/departments/${sourceDepartmentId}`, {
+      code: source.code,
+      name_th: source.name_th,
+      company_id: targetCompanyId,
+      parent_dept_id: targetParentDepartmentId,
+      cost_center: source.cost_center || null,
+    });
+
+    await fetchData();
+    toast({ title: "Moved department" });
+  };
+
+  const handleMovePosition = async (sourcePositionId: string, targetDepartmentId: string | null, targetCompanyId: string) => {
+    const source = positions.find((p) => String(p.id) === String(sourcePositionId));
+    if (!source) return;
+
+    await apiPut(`/organization/positions/${sourcePositionId}`, {
+      code: source.code || null,
+      title_th: source.title_th,
+      level: source.level || null,
+      company_id: targetCompanyId,
+      department_id: targetDepartmentId,
+    });
+
+    await fetchData();
+    toast({ title: "Moved position" });
+  };
+
+  const requestDelete = (type: "department" | "position", id: string, label: string) => {
+    setConfirmDelete({ open: true, type, id, label });
+  };
+
+  const confirmDeleteAction = async () => {
+    const { type, id } = confirmDelete;
+    if (!id) return;
+
+    if (type === "department") {
+      await handleDeleteDepartment(id);
+    } else {
+      await handleDeletePosition(id);
+    }
+
+    setConfirmDelete({ open: false, type: "department", id: "", label: "" });
   };
 
   if (loading) return <div className="p-6 text-center">{t("organizationStructure.loading")}</div>
@@ -341,7 +595,7 @@ const OrganizationStructure = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {message && <div className="text-sm text-primary">{message}</div>}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {canManageCompanyMaster && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>{t("organizationStructure.company.fields.code")}</Label>
                   <Input value={companyForm.code} onChange={(e) => setCompanyForm((p) => ({ ...p, code: e.target.value }))} />
@@ -370,8 +624,8 @@ const OrganizationStructure = () => {
                   <Label>{t("organizationStructure.company.fields.address")}</Label>
                   <Textarea value={companyForm.address} onChange={(e) => setCompanyForm((p) => ({ ...p, address: e.target.value }))} />
                 </div>
-              </div>
-              {canManageOrg && (
+              </div>}
+              {canManageCompanyMaster && (
                 <Button className="gap-1.5" onClick={handleAddCompany}><Plus className="h-4 w-4" /> {t("organizationStructure.company.add")}</Button>
               )}
 
@@ -447,7 +701,10 @@ const OrganizationStructure = () => {
                 </div>
               </div>
               {canManageOrg && (
-                <Button className="gap-1.5" onClick={handleAddDepartment}><Plus className="h-4 w-4" /> {t("organizationStructure.department.add")}</Button>
+                <div className="flex items-center gap-2">
+                  <Button className="gap-1.5" onClick={handleAddDepartment} disabled={submitting}><Plus className="h-4 w-4" /> {editingDepartmentId ? "Update Department" : t("organizationStructure.department.add")}</Button>
+                  {editingDepartmentId && <Button variant="outline" onClick={resetDepartmentForm}>Cancel Edit</Button>}
+                </div>
               )}
 
               <div className="border rounded-md overflow-hidden mt-4">
@@ -459,6 +716,7 @@ const OrganizationStructure = () => {
                       <th className="text-left px-3 py-2">{t("organizationStructure.department.table.company")}</th>
                       <th className="text-left px-3 py-2">{t("organizationStructure.department.table.parent")}</th>
                       <th className="text-left px-3 py-2">{t("organizationStructure.department.table.costCenter")}</th>
+                      {canManageOrg && <th className="text-left px-3 py-2">Manage</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -469,6 +727,14 @@ const OrganizationStructure = () => {
                         <td className="px-3 py-2">{d.company_name || d.company_id || "-"}</td>
                         <td className="px-3 py-2">{d.parent_dept_id || "-"}</td>
                         <td className="px-3 py-2">{d.cost_center || "-"}</td>
+                        {canManageOrg && (
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" size="sm" onClick={() => handleEditDepartment(d)}>Edit</Button>
+                              <Button variant="destructive" size="sm" onClick={() => requestDelete("department", String(d.id), d.name_th || "Department")}>Delete</Button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -529,7 +795,10 @@ const OrganizationStructure = () => {
                 </div>
               </div>
               {canManageOrg && (
-                <Button className="gap-1.5" onClick={handleAddPosition}><Plus className="h-4 w-4" /> {t("organizationStructure.position.add")}</Button>
+                <div className="flex items-center gap-2">
+                  <Button className="gap-1.5" onClick={handleAddPosition} disabled={submitting}><Plus className="h-4 w-4" /> {editingPositionId ? "Update Position" : t("organizationStructure.position.add")}</Button>
+                  {editingPositionId && <Button variant="outline" onClick={resetPositionForm}>Cancel Edit</Button>}
+                </div>
               )}
 
               <div className="border rounded-md overflow-hidden mt-4">
@@ -540,6 +809,7 @@ const OrganizationStructure = () => {
                       <th className="text-left px-3 py-2">{t("organizationStructure.position.table.title")}</th>
                       <th className="text-left px-3 py-2">{t("organizationStructure.position.table.level")}</th>
                       <th className="text-left px-3 py-2">{t("organizationStructure.position.table.company")}</th>
+                      {canManageOrg && <th className="text-left px-3 py-2">Manage</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -549,6 +819,14 @@ const OrganizationStructure = () => {
                         <td className="px-3 py-2">{p.title_th || "-"}</td>
                         <td className="px-3 py-2">{p.level || "-"}</td>
                         <td className="px-3 py-2">{p.company_name || p.company_id || "-"}</td>
+                        {canManageOrg && (
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" size="sm" onClick={() => handleEditPosition(p)}>Edit</Button>
+                              <Button variant="destructive" size="sm" onClick={() => requestDelete("position", String(p.id), p.title_th || "Position")}>Delete</Button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -559,7 +837,7 @@ const OrganizationStructure = () => {
         </TabsContent>}
 
         <TabsContent value="org-chart" className="mt-4">
-          {canUseMasterTabs && (isSuperAdmin || companies.length > 0) && (
+          {canUseMasterTabs && (isSuperAdmin || companies.length > 0) && canManageOrg && (
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="text-base">{t("organizationStructure.adminTools.title")}</CardTitle>
@@ -579,11 +857,31 @@ const OrganizationStructure = () => {
               <CardTitle className="text-base">{t("organizationStructure.orgChartTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <TreeNode node={data} />
+              <TreeNode
+                node={data}
+                canManageOrg={canManageOrg}
+                onMoveDepartment={handleMoveDepartment}
+                onMovePosition={handleMovePosition}
+              />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={confirmDelete.open} onOpenChange={(open) => setConfirmDelete((prev) => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete {confirmDelete.type} {confirmDelete.label} permanently?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteAction}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -6,40 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, RefreshCw, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Permission } from "@/types/roles";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const templates = [
-  {
-    id: 1,
-    name: "สัญญาจ้างทั่วไป - ABC Holdings",
-    company: "ABC",
-    logoUrl: "https://dummyimage.com/120x40/1e3a8a/ffffff.png&text=ABC",
-    content:
-      "ข้อตกลงการจ้างงานระหว่าง {{company_name}} และ {{employee_name}} ในตำแหน่ง {{position}} อัตราเงินเดือน {{salary}} บาท เริ่มวันที่ {{start_date}} ถึง {{end_date}}",
-    variables: ["{{employee_name}}", "{{position}}", "{{salary}}", "{{start_date}}", "{{end_date}}", "{{company_name}}"],
-  },
-  {
-    id: 2,
-    name: "สัญญาจ้างทั่วไป - XYZ Services",
-    company: "XYZ",
-    logoUrl: "https://dummyimage.com/120x40/166534/ffffff.png&text=XYZ",
-    content:
-      "สัญญาฉบับนี้จัดทำขึ้นสำหรับ {{employee_name}} ตำแหน่ง {{position}} โดย {{company_name}} ระยะเวลาสัญญา {{start_date}} ถึง {{end_date}} ค่าตอบแทน {{salary}} บาท",
-    variables: ["{{employee_name}}", "{{position}}", "{{salary}}", "{{start_date}}", "{{end_date}}", "{{company_name}}"],
-  },
-  {
-    id: 3,
-    name: "สัญญาทดลองงาน - Group",
-    company: "ALL",
-    logoUrl: "https://dummyimage.com/120x40/7c3aed/ffffff.png&text=GROUP",
-    content:
-      "{{employee_name}} เข้าปฏิบัติงานตำแหน่ง {{position}} เริ่ม {{start_date}} โดยมีเงื่อนไขทดลองงานตามระเบียบบริษัท {{company_name}}",
-    variables: ["{{employee_name}}", "{{position}}", "{{start_date}}", "{{company_name}}"],
-  },
-];
+type ContractTemplate = {
+  id: number;
+  name: string;
+  company: string;
+  logoUrl: string;
+  content: string;
+  variables: string[];
+};
 
 const statusColor: Record<string, string> = {
   active: "bg-success/10 text-success border-success/20",
@@ -54,6 +33,8 @@ const ContractManagement = () => {
   const canManageTemplates = hasPermission(Permission.MANAGE_CONTRACT_TEMPLATES);
   const [contracts, setContracts] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<ContractTemplate[]>([]);
+  const [companyScopes, setCompanyScopes] = useState<string[]>(["ALL"]);
   const [loading, setLoading] = useState(true);
   const [showCreateContract, setShowCreateContract] = useState(false);
   const [newContractForm, setNewContractForm] = useState({
@@ -63,10 +44,10 @@ const ContractManagement = () => {
     endDate: "",
     salary: "",
   });
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number>(templates[0].id);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number>(0);
   const [templateDraft, setTemplateDraft] = useState({
     name: "",
-    company: "ABC",
+    company: "ALL",
     logoUrl: "",
     content: "",
   });
@@ -75,12 +56,24 @@ const ContractManagement = () => {
     const fetchContracts = async () => {
       try {
         setLoading(true);
-        const [contractData, employeeData] = await Promise.all([
+        const [contractData, employeeData, templateData, companyData] = await Promise.all([
           apiGet<any>("/contracts"),
           apiGet<any>("/employees"),
+          apiGet<any>("/contracts/templates"),
+          apiGet<any>("/organization/companies"),
         ]);
         setContracts(Array.isArray(contractData) ? contractData : contractData?.data || []);
         setEmployees(Array.isArray(employeeData) ? employeeData : employeeData?.data || []);
+        const templateRows = Array.isArray(templateData) ? templateData : templateData?.data || [];
+        setTemplates(templateRows);
+
+        const companyRows = Array.isArray(companyData) ? companyData : companyData?.data || [];
+        const scopes = ["ALL", ...companyRows.map((row: any) => String(row.code || row.id || "ALL"))];
+        setCompanyScopes(Array.from(new Set(scopes)));
+
+        if (templateRows[0]) {
+          setSelectedTemplateId(Number(templateRows[0].id));
+        }
       } catch (error) {
         console.error("Failed to fetch contracts:", error);
       } finally {
@@ -113,8 +106,8 @@ const ContractManagement = () => {
   }, [contracts]);
 
   const selectedTemplate = useMemo(
-    () => templates.find((tpl) => tpl.id === selectedTemplateId) || templates[0],
-    [selectedTemplateId],
+    () => templates.find((tpl) => tpl.id === selectedTemplateId) || templates[0] || null,
+    [selectedTemplateId, templates],
   );
 
   const employeeOptions = useMemo(() => {
@@ -133,6 +126,11 @@ const ContractManagement = () => {
   );
 
   const handleGeneratePdf = (contract: any) => {
+    if (!selectedTemplate) {
+      window.alert("No contract template configured");
+      return;
+    }
+
     const templateText = selectedTemplate.content
       .replaceAll("{{employee_name}}", contract.employee || "-")
       .replaceAll("{{position}}", "-")
@@ -159,7 +157,7 @@ const ContractManagement = () => {
         </head>
         <body>
           <div class="header">
-            <img class="logo" src="${selectedTemplate.logoUrl}" alt="logo" />
+            ${selectedTemplate.logoUrl ? `<img class="logo" src="${selectedTemplate.logoUrl}" alt="logo" />` : `<div style="font-weight:700">${contract.company || '-'}</div>`}
             <div class="meta">Generated at ${new Date().toLocaleString()}</div>
           </div>
           <h1>${t("contractManagement.pdf.title")}</h1>
@@ -190,11 +188,35 @@ const ContractManagement = () => {
       alert(t("contractManagement.alerts.fillTemplateNameAndContent"));
       return;
     }
-    alert(t("contractManagement.alerts.templateCreatedDemo"));
-    setTemplateDraft({ name: "", company: "ABC", logoUrl: "", content: "" });
+
+    const variables = Array.from(new Set((templateDraft.content.match(/\{\{[^}]+\}\}/g) || [])));
+
+    apiPost("/contracts/templates", {
+      name: templateDraft.name,
+      company_scope: templateDraft.company,
+      logo_url: templateDraft.logoUrl,
+      content: templateDraft.content,
+      variables,
+    })
+      .then(async () => {
+        const res = await apiGet<any>("/contracts/templates");
+        const nextRows = Array.isArray(res) ? res : res?.data || [];
+        setTemplates(nextRows);
+        if (nextRows[0]) setSelectedTemplateId(Number(nextRows[0].id));
+        setTemplateDraft({ name: "", company: "ALL", logoUrl: "", content: "" });
+      })
+      .catch((error) => {
+        console.error("Failed to create template:", error);
+        alert(error?.message || "Failed to create template");
+      });
   };
 
   const handleCreateContractPdf = () => {
+    if (!selectedTemplate) {
+      window.alert("No contract template configured");
+      return;
+    }
+
     if (!selectedEmployee || !newContractForm.startDate || !newContractForm.endDate) {
       alert(t("contractManagement.alerts.selectEmployeeAndDates"));
       return;
@@ -237,7 +259,7 @@ const ContractManagement = () => {
         </head>
         <body>
           <div class="header">
-            <img class="logo" src="${selectedTemplate.logoUrl}" alt="logo" />
+            ${selectedTemplate.logoUrl ? `<img class="logo" src="${selectedTemplate.logoUrl}" alt="logo" />` : `<div style="font-weight:700">${adHocContract.company || '-'}</div>`}
             <div class="meta">Generated at ${new Date().toLocaleString()}</div>
           </div>
           <h1>${t("contractManagement.pdf.title")}</h1>
@@ -388,10 +410,9 @@ const ContractManagement = () => {
                         value={templateDraft.company}
                         onChange={(e) => setTemplateDraft((p) => ({ ...p, company: e.target.value }))}
                       >
-                        <option value="ABC">ABC</option>
-                        <option value="XYZ">XYZ</option>
-                        <option value="DEF">DEF</option>
-                        <option value="ALL">ALL</option>
+                        {companyScopes.map((scope) => (
+                          <option key={scope} value={scope}>{scope}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -428,32 +449,38 @@ const ContractManagement = () => {
                         ))}
                       </select>
                     </div>
-                    <img src={selectedTemplate.logoUrl} alt="company-logo" className="h-8 object-contain" />
-                    <div className="flex gap-1.5 flex-wrap">
-                      {selectedTemplate.variables.map((v) => (
-                        <Badge key={v} variant="secondary" className="text-xs font-mono">{v}</Badge>
-                      ))}
-                    </div>
-                    <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/20">
-                      {selectedTemplate.content}
-                    </div>
+                    {selectedTemplate ? (
+                      <>
+                        {selectedTemplate.logoUrl ? <img src={selectedTemplate.logoUrl} alt="company-logo" className="h-8 object-contain" /> : null}
+                        <div className="flex gap-1.5 flex-wrap">
+                          {selectedTemplate.variables.map((v) => (
+                            <Badge key={v} variant="secondary" className="text-xs font-mono">{v}</Badge>
+                          ))}
+                        </div>
+                        <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/20">
+                          {selectedTemplate.content}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/20">No template available</div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
 
               <div className="space-y-3">
-              {templates.map((t) => (
-                <div key={t.id} className="p-4 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+              {templates.map((tpl) => (
+                <div key={tpl.id} className="p-4 rounded-lg border border-border hover:bg-muted/30 transition-colors">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-sm">{t.name}</p>
+                      <p className="font-medium text-sm">{tpl.name}</p>
                       <div className="flex gap-1.5 mt-2 flex-wrap">
-                        {t.variables.map((v) => (
+                        {tpl.variables.map((v) => (
                           <Badge key={v} variant="secondary" className="text-xs font-mono">{v}</Badge>
                         ))}
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">{t.company}</Badge>
+                    <Badge variant="outline" className="text-xs">{tpl.company}</Badge>
                   </div>
                 </div>
               ))}

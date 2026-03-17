@@ -9,6 +9,7 @@ router.use(authMiddleware);
 // Routes เดิม
 router.get('/requests', leaveController.getLeaveRequests);
 router.get('/balances', leaveController.getLeaveBalances);
+router.get('/types', leaveController.getLeaveTypes);
 
 // 🆕 Route ใหม่: ยื่นใบลา (ทุกคนทำได้)
 router.post('/request', leaveController.createLeaveRequest);

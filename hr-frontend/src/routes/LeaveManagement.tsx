@@ -12,36 +12,28 @@ import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const leaveTypeOptions = [
-  { id: 1 },
-  { id: 2 },
-  { id: 3 },
-  { id: 4 },
-];
+type LeaveTypeOption = { id: number; name: string; leaveTypeCode: string };
+type LeavePolicyRow = {
+  company_id: number;
+  company_code: string;
+  company_name: string;
+  service_years: number;
+  vacation_days: number;
+  sick_cert_required_after_days: number;
+};
+type HolidayRow = { id: number; holiday_date: string; holiday_name_th: string };
 
-const initialPolicyRows = [
-  { company: "ABC", serviceYears: "1", vacationDays: "6", sickCertRequiredAfterDays: "2" },
-  { company: "XYZ", serviceYears: "1", vacationDays: "10", sickCertRequiredAfterDays: "2" },
-  { company: "DEF", serviceYears: "1", vacationDays: "8", sickCertRequiredAfterDays: "3" },
-];
+const inferLeaveTypeCode = (code?: string, name?: string, id?: number) => {
+  const normalizedCode = String(code || "").trim().toLowerCase();
+  if (normalizedCode) return normalizedCode;
 
-const holidays = [
-  { date: "2026-01-01", nameKey: "newYear" },
-  { date: "2026-02-26", nameKey: "makhaBucha" },
-  { date: "2026-04-06", nameKey: "chakri" },
-  { date: "2026-04-13", nameKey: "songkran" },
-  { date: "2026-04-14", nameKey: "songkran" },
-  { date: "2026-04-15", nameKey: "songkran" },
-  { date: "2026-05-01", nameKey: "labour" },
-  { date: "2026-05-04", nameKey: "coronation" },
-  { date: "2026-06-03", nameKey: "queenSuthidaBirthday" },
-  { date: "2026-07-28", nameKey: "kingBirthdaySubstitute" },
-  { date: "2026-08-12", nameKey: "mothersDay" },
-  { date: "2026-10-23", nameKey: "chulalongkorn" },
-  { date: "2026-12-05", nameKey: "fathersDay" },
-  { date: "2026-12-10", nameKey: "constitution" },
-  { date: "2026-12-31", nameKey: "yearEnd" },
-];
+  const normalizedName = String(name || "").trim().toLowerCase();
+  if (normalizedName.includes("vacation") || normalizedName.includes("annual") || normalizedName.includes("พักร้อน") || normalizedName.includes("พักผ่อน")) return "annual";
+  if (normalizedName.includes("sick") || normalizedName.includes("ป่วย")) return "sick";
+  if (normalizedName.includes("personal") || normalizedName.includes("กิจ")) return "personal";
+  if (normalizedName.includes("maternity") || normalizedName.includes("คลอด")) return "maternity";
+  return `custom_${Number(id || 0)}`;
+};
 
 const LeaveManagement = () => {
   const { t } = useLanguage();
@@ -60,9 +52,12 @@ const LeaveManagement = () => {
   const [requestError, setRequestError] = useState("");
   const [requestSuccess, setRequestSuccess] = useState("");
   const [formLoading, setFormLoading] = useState(false);
-  const [policyRows, setPolicyRows] = useState(initialPolicyRows);
+  const [leaveTypeOptions, setLeaveTypeOptions] = useState<LeaveTypeOption[]>([]);
+  const [policyRows, setPolicyRows] = useState<LeavePolicyRow[]>([]);
+  const [holidays, setHolidays] = useState<HolidayRow[]>([]);
+  const [policySaving, setPolicySaving] = useState(false);
   const [leaveForm, setLeaveForm] = useState({
-    leaveTypeId: "1",
+    leaveTypeId: "",
     startDate: "",
     endDate: "",
     totalDays: "",
@@ -72,6 +67,14 @@ const LeaveManagement = () => {
   const [showEmployeeRequestForm, setShowEmployeeRequestForm] = useState(false);
   const [employeeView, setEmployeeView] = useState<"history" | "request">("history");
   const [employeeStatusFilter, setEmployeeStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+
+  const getLeaveTypeLabel = (code?: string, fallbackName?: string, id?: number) => {
+    const leaveTypeCode = inferLeaveTypeCode(code, fallbackName, id);
+    const key = `leaveManagement.leaveTypeCodes.${leaveTypeCode}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+    return fallbackName || t("leaveManagement.common.unknown");
+  };
 
   const getStatusLabel = (status?: string) => {
     const s = String(status || "").toLowerCase();
@@ -119,6 +122,78 @@ const LeaveManagement = () => {
     fetchBalances();
   }, []);
 
+  useEffect(() => {
+    const fetchLeaveTypes = async () => {
+      try {
+        const res = await apiGet<any>("/leaves/types");
+        const rows = Array.isArray(res) ? res : res?.data || [];
+        setLeaveTypeOptions(
+          rows.map((row: any) => ({
+            id: Number(row.id),
+            name: String(row.name || `Type ${row.id}`),
+            leaveTypeCode: inferLeaveTypeCode(row.leave_type_code, row.name, row.id),
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch leave types:", error);
+      }
+    };
+
+    fetchLeaveTypes();
+  }, []);
+
+  useEffect(() => {
+    if (!canManageLeavePolicy) return;
+
+    const fetchPolicies = async () => {
+      try {
+        const res = await apiGet<any>("/admin/leave-policies");
+        const rows = Array.isArray(res) ? res : res?.data || [];
+        setPolicyRows(
+          rows.map((row: any) => ({
+            company_id: Number(row.company_id),
+            company_code: String(row.company_code || ""),
+            company_name: String(row.company_name || "-"),
+            service_years: Number(row.service_years || 0),
+            vacation_days: Number(row.vacation_days || 0),
+            sick_cert_required_after_days: Number(row.sick_cert_required_after_days || 0),
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch leave policies:", error);
+      }
+    };
+
+    fetchPolicies();
+  }, [canManageLeavePolicy]);
+
+  useEffect(() => {
+    if (!canManageHoliday) return;
+
+    const fetchHolidays = async () => {
+      try {
+        const res = await apiGet<any>("/holidays");
+        const rows = Array.isArray(res) ? res : res?.data || [];
+        setHolidays(
+          rows.map((row: any) => ({
+            id: Number(row.id),
+            holiday_date: String(row.holiday_date || row.date || ""),
+            holiday_name_th: String(row.holiday_name_th || row.name_th || row.holiday_name || "-"),
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch holidays:", error);
+      }
+    };
+
+    fetchHolidays();
+  }, [canManageHoliday]);
+
+  useEffect(() => {
+    if (leaveTypeOptions.length === 0 || leaveForm.leaveTypeId) return;
+    setLeaveForm((prev) => ({ ...prev, leaveTypeId: String(leaveTypeOptions[0].id) }));
+  }, [leaveForm.leaveTypeId, leaveTypeOptions]);
+
   const myLeaveHistory = useMemo(
     () => requests.filter((r: any) => {
       if (!ownUserId) return true;
@@ -138,19 +213,22 @@ const LeaveManagement = () => {
   );
 
   const leaveBalanceByType = useMemo(() => {
-    const grouped = new Map<string, { quota: number; used: number; pending: number; balance: number }>();
+    const grouped = new Map<string, { leaveTypeCode: string; leaveTypeName: string; quota: number; used: number; pending: number; balance: number }>();
     (balances || []).forEach((row: any) => {
-      const name = row.leave_type_name || t("leaveManagement.common.unknown");
-      const prev = grouped.get(name) || { quota: 0, used: 0, pending: 0, balance: 0 };
-      grouped.set(name, {
+      const leaveTypeCode = inferLeaveTypeCode(row.leave_type_code, row.leave_type_name, row.leave_type_id || row.id);
+      const leaveTypeName = getLeaveTypeLabel(leaveTypeCode, row.leave_type_name, row.leave_type_id || row.id);
+      const prev = grouped.get(leaveTypeCode) || { leaveTypeCode, leaveTypeName, quota: 0, used: 0, pending: 0, balance: 0 };
+      grouped.set(leaveTypeCode, {
+        leaveTypeCode,
+        leaveTypeName,
         quota: prev.quota + Number(row.quota || 0),
         used: prev.used + Number(row.used || 0),
         pending: prev.pending + Number(row.pending || 0),
         balance: prev.balance + Number(row.balance || 0),
       });
     });
-    return Array.from(grouped.entries()).map(([leaveTypeName, summary]) => ({ leaveTypeName, ...summary }));
-  }, [balances]);
+    return Array.from(grouped.values());
+  }, [balances, t]);
 
   const overlapWarningByRequestId = useMemo(() => {
     const overlapMap = new Map<number, { approved: number; pending: number }>();
@@ -208,7 +286,7 @@ const LeaveManagement = () => {
 
       setRequestSuccess(t("leaveManagement.messages.requestSubmitted"));
       setLeaveForm({
-        leaveTypeId: "1",
+        leaveTypeId: String(leaveTypeOptions[0]?.id || ""),
         startDate: "",
         endDate: "",
         totalDays: "",
@@ -231,8 +309,21 @@ const LeaveManagement = () => {
     }
   };
 
-  const handlePolicyChange = (index: number, field: "serviceYears" | "vacationDays" | "sickCertRequiredAfterDays", value: string) => {
-    setPolicyRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  const handlePolicyChange = (index: number, field: "service_years" | "vacation_days" | "sick_cert_required_after_days", value: string) => {
+    const next = Number(value || 0);
+    setPolicyRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: Number.isFinite(next) ? next : 0 } : row)));
+  };
+
+  const handleSavePolicies = async () => {
+    try {
+      setPolicySaving(true);
+      await apiPut("/admin/leave-policies", { rows: policyRows });
+      window.alert("Saved leave policies");
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to save leave policies");
+    } finally {
+      setPolicySaving(false);
+    }
   };
 
   const handleUpdateLeaveStatus = async (request: any, status: "approved" | "rejected") => {
@@ -325,7 +416,7 @@ const LeaveManagement = () => {
                     onChange={(e) => setLeaveForm((prev) => ({ ...prev, leaveTypeId: e.target.value }))}
                   >
                     {leaveTypeOptions.map((item) => (
-                      <option key={item.id} value={item.id}>{t(`leaveManagement.leaveTypes.${item.id}`)}</option>
+                        <option key={item.id} value={item.id}>{getLeaveTypeLabel(item.leaveTypeCode, item.name, item.id)}</option>
                     ))}
                   </select>
                 </div>
@@ -422,7 +513,7 @@ const LeaveManagement = () => {
                 ) : (
                   filteredMyLeaveHistory.slice(0, 10).map((r: any) => (
                     <tr key={r.id} className="border-b last:border-b-0">
-                      <td className="px-4 py-3">{r.leave_type_name || "-"}</td>
+                      <td className="px-4 py-3">{getLeaveTypeLabel(r.leave_type_code, r.leave_type_name, r.leave_type_id || r.id)}</td>
                       <td className="px-4 py-3 font-mono text-xs">{r.start_date} - {r.end_date}</td>
                       <td className="px-4 py-3">{r.total_days || 0} {t("leaveManagement.common.day")}</td>
                       <td className="px-4 py-3">
@@ -474,7 +565,7 @@ const LeaveManagement = () => {
                     </tr>
                   ) : (
                     leaveBalanceByType.map((row) => (
-                      <tr key={row.leaveTypeName} className="border-b last:border-b-0">
+                      <tr key={row.leaveTypeCode} className="border-b last:border-b-0">
                         <td className="px-4 py-3 font-medium">{row.leaveTypeName}</td>
                         <td className="px-4 py-3 text-center">{row.quota}</td>
                         <td className="px-4 py-3 text-center">{row.used}</td>
@@ -502,7 +593,7 @@ const LeaveManagement = () => {
                   {myLeaveHistory.slice(0, 8).map((r: any) => (
                     <div key={r.id} className="rounded-md border border-border p-3 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium">{r.leave_type_name || t("leaveManagement.labels.leave")}</p>
+                        <p className="text-sm font-medium">{getLeaveTypeLabel(r.leave_type_code, r.leave_type_name, r.leave_type_id || r.id)}</p>
                         <p className="text-xs text-muted-foreground">{r.start_date} - {r.end_date} ({r.total_days} {t("leaveManagement.common.day")})</p>
                       </div>
                       <Badge variant="secondary" className="capitalize">{r.status || "-"}</Badge>
@@ -534,7 +625,7 @@ const LeaveManagement = () => {
                   onChange={(e) => setLeaveForm((prev) => ({ ...prev, leaveTypeId: e.target.value }))}
                 >
                   {leaveTypeOptions.map((item) => (
-                    <option key={item.id} value={item.id}>{t(`leaveManagement.leaveTypes.${item.id}`)}</option>
+                    <option key={item.id} value={item.id}>{getLeaveTypeLabel(item.leaveTypeCode, item.name, item.id)}</option>
                   ))}
                 </select>
               </div>
@@ -618,7 +709,7 @@ const LeaveManagement = () => {
                     return (
                       <tr key={r.id} className="border-b last:border-b-0">
                         <td className="px-4 py-3">{r.firstname_th || ""} {r.lastname_th || ""}</td>
-                        <td className="px-4 py-3">{r.leave_type_name || t("leaveManagement.labels.leave")}</td>
+                        <td className="px-4 py-3">{getLeaveTypeLabel(r.leave_type_code, r.leave_type_name, r.leave_type_id || r.id)}</td>
                         <td className="px-4 py-3 text-xs">{r.start_date} - {r.end_date} ({r.total_days} {t("leaveManagement.common.day")})</td>
                         <td className="px-4 py-3">
                           {overlapCount > 0 ? (
@@ -662,7 +753,7 @@ const LeaveManagement = () => {
                 {balances.slice(0, 12).map((b: any) => (
                   <div key={b.id} className="rounded-md border border-border p-3 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium">{b.firstname_th || ""} {b.lastname_th || ""} - {b.leave_type_name || t("leaveManagement.labels.leave")}</p>
+                      <p className="text-sm font-medium">{b.firstname_th || ""} {b.lastname_th || ""} - {getLeaveTypeLabel(b.leave_type_code, b.leave_type_name, b.leave_type_id || b.id)}</p>
                       <p className="text-xs text-muted-foreground">{t("leaveManagement.balanceAdjust.summary").replace("{{quota}}", String(b.quota || 0)).replace("{{used}}", String(b.used || 0)).replace("{{balance}}", String(b.balance || 0))}</p>
                     </div>
                     <Button size="sm" variant="outline">{t("leaveManagement.balanceAdjust.adjust")}</Button>
@@ -691,18 +782,18 @@ const LeaveManagement = () => {
               </tr></thead>
               <tbody>
                 {policyRows.map((row, index) => (
-                  <tr key={row.company} className="border-b last:border-b-0">
-                    <td className="px-4 py-3 font-medium">{row.company}</td>
+                  <tr key={row.company_id} className="border-b last:border-b-0">
+                    <td className="px-4 py-3 font-medium">{row.company_name || row.company_code}</td>
                     <td className="px-4 py-3">
-                      <Input value={row.serviceYears} onChange={(e) => handlePolicyChange(index, "serviceYears", e.target.value)} />
+                      <Input value={row.service_years} onChange={(e) => handlePolicyChange(index, "service_years", e.target.value)} />
                     </td>
                     <td className="px-4 py-3">
-                      <Input value={row.vacationDays} onChange={(e) => handlePolicyChange(index, "vacationDays", e.target.value)} />
+                      <Input value={row.vacation_days} onChange={(e) => handlePolicyChange(index, "vacation_days", e.target.value)} />
                     </td>
                     <td className="px-4 py-3">
                       <Input
-                        value={row.sickCertRequiredAfterDays}
-                        onChange={(e) => handlePolicyChange(index, "sickCertRequiredAfterDays", e.target.value)}
+                        value={row.sick_cert_required_after_days}
+                        onChange={(e) => handlePolicyChange(index, "sick_cert_required_after_days", e.target.value)}
                       />
                     </td>
                   </tr>
@@ -710,7 +801,7 @@ const LeaveManagement = () => {
               </tbody>
             </table>
             <div className="p-4 border-t">
-              <Button size="sm">{t("leaveManagement.policy.save")}</Button>
+              <Button size="sm" onClick={handleSavePolicies} disabled={policySaving}>{policySaving ? "Saving..." : t("leaveManagement.policy.save")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -745,10 +836,10 @@ const LeaveManagement = () => {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.holidays.table.action")}</th>
               </tr></thead>
               <tbody>
-                {holidays.map((h, i) => (
-                  <tr key={i} className="border-b last:border-b-0 hover:bg-muted/30">
-                    <td className="px-4 py-3 font-mono text-xs">{h.date}</td>
-                    <td className="px-4 py-3">{t(`leaveManagement.holidays.names.${h.nameKey}`)}</td>
+                {holidays.map((h) => (
+                  <tr key={h.id} className="border-b last:border-b-0 hover:bg-muted/30">
+                    <td className="px-4 py-3 font-mono text-xs">{h.holiday_date}</td>
+                    <td className="px-4 py-3">{h.holiday_name_th}</td>
                     <td className="px-4 py-3">
                       <Button size="sm" variant="outline">{t("leaveManagement.holidays.edit")}</Button>
                     </td>
