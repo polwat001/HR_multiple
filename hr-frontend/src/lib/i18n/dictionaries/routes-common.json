@@ -118,31 +118,6 @@
       "empty": "ไม่พบบันทึกการใช้งาน",
       "fallbackError": "โหลด Audit Logs ไม่สำเร็จ"
     },
-    "contacts": {
-      "title": "สมุดรายชื่อ",
-      "searchPlaceholder": "ค้นหาชื่อ, รหัสพนักงาน, แผนก, ตำแหน่ง",
-      "exportCsv": "ส่งออก CSV",
-      "selectColumns": "เลือกคอลัมน์สำหรับ Export CSV",
-      "loading": "กำลังโหลดรายชื่อผู้ติดต่อ...",
-      "empty": "ไม่พบรายชื่อที่ค้นหา",
-      "needAtLeastOneColumn": "กรุณาเลือกอย่างน้อย 1 คอลัมน์ก่อน Export",
-      "table": {
-        "employee": "พนักงาน",
-        "positionDepartment": "ตำแหน่ง/แผนก",
-        "company": "บริษัท",
-        "contact": "ติดต่อ"
-      },
-      "columns": {
-        "employee_code": "รหัสพนักงาน",
-        "firstname_th": "ชื่อ",
-        "lastname_th": "นามสกุล",
-        "position_name": "ตำแหน่ง",
-        "department_name": "แผนก",
-        "company_name": "บริษัท",
-        "email": "อีเมล",
-        "phone": "โทรศัพท์"
-      }
-    },
     "employeeList": {
       "loading": "กำลังโหลดข้อมูลพนักงาน...",
       "searchPlaceholder": "ค้นหารหัส หรือชื่อพนักงาน...",
@@ -1161,31 +1136,6 @@
       "loading": "Loading audit logs...",
       "empty": "No audit logs found",
       "fallbackError": "Failed to load Audit Logs"
-    },
-    "contacts": {
-      "title": "Contact Directory",
-      "searchPlaceholder": "Search name, employee code, department, or position",
-      "exportCsv": "Export CSV",
-      "selectColumns": "Select columns for CSV export",
-      "loading": "Loading contact directory...",
-      "empty": "No matching contacts found",
-      "needAtLeastOneColumn": "Please select at least 1 column before export",
-      "table": {
-        "employee": "Employee",
-        "positionDepartment": "Position/Department",
-        "company": "Company",
-        "contact": "Contact"
-      },
-      "columns": {
-        "employee_code": "Employee Code",
-        "firstname_th": "First Name",
-        "lastname_th": "Last Name",
-        "position_name": "Position",
-        "department_name": "Department",
-        "company_name": "Company",
-        "email": "Email",
-        "phone": "Phone"
-      }
     },
     "employeeList": {
       "loading": "Loading employee data...",

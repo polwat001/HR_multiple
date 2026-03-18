@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { Clock, CalendarDays, Briefcase, User, Building, Timer } from "lucide-react";
+import { Clock, CalendarDays, Briefcase, User, Building, Timer, ChevronLeft, ChevronRight } from "lucide-react";
 import { apiGet } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -23,6 +23,45 @@ const LEAVE_COLORS = ["hsl(var(--primary))", "hsl(var(--warning))", "hsl(var(--i
 const getCurrentMonthString = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
+
+const shiftMonthString = (monthString: string, diff: number) => {
+  const [y, m] = monthString.split("-").map(Number);
+  const baseYear = Number.isFinite(y) ? y : new Date().getFullYear();
+  const baseMonth = Number.isFinite(m) ? m - 1 : new Date().getMonth();
+  const next = new Date(baseYear, baseMonth + diff, 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+};
+
+const toDateOnly = (value?: string | null) => {
+  if (!value) return "";
+  const raw = String(value);
+  const directMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (directMatch) return directMatch[1];
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, "0");
+    const d = String(parsed.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  return "";
+};
+
+const toTimeOnly = (value?: string | null) => {
+  if (!value) return "-";
+  const raw = String(value);
+  const hhmm = raw.match(/[T\s](\d{2}:\d{2})(:\d{2})?/) || raw.match(/^(\d{2}:\d{2})(:\d{2})?/);
+  if (hhmm) return hhmm[1];
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return `${String(parsed.getHours()).padStart(2, "0")}:${String(parsed.getMinutes()).padStart(2, "0")}`;
+  }
+
+  return "-";
 };
 
 interface EmployeeProfile {
@@ -134,7 +173,7 @@ const SelfService = () => {
         }
 
         const month = selectedMonth;
-        const [empRes, attendanceRes, balanceRes, leaveTypeRes, otReqRes] = await Promise.all([
+        const [empRes, attendanceRes, balanceRes, leaveTypeRes, otReqRes] = await Promise.allSettled([
           apiGet<any>("/employees"),
           apiGet<any>("/attendance"),
           apiGet<any>("/leaves/balances"),
@@ -142,11 +181,20 @@ const SelfService = () => {
           apiGet<any>(`/ot/requests?month=${month}`),
         ]);
 
-        const empList: EmployeeProfile[] = Array.isArray(empRes) ? empRes : (empRes?.data || []);
-        const attendanceList: AttendanceRow[] = Array.isArray(attendanceRes) ? attendanceRes : (attendanceRes?.data || []);
-        const balanceList: LeaveBalanceRow[] = Array.isArray(balanceRes) ? balanceRes : (balanceRes?.data || []);
-        const leaveTypeList: LeaveTypeRow[] = Array.isArray(leaveTypeRes) ? leaveTypeRes : (leaveTypeRes?.data || []);
-        const otList: OtRequestRow[] = Array.isArray(otReqRes) ? otReqRes : (otReqRes?.data || []);
+        const getList = <T,>(result: PromiseSettledResult<any>, label: string): T[] => {
+          if (result.status === "fulfilled") {
+            const payload = result.value;
+            return (Array.isArray(payload) ? payload : payload?.data || []) as T[];
+          }
+          console.error(`SelfService API failed: ${label}`, result.reason);
+          return [] as T[];
+        };
+
+        const empList: EmployeeProfile[] = getList<EmployeeProfile>(empRes, "/employees");
+        const attendanceList: AttendanceRow[] = getList<AttendanceRow>(attendanceRes, "/attendance");
+        const balanceList: LeaveBalanceRow[] = getList<LeaveBalanceRow>(balanceRes, "/leaves/balances");
+        const leaveTypeList: LeaveTypeRow[] = getList<LeaveTypeRow>(leaveTypeRes, "/leaves/types");
+        const otList: OtRequestRow[] = getList<OtRequestRow>(otReqRes, "/ot/requests");
         const ownProfile =
           empList.find((e) => String(e.user_id) === String(authUser?.user_id)) ||
           empList[0] ||
@@ -165,7 +213,35 @@ const SelfService = () => {
           if (authUser?.user_id && rowUserId) return rowUserId === String(authUser.user_id);
           if (ownEmployeeCode && rowCode) return rowCode === ownEmployeeCode;
           if (ownDisplayName && rowName) return rowName === ownDisplayName;
-          return true;
+          return false;
+        });
+
+        // Normalize date/time from mixed SQL/ISO formats and merge duplicated rows by day.
+        const normalizedAttendanceRows = ownAttendance
+          .map((row) => ({
+            ...row,
+            work_date: toDateOnly(row?.work_date),
+            check_in_time: toTimeOnly(row?.check_in_time),
+            check_out_time: toTimeOnly(row?.check_out_time),
+          }))
+          .filter((row) => Boolean(row.work_date));
+
+        const attendanceByDate = new Map<string, AttendanceRow>();
+        normalizedAttendanceRows.forEach((row) => {
+          const key = String(row.work_date);
+          const current = attendanceByDate.get(key);
+          if (!current) {
+            attendanceByDate.set(key, row);
+            return;
+          }
+
+          const score = (r: AttendanceRow) =>
+            (r.check_in_time && r.check_in_time !== "-" ? 1 : 0) +
+            (r.check_out_time && r.check_out_time !== "-" ? 2 : 0);
+
+          if (score(row) > score(current) || Number(row.id || 0) > Number(current.id || 0)) {
+            attendanceByDate.set(key, row);
+          }
         });
 
         const ownLeaveBalances = balanceList.filter((row: any) => {
@@ -184,6 +260,13 @@ const SelfService = () => {
           return false;
         });
 
+        // For employee self-service, backend /leaves/balances is already scoped.
+        // If strict matching above returns empty (missing user/name fields), keep API rows.
+        const fallbackLeaveBalances =
+          ownLeaveBalances.length > 0
+            ? ownLeaveBalances
+            : balanceList;
+
         const ownOtRecords = otList.filter((row: any) => {
           const rowUserId = String(row?.user_id || "");
           const rowCode = normalizeText(row?.employee_code);
@@ -192,7 +275,7 @@ const SelfService = () => {
           if (authUser?.user_id && rowUserId) return rowUserId === String(authUser.user_id);
           if (ownEmployeeCode && rowCode) return rowCode === ownEmployeeCode;
           if (ownDisplayName && rowName) return rowName === ownDisplayName;
-          return true;
+          return false;
         });
 
         const ownTotalHours = ownOtRecords.reduce((sum: number, row: any) => sum + Number(row?.total_hours || row?.hours || 0), 0);
@@ -207,8 +290,8 @@ const SelfService = () => {
         );
 
         setProfile(ownProfile);
-        setAttendanceRows(ownAttendance);
-        setLeaveBalances(ownLeaveBalances);
+        setAttendanceRows(Array.from(attendanceByDate.values()));
+        setLeaveBalances(fallbackLeaveBalances);
         setLeaveTypes(leaveTypeList);
         setOtRecords(
           ownOtRecords.map((r: any) => ({
@@ -279,16 +362,57 @@ const SelfService = () => {
     return d.toLocaleDateString(language === "th" ? "th-TH" : "en-US", { month: "long", year: "numeric" });
   }, [language, selectedMonth]);
 
+  const formatTooltipDate = (workDate?: string) => {
+    if (!workDate) return "-";
+    const parsed = new Date(workDate);
+    if (Number.isNaN(parsed.getTime())) return workDate;
+    return parsed.toLocaleDateString(language === "th" ? "th-TH" : "en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const buildAttendanceTooltip = (record?: AttendanceRow) => {
+    if (!record) return undefined;
+    const status = statusLabels[String(record.status || "present")] || t("selfService.attendance.present");
+    const checkIn = record.check_in_time || "-";
+    const checkOut = record.check_out_time || "-";
+    const translatedStatusLabel = t("selfService.attendance.status");
+    const translatedInLabel = t("timeAttendance.common.in");
+    const translatedOutLabel = t("timeAttendance.common.out");
+    const statusLabel = translatedStatusLabel !== "selfService.attendance.status" ? translatedStatusLabel : language === "th" ? "สถานะ" : "Status";
+    const inLabel = translatedInLabel !== "timeAttendance.common.in" ? translatedInLabel : language === "th" ? "เข้างาน" : "Check In";
+    const outLabel = translatedOutLabel !== "timeAttendance.common.out" ? translatedOutLabel : language === "th" ? "ออกงาน" : "Check Out";
+
+    return [
+      `${t("selfService.attendance.title")}: ${formatTooltipDate(record.work_date)}`,
+      `${statusLabel}: ${status}`,
+      `${inLabel}: ${checkIn}`,
+      `${outLabel}: ${checkOut}`,
+    ].join("\n");
+  };
+
   const otTotal = otSummary.total_hours;
   const otAmount = otSummary.estimated_total_amount;
 
   const leaveQuotaForDisplay: LeaveBalanceRow[] = useMemo(() => {
     if (leaveTypes.length > 0) {
-      return leaveTypes.map((leaveType) => {
+      const normalizedBalances = leaveBalances.map((balance) => ({
+        ...balance,
+        normalizedCode: inferLeaveTypeCode(balance.leave_type_code, balance.leave_type_name, balance.leave_type_id || balance.id),
+        normalizedName: normalizeText(balance.leave_type_name),
+      }));
+
+      const rowsFromTypes = leaveTypes.map((leaveType) => {
         const leaveTypeCode = inferLeaveTypeCode(leaveType.leave_type_code, leaveType.name, leaveType.id);
-        const matched = leaveBalances.find(
-          (balance) => inferLeaveTypeCode(balance.leave_type_code, balance.leave_type_name, balance.leave_type_id || balance.id) === leaveTypeCode
-        );
+        const leaveTypeName = normalizeText(leaveType.name);
+        const matched = normalizedBalances.find((balance) => {
+          const sameTypeId = Number(balance.leave_type_id || 0) > 0 && Number(balance.leave_type_id) === Number(leaveType.id);
+          const sameCode = balance.normalizedCode === leaveTypeCode;
+          const sameName = balance.normalizedName && leaveTypeName && balance.normalizedName === leaveTypeName;
+          return sameTypeId || sameCode || sameName;
+        });
 
         return {
           id: matched?.id || -Number(leaveType.id),
@@ -302,6 +426,20 @@ const SelfService = () => {
           balance: Number(matched?.balance || 0),
         };
       });
+
+      const hasMatchedBalance = rowsFromTypes.some((row) => Number(row.id) > 0 && (Number(row.quota) > 0 || Number(row.used) > 0 || Number(row.balance || 0) > 0));
+      if (hasMatchedBalance) {
+        return rowsFromTypes;
+      }
+
+      if (leaveBalances.length > 0) {
+        return leaveBalances.map((balance) => ({
+          ...balance,
+          leave_type_name: getLeaveTypeLabel(balance.leave_type_code, balance.leave_type_name, balance.leave_type_id || balance.id),
+        }));
+      }
+
+      return rowsFromTypes;
     }
 
     if (leaveBalances.length > 0) {
@@ -332,12 +470,32 @@ const SelfService = () => {
         <h2 className="text-2xl font-bold text-foreground">{t("selfService.title")}</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">{t("selfService.monthData")}</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => setSelectedMonth((prev) => shiftMonthString(prev, -1))}
+            aria-label={language === "th" ? "เดือนก่อนหน้า" : "Previous month"}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
           <Input
             type="month"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
             className="w-[180px]"
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => setSelectedMonth((prev) => shiftMonthString(prev, 1))}
+            aria-label={language === "th" ? "เดือนถัดไป" : "Next month"}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -438,7 +596,9 @@ const SelfService = () => {
                     </div>
                   );
                 })}
-                {leaveBalances.length === 0 && <p className="text-sm text-muted-foreground">{t("selfService.noLeaveQuota")}</p>}
+                {leaveQuotaForDisplay.length === 0 && (
+                  <p className="text-sm text-muted-foreground">{t("selfService.noLeaveQuota")}</p>
+                )}
               </>
             )}
           </CardContent>
@@ -464,11 +624,7 @@ const SelfService = () => {
                   <div
                     key={idx}
                     className="rounded-md border border-border p-1 text-center min-h-[56px] flex flex-col items-center justify-center"
-                    title={
-                      cell.record
-                        ? `${statusLabels[String(cell.record.status || "present")] || t("selfService.attendance.present")} ${cell.record.check_in_time || "-"} - ${cell.record.check_out_time || "-"}`
-                        : undefined
-                    }
+                    title={buildAttendanceTooltip(cell.record)}
                   >
                     <span className="text-xs text-muted-foreground">{cell.day}</span>
                     {cell.record && (

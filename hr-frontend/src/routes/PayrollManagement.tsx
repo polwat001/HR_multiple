@@ -3,13 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/types/roles";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import * as XLSX from "xlsx";
-import { apiGet, apiPut } from "@/lib/api";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 
 type PayrollStatus = "draft" | "processing" | "waiting_approval" | "completed";
 
@@ -30,6 +29,7 @@ type RunDataRow = {
   id: number;
   employeeCode: string;
   employeeName: string;
+  departmentName: string;
   baseSalary: number;
   presentDays: number;
   absentDays: number;
@@ -84,103 +84,132 @@ export default function PayrollManagement() {
   const [settingsRows, setSettingsRows] = useState<EmployeeSettingRow[]>([]);
   const [selectedSettingId, setSelectedSettingId] = useState<number>(0);
   const [reportDepartment, setReportDepartment] = useState("all");
+  const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [bankExportFormat, setBankExportFormat] = useState<BankExportFormat>("KTB_TXT");
+  const [syncing, setSyncing] = useState(false);
+  const [runningActionKey, setRunningActionKey] = useState<string | null>(null);
+
+  const getMonthRange = (month: string) => {
+    const [yearRaw, monthRaw] = month.split("-").map(Number);
+    const year = Number.isFinite(yearRaw) ? yearRaw : new Date().getFullYear();
+    const mon = Number.isFinite(monthRaw) ? monthRaw : new Date().getMonth() + 1;
+    const startDate = `${year}-${String(mon).padStart(2, "0")}-01`;
+    const endDate = getMonthEndDate(`${year}-${String(mon).padStart(2, "0")}`);
+    return { startDate, endDate };
+  };
+
+  const fetchPayrollData = async () => {
+    const [employeesRes, attendanceRes, leaveReqRes, otReqRes, payrollSettingsRes, departmentsRes] = await Promise.all([
+      apiGet<any>("/employees"),
+      apiGet<any>("/attendance"),
+      apiGet<any>("/leaves/requests"),
+      apiGet<any>(`/ot/requests?month=${selectedMonth}`),
+      apiGet<any>("/admin/payroll-settings"),
+      apiGet<any>("/organization/departments"),
+    ]);
+
+    const employees = Array.isArray(employeesRes) ? employeesRes : employeesRes?.data || [];
+    const attendanceRows = Array.isArray(attendanceRes) ? attendanceRes : attendanceRes?.data || [];
+    const leaveRows = Array.isArray(leaveReqRes) ? leaveReqRes : leaveReqRes?.data || [];
+    const otRows = Array.isArray(otReqRes) ? otReqRes : otReqRes?.data || [];
+    const settingRows = Array.isArray(payrollSettingsRes) ? payrollSettingsRes : payrollSettingsRes?.data || [];
+    const departmentRows = Array.isArray(departmentsRes) ? departmentsRes : departmentsRes?.data || [];
+
+    const deptMap = new Map<number, string>();
+    departmentRows.forEach((row: any) => {
+      const key = Number(row.id || 0);
+      if (!key) return;
+      deptMap.set(key, String(row.name_th || row.name || "-"));
+    });
+
+    const settingsMap = new Map<number, any>();
+    settingRows.forEach((row: any) => settingsMap.set(Number(row.employee_id), row));
+
+    const runData: RunDataRow[] = employees.map((employee: any) => {
+      const employeeId = Number(employee.id);
+      const employeeCode = String(employee.employee_code || "");
+      const employeeAttendance = attendanceRows.filter((row: any) => String(row?.employee_code || "") === employeeCode);
+      const presentDays = employeeAttendance.filter((row: any) => ["present", "late"].includes(String(row.status || "").toLowerCase())).length;
+      const absentDays = employeeAttendance.filter((row: any) => String(row.status || "").toLowerCase() === "absent").length;
+      const missingScanDays = employeeAttendance.filter((row: any) => !row.check_in_time || !row.check_out_time).length;
+
+      const employeeLeaves = leaveRows.filter((row: any) => String(row?.employee_code || "") === employeeCode && String(row.status || "").toLowerCase() === "approved");
+      const leaveDays = employeeLeaves.reduce((sum: number, row: any) => sum + Number(row.total_days || 0), 0);
+
+      const employeeOts = otRows.filter((row: any) => String(row?.employee_code || "") === employeeCode && String(row.status || "").toLowerCase() !== "rejected");
+      const otHours = employeeOts.reduce((sum: number, row: any) => sum + Number(row.total_hours || 0), 0);
+
+      const setting = settingsMap.get(employeeId);
+      return {
+        id: employeeId,
+        employeeCode,
+        employeeName: `${employee.firstname_th || ""} ${employee.lastname_th || ""}`.trim(),
+        departmentName: String(employee.department_name || deptMap.get(Number(employee.department_id || 0)) || "-"),
+        baseSalary: Number(setting?.basic_salary || 0),
+        presentDays,
+        absentDays,
+        otHours,
+        leaveDays,
+        missingScanDays,
+      };
+    });
+
+    const settingData: EmployeeSettingRow[] = runData.map((row) => {
+      const setting = settingsMap.get(row.id);
+      return {
+        id: row.id,
+        employeeCode: row.employeeCode,
+        employeeName: row.employeeName,
+        basicSalary: Number(setting?.basic_salary || row.baseSalary || 0),
+        bankName: String(setting?.bank_name || "SCB"),
+        bankAccountNo: String(setting?.bank_account_no || ""),
+        taxDependent: Number(setting?.tax_dependent || 0),
+        lifeInsuranceDeduction: Number(setting?.life_insurance_deduction || 0),
+        ssoEnabled: Boolean(Number(setting?.sso_enabled ?? 1)),
+      };
+    });
+
+    const extraRows: ExtraPayRow[] = runData.map((row) => ({
+      id: row.id,
+      commission: 0,
+      travel: 0,
+      bonus: 0,
+      lateDeduction: row.missingScanDays > 0 ? 500 : 0,
+      loanDeduction: 0,
+    }));
+
+    const monthEnd = getMonthEndDate(selectedMonth);
+    const totalBase = settingData.reduce((sum, row) => sum + Number(row.basicSalary || 0), 0);
+    const totalOt = runData.reduce((sum, row) => sum + Number(row.otHours || 0) * 220, 0);
+    const totalDeduction = runData.reduce((sum, row) => sum + Number(row.absentDays || 0) * 350, 0);
+    const cycleRows: PayrollCycleRow[] = [
+      {
+        month: selectedMonth,
+        company: "Current Scope",
+        employees: runData.length,
+        otAmount: Math.round(totalOt),
+        allowanceAmount: 0,
+        deductionAmount: Math.round(totalDeduction),
+        netAmount: Math.round(Math.max(0, totalBase + totalOt - totalDeduction)),
+        paymentDate: monthEnd,
+        status: "processing",
+      },
+    ];
+
+    setDepartmentOptions(
+      Array.from(new Set(runData.map((row) => row.departmentName).filter((name) => name && name !== "-"))).sort((a, b) => a.localeCompare(b))
+    );
+    setRunRows(runData);
+    setSettingsRows(settingData);
+    setSelectedSettingId(settingData[0]?.id || 0);
+    setExtraPayRows(extraRows);
+    setRows(cycleRows);
+  };
 
   useEffect(() => {
-    const fetchPayrollData = async () => {
+    const run = async () => {
       try {
-        const [employeesRes, attendanceRes, leaveReqRes, otReqRes, payrollSettingsRes] = await Promise.all([
-          apiGet<any>("/employees"),
-          apiGet<any>("/attendance"),
-          apiGet<any>("/leaves/requests"),
-          apiGet<any>(`/ot/requests?month=${selectedMonth}`),
-          apiGet<any>("/admin/payroll-settings"),
-        ]);
-
-        const employees = Array.isArray(employeesRes) ? employeesRes : employeesRes?.data || [];
-        const attendanceRows = Array.isArray(attendanceRes) ? attendanceRes : attendanceRes?.data || [];
-        const leaveRows = Array.isArray(leaveReqRes) ? leaveReqRes : leaveReqRes?.data || [];
-        const otRows = Array.isArray(otReqRes) ? otReqRes : otReqRes?.data || [];
-        const settingRows = Array.isArray(payrollSettingsRes) ? payrollSettingsRes : payrollSettingsRes?.data || [];
-
-        const settingsMap = new Map<number, any>();
-        settingRows.forEach((row: any) => settingsMap.set(Number(row.employee_id), row));
-
-        const runData: RunDataRow[] = employees.map((employee: any) => {
-          const employeeId = Number(employee.id);
-          const employeeCode = String(employee.employee_code || "");
-          const employeeAttendance = attendanceRows.filter((row: any) => String(row?.employee_code || "") === employeeCode);
-          const presentDays = employeeAttendance.filter((row: any) => ["present", "late"].includes(String(row.status || "").toLowerCase())).length;
-          const absentDays = employeeAttendance.filter((row: any) => String(row.status || "").toLowerCase() === "absent").length;
-          const missingScanDays = employeeAttendance.filter((row: any) => !row.check_in_time || !row.check_out_time).length;
-
-          const employeeLeaves = leaveRows.filter((row: any) => String(row?.employee_code || "") === employeeCode && String(row.status || "").toLowerCase() === "approved");
-          const leaveDays = employeeLeaves.reduce((sum: number, row: any) => sum + Number(row.total_days || 0), 0);
-
-          const employeeOts = otRows.filter((row: any) => String(row?.employee_code || "") === employeeCode && String(row.status || "").toLowerCase() !== "rejected");
-          const otHours = employeeOts.reduce((sum: number, row: any) => sum + Number(row.total_hours || 0), 0);
-
-          const setting = settingsMap.get(employeeId);
-          return {
-            id: employeeId,
-            employeeCode,
-            employeeName: `${employee.firstname_th || ""} ${employee.lastname_th || ""}`.trim(),
-            baseSalary: Number(setting?.basic_salary || 0),
-            presentDays,
-            absentDays,
-            otHours,
-            leaveDays,
-            missingScanDays,
-          };
-        });
-
-        const settingData: EmployeeSettingRow[] = runData.map((row) => {
-          const setting = settingsMap.get(row.id);
-          return {
-            id: row.id,
-            employeeCode: row.employeeCode,
-            employeeName: row.employeeName,
-            basicSalary: Number(setting?.basic_salary || row.baseSalary || 0),
-            bankName: String(setting?.bank_name || "SCB"),
-            bankAccountNo: String(setting?.bank_account_no || ""),
-            taxDependent: Number(setting?.tax_dependent || 0),
-            lifeInsuranceDeduction: Number(setting?.life_insurance_deduction || 0),
-            ssoEnabled: Boolean(Number(setting?.sso_enabled ?? 1)),
-          };
-        });
-
-        const extraRows: ExtraPayRow[] = runData.map((row) => ({
-          id: row.id,
-          commission: 0,
-          travel: 0,
-          bonus: 0,
-          lateDeduction: row.missingScanDays > 0 ? 500 : 0,
-          loanDeduction: 0,
-        }));
-
-        const monthEnd = getMonthEndDate(selectedMonth);
-        const totalBase = settingData.reduce((sum, row) => sum + Number(row.basicSalary || 0), 0);
-        const totalOt = runData.reduce((sum, row) => sum + Number(row.otHours || 0) * 220, 0);
-        const totalDeduction = runData.reduce((sum, row) => sum + Number(row.absentDays || 0) * 350, 0);
-        const cycleRows: PayrollCycleRow[] = [
-          {
-            month: selectedMonth,
-            company: "Current Scope",
-            employees: runData.length,
-            otAmount: Math.round(totalOt),
-            allowanceAmount: 0,
-            deductionAmount: Math.round(totalDeduction),
-            netAmount: Math.round(Math.max(0, totalBase + totalOt - totalDeduction)),
-            paymentDate: monthEnd,
-            status: "processing",
-          },
-        ];
-
-        setRunRows(runData);
-        setSettingsRows(settingData);
-        setSelectedSettingId(settingData[0]?.id || 0);
-        setExtraPayRows(extraRows);
-        setRows(cycleRows);
+        await fetchPayrollData();
       } catch (error) {
         console.error("Failed to fetch payroll data:", error);
         setRunRows([]);
@@ -190,7 +219,7 @@ export default function PayrollManagement() {
       }
     };
 
-    fetchPayrollData();
+    run();
   }, [selectedMonth]);
 
   const currentRow = useMemo(() => rows.find((r) => r.month === selectedMonth) || rows[0], [rows, selectedMonth]);
@@ -261,6 +290,10 @@ export default function PayrollManagement() {
   };
 
   const handleSaveSetting = async () => {
+    if (isReadOnly) {
+      window.alert("Read-only mode: this role can view payroll data but cannot update payroll settings.");
+      return;
+    }
     if (!selectedSetting) return;
 
     try {
@@ -278,14 +311,73 @@ export default function PayrollManagement() {
     }
   };
 
-  const runSyncData = () => {
-    setLastSyncAt(new Date().toLocaleString());
-    setRunRows((prev) =>
-      prev.map((row) => ({
-        ...row,
-        otHours: row.otHours + (row.id % 2 === 0 ? 1 : 0),
-      }))
-    );
+  const runSyncData = async () => {
+    try {
+      setSyncing(true);
+      await fetchPayrollData();
+      setLastSyncAt(new Date().toLocaleString());
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to sync payroll data");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const exportReportRows = (rowsToExport: any[], fileName: string) => {
+    const worksheet = XLSX.utils.json_to_sheet(rowsToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
+    XLSX.writeFile(workbook, fileName);
+  };
+
+  const handleDownloadAttendanceReport = async () => {
+    try {
+      const { startDate, endDate } = getMonthRange(selectedMonth);
+      const query = new URLSearchParams({
+        date_from: startDate,
+        date_to: endDate,
+        employee_status: "all",
+        department: reportDepartment,
+      }).toString();
+      const res = await apiGet<any>(`/reports/attendance?${query}`);
+      const data = Array.isArray(res) ? res : res?.data || [];
+      exportReportRows(data, `attendance-report-${selectedMonth.replace("-", "")}.xlsx`);
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to download attendance report");
+    }
+  };
+
+  const handleDownloadOtReport = async () => {
+    try {
+      const { startDate, endDate } = getMonthRange(selectedMonth);
+      const query = new URLSearchParams({
+        date_from: startDate,
+        date_to: endDate,
+        employee_status: "all",
+        department: reportDepartment,
+      }).toString();
+      const res = await apiGet<any>(`/reports/ot?${query}`);
+      const data = Array.isArray(res) ? res : res?.data || [];
+      exportReportRows(data, `ot-report-${selectedMonth.replace("-", "")}.xlsx`);
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to download OT report");
+    }
+  };
+
+  const handleRunSystemAction = async (actionKey: string) => {
+    if (isReadOnly) {
+      window.alert("Read-only mode: this role can view payroll data but cannot execute payroll actions.");
+      return;
+    }
+    try {
+      setRunningActionKey(actionKey);
+      await apiPost(`/admin/system-actions/${actionKey}`, { month: selectedMonth });
+      window.alert(`Executed action: ${actionKey}`);
+    } catch (error: any) {
+      window.alert(error?.message || `Failed action: ${actionKey}`);
+    } finally {
+      setRunningActionKey(null);
+    }
   };
 
   const monthDelta = (currentRow?.netAmount || 0) - (previousRow?.netAmount || 0);
@@ -331,6 +423,10 @@ export default function PayrollManagement() {
   };
 
   const handleGenerateBankFile = () => {
+    if (isReadOnly) {
+      window.alert("Read-only mode: this role can view payroll data but cannot generate bank files.");
+      return;
+    }
     const exportRows = getExportRows();
     if (exportRows.length === 0) {
       window.alert("No payable employee rows to export");
@@ -436,15 +532,10 @@ export default function PayrollManagement() {
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">{t("payroll.readOnlyNotice")}</p>
           ) : null}
 
-          <Tabs defaultValue="overview">
-            <TabsList className="mb-4">
-              <TabsTrigger value="overview">Payroll Overview</TabsTrigger>
-              <TabsTrigger value="run" disabled={isReadOnly}>Run Payroll Wizard</TabsTrigger>
-              <TabsTrigger value="settings">Employee Payroll Settings</TabsTrigger>
-              <TabsTrigger value="reports">Payroll Reports</TabsTrigger>
-            </TabsList>
+          <div className="space-y-6">
 
-            <TabsContent value="overview" className="space-y-6">
+            <div className="space-y-6">
+              <h3 className="text-sm font-semibold text-foreground">Payroll Overview</h3>
               <div className="grid grid-cols-0 md:grid-cols-2 lg:grid-cols-5 gap-3">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">{t("payroll.fields.month")}</p>
@@ -556,9 +647,10 @@ export default function PayrollManagement() {
                   </table>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </div>
 
-            <TabsContent value="run" className="space-y-4">
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">Run Payroll Wizard</h3>
               <Card className="shadow-card">
                 <CardHeader>
                   <CardTitle className="text-base">Run Payroll Wizard</CardTitle>
@@ -589,7 +681,7 @@ export default function PayrollManagement() {
                       <CardTitle className="text-base">Step 1: Sync & Verify Data</CardTitle>
                       <p className="text-xs text-muted-foreground mt-1">Last sync: {lastSyncAt}</p>
                     </div>
-                    <Button onClick={runSyncData}>Sync Data</Button>
+                    <Button onClick={runSyncData} disabled={syncing || isReadOnly}>{syncing ? "Syncing..." : "Sync Data"}</Button>
                   </CardHeader>
                   <CardContent className="p-0">
                     {totalMissingScan > 0 ? (
@@ -633,7 +725,7 @@ export default function PayrollManagement() {
                 <Card className="shadow-card overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="text-base">Step 2: Allowances & Deductions</CardTitle>
-                    <Button variant="outline">Import Excel</Button>
+                    <Button variant="outline" disabled={isReadOnly}>Import Excel</Button>
                   </CardHeader>
                   <CardContent className="p-0 overflow-x-auto">
                     <table className="w-full text-sm min-w-[960px]">
@@ -655,11 +747,11 @@ export default function PayrollManagement() {
                           return (
                             <tr key={employee.id} className="border-b last:border-b-0">
                               <td className="px-4 py-3">{employee.employeeCode} - {employee.employeeName}</td>
-                              <td className="px-4 py-3"><Input type="number" value={extra.commission} onChange={(e) => updateExtraPay(employee.id, "commission", e.target.value)} className="text-right" /></td>
-                              <td className="px-4 py-3"><Input type="number" value={extra.travel} onChange={(e) => updateExtraPay(employee.id, "travel", e.target.value)} className="text-right" /></td>
-                              <td className="px-4 py-3"><Input type="number" value={extra.bonus} onChange={(e) => updateExtraPay(employee.id, "bonus", e.target.value)} className="text-right" /></td>
-                              <td className="px-4 py-3"><Input type="number" value={extra.lateDeduction} onChange={(e) => updateExtraPay(employee.id, "lateDeduction", e.target.value)} className="text-right" /></td>
-                              <td className="px-4 py-3"><Input type="number" value={extra.loanDeduction} onChange={(e) => updateExtraPay(employee.id, "loanDeduction", e.target.value)} className="text-right" /></td>
+                              <td className="px-4 py-3"><Input type="number" value={extra.commission} onChange={(e) => updateExtraPay(employee.id, "commission", e.target.value)} className="text-right" disabled={isReadOnly} /></td>
+                              <td className="px-4 py-3"><Input type="number" value={extra.travel} onChange={(e) => updateExtraPay(employee.id, "travel", e.target.value)} className="text-right" disabled={isReadOnly} /></td>
+                              <td className="px-4 py-3"><Input type="number" value={extra.bonus} onChange={(e) => updateExtraPay(employee.id, "bonus", e.target.value)} className="text-right" disabled={isReadOnly} /></td>
+                              <td className="px-4 py-3"><Input type="number" value={extra.lateDeduction} onChange={(e) => updateExtraPay(employee.id, "lateDeduction", e.target.value)} className="text-right" disabled={isReadOnly} /></td>
+                              <td className="px-4 py-3"><Input type="number" value={extra.loanDeduction} onChange={(e) => updateExtraPay(employee.id, "loanDeduction", e.target.value)} className="text-right" disabled={isReadOnly} /></td>
                             </tr>
                           );
                         })}
@@ -674,7 +766,7 @@ export default function PayrollManagement() {
                   <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="text-base">Step 3: Pre-Calculation Review</CardTitle>
                     <div className="flex gap-2">
-                      <Button variant="outline">Recalculate</Button>
+                      <Button variant="outline" onClick={runSyncData} disabled={syncing}>{syncing ? "Recalculating..." : "Recalculate"}</Button>
                       <Button variant="outline" onClick={handleExportDraftExcel}>Export Draft</Button>
                     </div>
                   </CardHeader>
@@ -743,10 +835,24 @@ export default function PayrollManagement() {
                           <option value="SCB_CSV">SCB CSV</option>
                           <option value="GENERIC_CSV">Generic CSV</option>
                         </select>
-                        <Button className="min-w-[200px]" onClick={handleGenerateBankFile}>Generate Bank File</Button>
+                        <Button className="min-w-[200px]" onClick={handleGenerateBankFile} disabled={isReadOnly}>Generate Bank File</Button>
                       </div>
-                      <Button className="min-w-[200px]" variant="outline">Generate Payslips</Button>
-                      <Button className="min-w-[200px]" variant="outline">Publish Payslips</Button>
+                      <Button
+                        className="min-w-[200px]"
+                        variant="outline"
+                        onClick={() => handleRunSystemAction("generate-payslips")}
+                        disabled={runningActionKey !== null || isReadOnly}
+                      >
+                        {runningActionKey === "generate-payslips" ? "Generating..." : "Generate Payslips"}
+                      </Button>
+                      <Button
+                        className="min-w-[200px]"
+                        variant="outline"
+                        onClick={() => handleRunSystemAction("publish-payslips")}
+                        disabled={runningActionKey !== null || isReadOnly}
+                      >
+                        {runningActionKey === "publish-payslips" ? "Publishing..." : "Publish Payslips"}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -756,9 +862,10 @@ export default function PayrollManagement() {
                 <Button variant="outline" disabled={wizardStep === 1} onClick={() => setWizardStep((s) => Math.max(1, s - 1))}>Back</Button>
                 <Button disabled={wizardStep === 4} onClick={() => setWizardStep((s) => Math.min(4, s + 1))}>Next</Button>
               </div>
-            </TabsContent>
+            </div>
 
-            <TabsContent value="settings" className="space-y-4">
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">Employee Payroll Settings</h3>
               <Card className="shadow-card">
                 <CardHeader>
                   <CardTitle className="text-base">Employee Payroll Settings</CardTitle>
@@ -783,23 +890,23 @@ export default function PayrollManagement() {
 
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Basic Salary</p>
-                    <Input type="number" value={selectedSetting?.basicSalary || 0} onChange={(e) => updateSelectedSetting("basicSalary", e.target.value)} />
+                    <Input type="number" value={selectedSetting?.basicSalary || 0} onChange={(e) => updateSelectedSetting("basicSalary", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Bank Name</p>
-                    <Input value={selectedSetting?.bankName || ""} onChange={(e) => updateSelectedSetting("bankName", e.target.value)} />
+                    <Input value={selectedSetting?.bankName || ""} onChange={(e) => updateSelectedSetting("bankName", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Bank Account No.</p>
-                    <Input value={selectedSetting?.bankAccountNo || ""} onChange={(e) => updateSelectedSetting("bankAccountNo", e.target.value)} />
+                    <Input value={selectedSetting?.bankAccountNo || ""} onChange={(e) => updateSelectedSetting("bankAccountNo", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Tax Dependent (children)</p>
-                    <Input type="number" value={selectedSetting?.taxDependent || 0} onChange={(e) => updateSelectedSetting("taxDependent", e.target.value)} />
+                    <Input type="number" value={selectedSetting?.taxDependent || 0} onChange={(e) => updateSelectedSetting("taxDependent", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Life Insurance Deduction</p>
-                    <Input type="number" value={selectedSetting?.lifeInsuranceDeduction || 0} onChange={(e) => updateSelectedSetting("lifeInsuranceDeduction", e.target.value)} />
+                    <Input type="number" value={selectedSetting?.lifeInsuranceDeduction || 0} onChange={(e) => updateSelectedSetting("lifeInsuranceDeduction", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div className="flex items-center gap-2 pt-6">
                     <input
@@ -807,18 +914,20 @@ export default function PayrollManagement() {
                       type="checkbox"
                       checked={selectedSetting?.ssoEnabled || false}
                       onChange={(e) => updateSelectedSetting("ssoEnabled", e.target.checked)}
+                      disabled={isReadOnly}
                     />
                     <label htmlFor="sso-enabled" className="text-sm">Enable SSO Deduction</label>
                   </div>
 
                   <div className="lg:col-span-2 flex justify-end">
-                    <Button onClick={handleSaveSetting} disabled={!selectedSetting}>Save Payroll Setting</Button>
+                    <Button onClick={handleSaveSetting} disabled={!selectedSetting || isReadOnly}>Save Payroll Setting</Button>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </div>
 
-            <TabsContent value="reports" className="space-y-4">
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-foreground">Payroll Reports</h3>
               <Card className="shadow-card">
                 <CardHeader>
                   <CardTitle className="text-base">Payroll Reports</CardTitle>
@@ -837,24 +946,23 @@ export default function PayrollManagement() {
                         onChange={(e) => setReportDepartment(e.target.value)}
                       >
                         <option value="all">All Departments</option>
-                        <option value="hr">HR</option>
-                        <option value="it">IT</option>
-                        <option value="accounting">Accounting</option>
-                        <option value="operations">Operations</option>
+                        {departmentOptions.map((dept) => (
+                          <option key={dept} value={dept}>{dept}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Button variant="outline" className="justify-start">Download Payroll Summary Report</Button>
-                    <Button variant="outline" className="justify-start">Download P.N.D. 1 (WHT)</Button>
-                    <Button variant="outline" className="justify-start">Download SSO 1-10 Report</Button>
-                    <Button variant="outline" className="justify-start">Download OT by Cost Center</Button>
+                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>Download Payroll Summary Report</Button>
+                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>Download P.N.D. 1 (WHT)</Button>
+                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>Download SSO 1-10 Report</Button>
+                    <Button variant="outline" className="justify-start" onClick={handleDownloadOtReport}>Download OT by Cost Center</Button>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

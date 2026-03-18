@@ -89,6 +89,23 @@ exports.getScheduleEmployees = async (req, res) => {
         const { role_level, company_id } = req.user;
         const roleLevel = Number(role_level || 0);
 
+        const [columnRows] = await db.query(
+            `SELECT COLUMN_NAME
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'employees'
+               AND COLUMN_NAME = 'work_schedule_id'
+             LIMIT 1`
+        );
+
+        if (!columnRows.length) {
+            return res.status(200).json({
+                message: 'ยังไม่มีการผูกพนักงานกับกะการทำงานใน schema ปัจจุบัน',
+                count: 0,
+                data: [],
+            });
+        }
+
         let sql = `
             SELECT
                 e.id,

@@ -9,9 +9,9 @@ import { UserRole } from "@/types/roles";
 import { apiGet, apiPut } from "@/lib/api";
 
 const emptyFlowRows = [
-  { module: "Leave", level1: "", level2: "", level3: "" },
-  { module: "OT", level1: "", level2: "", level3: "" },
-  { module: "Payroll", level1: "", level2: "", level3: "" },
+  { module: "Leave", level1: "", level2: "", level3: "", escalation_days: 0, delegate_role: "" },
+  { module: "OT", level1: "", level2: "", level3: "", escalation_days: 0, delegate_role: "" },
+  { module: "Payroll", level1: "", level2: "", level3: "", escalation_days: 0, delegate_role: "" },
 ];
 
 export default function ApprovalFlowConfiguration() {
@@ -19,6 +19,7 @@ export default function ApprovalFlowConfiguration() {
   const { t } = useLanguage();
   const isSystemAdmin = hasRole(UserRole.SUPER_ADMIN);
   const [rows, setRows] = useState(emptyFlowRows);
+  const [roleOptions, setRoleOptions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -32,18 +33,24 @@ export default function ApprovalFlowConfiguration() {
             level1: data?.leave?.level1 || "",
             level2: data?.leave?.level2 || "",
             level3: data?.leave?.level3 || "",
+            escalation_days: Number(data?.leave?.escalation_days || 0),
+            delegate_role: String(data?.leave?.delegate_role || ""),
           },
           {
             module: "OT",
             level1: data?.ot?.level1 || "",
             level2: data?.ot?.level2 || "",
             level3: data?.ot?.level3 || "",
+            escalation_days: Number(data?.ot?.escalation_days || 0),
+            delegate_role: String(data?.ot?.delegate_role || ""),
           },
           {
             module: "Payroll",
             level1: data?.payroll?.level1 || "",
             level2: data?.payroll?.level2 || "",
             level3: data?.payroll?.level3 || "",
+            escalation_days: Number(data?.payroll?.escalation_days || 0),
+            delegate_role: String(data?.payroll?.delegate_role || ""),
           },
         ]);
       } catch (error) {
@@ -54,8 +61,35 @@ export default function ApprovalFlowConfiguration() {
     fetchFlows();
   }, []);
 
-  const updateField = (index: number, field: "level1" | "level2" | "level3", value: string) => {
-    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const res = await apiGet<any>("/users/roles");
+        const rows = Array.isArray(res) ? res : res?.data || [];
+        const names = rows.map((row: any) => String(row.role_name || row.name || "")).filter(Boolean);
+        setRoleOptions(Array.from(new Set(names)));
+      } catch (error) {
+        console.error("Failed to fetch roles for approval flow:", error);
+      }
+    };
+
+    fetchRoles();
+  }, []);
+
+  const updateField = (
+    index: number,
+    field: "level1" | "level2" | "level3" | "delegate_role" | "escalation_days",
+    value: string
+  ) => {
+    setRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== index) return r;
+        if (field === "escalation_days") {
+          return { ...r, escalation_days: Math.max(0, Number(value || 0)) };
+        }
+        return { ...r, [field]: value };
+      })
+    );
   };
 
   const handleSave = async () => {
@@ -93,15 +127,58 @@ export default function ApprovalFlowConfiguration() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("approvalFlow.table.level1")}</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("approvalFlow.table.level2")}</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("approvalFlow.table.level3")}</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Escalation (days)</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Delegate Role</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, index) => (
                 <tr key={row.module} className="border-b last:border-b-0">
                   <td className="px-4 py-3 font-medium">{t(`approvalFlow.module.${row.module.toLowerCase()}`, row.module)}</td>
-                  <td className="px-4 py-3"><Input value={row.level1} onChange={(e) => updateField(index, "level1", e.target.value)} /></td>
-                  <td className="px-4 py-3"><Input value={row.level2} onChange={(e) => updateField(index, "level2", e.target.value)} /></td>
-                  <td className="px-4 py-3"><Input value={row.level3} onChange={(e) => updateField(index, "level3", e.target.value)} /></td>
+                  <td className="px-4 py-3">
+                    <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={row.level1} onChange={(e) => updateField(index, "level1", e.target.value)}>
+                      <option value="">-</option>
+                      {roleOptions.map((roleName) => (
+                        <option key={`l1-${row.module}-${roleName}`} value={roleName}>{roleName}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={row.level2} onChange={(e) => updateField(index, "level2", e.target.value)}>
+                      <option value="">-</option>
+                      {roleOptions.map((roleName) => (
+                        <option key={`l2-${row.module}-${roleName}`} value={roleName}>{roleName}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={row.level3} onChange={(e) => updateField(index, "level3", e.target.value)}>
+                      <option value="">-</option>
+                      {roleOptions.map((roleName) => (
+                        <option key={`l3-${row.module}-${roleName}`} value={roleName}>{roleName}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={Number(row.escalation_days || 0)}
+                      onChange={(e) => updateField(index, "escalation_days", e.target.value)}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={row.delegate_role || ""}
+                      onChange={(e) => updateField(index, "delegate_role", e.target.value)}
+                    >
+                      <option value="">-</option>
+                      {roleOptions.map((roleName) => (
+                        <option key={`delegate-${row.module}-${roleName}`} value={roleName}>{roleName}</option>
+                      ))}
+                    </select>
+                  </td>
                 </tr>
               ))}
             </tbody>

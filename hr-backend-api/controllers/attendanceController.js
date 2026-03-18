@@ -29,14 +29,13 @@ exports.getAttendances = async (req, res) => {
                 e.firstname_th, 
                 e.lastname_th,
                 d.name_th AS department_name,
-                ws.id AS shift_id,
-                ws.shift_name,
-                ws.time_in AS shift_time_in,
-                ws.time_out AS shift_time_out
+                NULL AS shift_id,
+                NULL AS shift_name,
+                NULL AS shift_time_in,
+                NULL AS shift_time_out
             FROM attendances a
             JOIN employees e ON a.employee_id = e.id
             LEFT JOIN departments d ON e.department_id = d.id
-            LEFT JOIN work_schedules ws ON e.work_schedule_id = ws.id
             WHERE 1=1
         `;
         
@@ -107,14 +106,14 @@ exports.checkIn = async (req, res) => {
         if (existing) {
             await db.query(
                 `UPDATE attendances
-                 SET check_in_time = CURTIME(), status = 'present'
+                 SET check_in_time = NOW(), status = 'present'
                  WHERE id = ?`,
                 [existing.id]
             );
         } else {
             await db.query(
                 `INSERT INTO attendances (employee_id, work_date, check_in_time, status)
-                 VALUES (?, CURDATE(), CURTIME(), 'present')`,
+                 VALUES (?, CURDATE(), NOW(), 'present')`,
                 [employee.id]
             );
         }
@@ -156,7 +155,7 @@ exports.checkOut = async (req, res) => {
 
         await db.query(
             `UPDATE attendances
-             SET check_out_time = CURTIME()
+             SET check_out_time = NOW()
              WHERE id = ?`,
             [existing.id]
         );

@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -362,15 +361,9 @@ const EmployeeProfile = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="personal">
-        <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="personal">{t("employeeProfile.tabs.personal")}</TabsTrigger>
-          <TabsTrigger value="work">{t("employeeProfile.tabs.work")}</TabsTrigger>
-          <TabsTrigger value="attachments">{t("employeeProfile.tabs.attachments")}</TabsTrigger>
-          <TabsTrigger value="history">{t("employeeProfile.tabs.history")}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="personal" className="mt-4">
+      <div className="space-y-6">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("employeeProfile.tabs.personal")}</h3>
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">{t("employeeProfile.personalTitle")}</CardTitle>
@@ -411,9 +404,10 @@ const EmployeeProfile = () => {
               />
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="work" className="mt-4">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("employeeProfile.tabs.work")}</h3>
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">{t("employeeProfile.workTitle")}</CardTitle>
@@ -500,9 +494,10 @@ const EmployeeProfile = () => {
               </Select>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="attachments" className="mt-4">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("employeeProfile.tabs.attachments")}</h3>
           <Card className="shadow-card">
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">{t("employeeProfile.attachmentsTitle")}</CardTitle>
@@ -543,9 +538,10 @@ const EmployeeProfile = () => {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="history" className="mt-4">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("employeeProfile.tabs.history")}</h3>
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">{t("employeeProfile.historyTitle")}</CardTitle>
@@ -610,8 +606,8 @@ const EmployeeProfile = () => {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 };

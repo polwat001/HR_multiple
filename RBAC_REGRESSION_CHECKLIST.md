@@ -73,6 +73,8 @@ Checks:
 - [ ] Employee cannot approve leave.
 - [ ] Manager approves only team scope.
 - [ ] HR Company approves only company scope.
+- [ ] Super Admin cannot approve/reject leave directly (support-only mode, expect 403).
+- [ ] Approval flow enforces role level1/2/3 with escalation_days and delegate_role.
 
 ### 4) OT
 - [ ] GET /api/ot/requests
@@ -84,6 +86,8 @@ Checks:
 - [ ] Employee cannot approve OT.
 - [ ] Manager approves only team scope.
 - [ ] HR Company approves only company scope.
+- [ ] Super Admin cannot approve/reject OT directly (support-only mode, expect 403).
+- [ ] Approval flow enforces role level1/2/3 with escalation_days and delegate_role.
 
 ### 5) Organization
 - [ ] GET /api/organization/companies
@@ -126,6 +130,9 @@ Checks:
 
 Checks:
 - [ ] Scope follows role policy (self/team/company/all).
+- [ ] Employee report payload is masked to self-service fields only.
+- [ ] Report range limit is enforced per role policy (max_days).
+- [ ] Report row limit is enforced per role policy (max_rows).
 
 ### 9) Admin
 - [ ] GET /api/admin/audit-logs
@@ -146,6 +153,7 @@ Checks:
 - [ ] Approval Flow read/write restricted by policy.
 - [ ] System Settings read/write restricted by policy.
 - [ ] Permission Matrix restricted to Super Admin.
+- [ ] Approval Flow returns and persists escalation_days + delegate_role.
 
 ### 10) Users & Role Assignment
 - [ ] GET /api/users
@@ -166,6 +174,9 @@ Checks:
 - [ ] HR Company reads all contract templates by bypassing UI.
 - [ ] Employee calls admin endpoints directly.
 - [ ] Manager approves leave/OT of non-team user.
+- [ ] Super Admin approves leave directly by API.
+- [ ] Super Admin approves OT directly by API.
+- [ ] Level2/Level3 approver bypasses escalation window before escalation_days.
 
 ## Execution Notes
 - Run each case with real JWT from each role.

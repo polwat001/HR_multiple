@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, RefreshCw, Plus } from "lucide-react";
@@ -287,13 +286,9 @@ const ContractManagement = () => {
 
   return (
   <div className="space-y-6 animate-fade-in">
-    <Tabs defaultValue="list">
-      <TabsList>
-        <TabsTrigger value="list">{t("contractManagement.tabs.list")}</TabsTrigger>
-        {canManageTemplates && <TabsTrigger value="templates">{t("contractManagement.tabs.templates")}</TabsTrigger>}
-      </TabsList>
-
-      <TabsContent value="list" className="mt-4">
+    <div className="space-y-6">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("contractManagement.tabs.list")}</h3>
         <Card className="shadow-card overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("contractManagement.title")}</CardTitle>
@@ -382,10 +377,11 @@ const ContractManagement = () => {
             )}
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
 
       {canManageTemplates && (
-      <TabsContent value="templates" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("contractManagement.tabs.templates")}</h3>
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("contractManagement.templates.title")}</CardTitle>
@@ -488,9 +484,9 @@ const ContractManagement = () => {
             </div>
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
-    </Tabs>
+    </div>
   </div>
   );
 };

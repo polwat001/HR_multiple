@@ -107,6 +107,19 @@ export function apiDelete<T>(endpoint: string): Promise<T> {
 }
 
 /**
+ * DELETE Request with body payload
+ */
+export function apiDeleteWithBody<T>(
+  endpoint: string,
+  data: Record<string, unknown>
+): Promise<T> {
+  return apiCall<T>(endpoint, {
+    method: "DELETE",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
  * Logout - ลบ token จาก localStorage
  */
 export function logout(): void {

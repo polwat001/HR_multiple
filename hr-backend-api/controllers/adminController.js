@@ -8,7 +8,10 @@ const MATRIX_MODULES = [
     'leave',
     'contract',
     'reports',
+    'payroll',
+    'approval_flow',
     'permissions',
+    'system_settings',
     'holidays',
     'audit_log',
 ];
@@ -16,9 +19,9 @@ const MATRIX_MODULES = [
 const APPROVAL_MODULES = ['leave', 'ot', 'payroll'];
 
 const DEFAULT_APPROVAL_FLOW = {
-    leave: { level1: 'Manager', level2: 'HR Company', level3: 'Central HR' },
-    ot: { level1: 'Manager', level2: 'HR Company', level3: 'Central HR' },
-    payroll: { level1: 'HR Company', level2: 'Central HR', level3: '-' },
+    leave: { level1: 'Manager', level2: 'HR Company', level3: 'Central HR', escalation_days: 3, delegate_role: 'HR Company' },
+    ot: { level1: 'Manager', level2: 'HR Company', level3: 'Central HR', escalation_days: 2, delegate_role: 'HR Company' },
+    payroll: { level1: 'HR Company', level2: 'Central HR', level3: '-', escalation_days: 5, delegate_role: 'Central HR' },
 };
 
 const DEFAULT_SYSTEM_SETTINGS = {
@@ -31,8 +34,8 @@ const defaultMatrix = () => {
     MATRIX_MODULES.forEach((moduleName) => {
         matrix[moduleName] = {
             view: true,
-            create: moduleName !== 'dashboard' && moduleName !== 'reports' && moduleName !== 'audit_log',
-            edit: moduleName !== 'dashboard' && moduleName !== 'reports',
+            create: !['dashboard', 'reports', 'payroll', 'approval_flow', 'permissions', 'system_settings', 'audit_log'].includes(moduleName),
+            edit: !['dashboard', 'reports', 'payroll', 'audit_log'].includes(moduleName),
             delete: ['employee', 'contract', 'permissions'].includes(moduleName),
         };
     });
@@ -82,6 +85,18 @@ async function ensureAdminTables() {
             updated_by INT NULL,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uniq_module_key (module_key)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await db.query(`
+        CREATE TABLE IF NOT EXISTS approval_flow_policies (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            module_key VARCHAR(50) NOT NULL,
+            escalation_days INT NOT NULL DEFAULT 0,
+            delegate_role VARCHAR(100) NOT NULL DEFAULT '',
+            updated_by INT NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_policy_module_key (module_key)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
@@ -336,15 +351,31 @@ exports.getApprovalFlows = async (req, res) => {
         const [rows] = await db.query(
             `SELECT module_key, level1, level2, level3 FROM approval_flow_configs`
         );
+        const [policyRows] = await db.query(
+            `SELECT module_key, escalation_days, delegate_role FROM approval_flow_policies`
+        );
+
+        const policyMap = new Map(
+            policyRows.map((row) => [
+                String(row.module_key),
+                {
+                    escalation_days: Number(row.escalation_days || 0),
+                    delegate_role: String(row.delegate_role || ''),
+                },
+            ])
+        );
 
         const mapped = {};
         APPROVAL_MODULES.forEach((moduleKey) => {
             const found = rows.find((row) => row.module_key === moduleKey);
+            const policy = policyMap.get(moduleKey);
             mapped[moduleKey] = found
                 ? {
                     level1: found.level1,
                     level2: found.level2,
                     level3: found.level3,
+                    escalation_days: policy ? policy.escalation_days : Number(DEFAULT_APPROVAL_FLOW[moduleKey].escalation_days || 0),
+                    delegate_role: policy ? policy.delegate_role : String(DEFAULT_APPROVAL_FLOW[moduleKey].delegate_role || ''),
                 }
                 : DEFAULT_APPROVAL_FLOW[moduleKey];
         });
@@ -389,6 +420,22 @@ exports.updateApprovalFlows = async (req, res) => {
                     String(row.level1 || DEFAULT_APPROVAL_FLOW[moduleKey].level1),
                     String(row.level2 || DEFAULT_APPROVAL_FLOW[moduleKey].level2),
                     String(row.level3 || DEFAULT_APPROVAL_FLOW[moduleKey].level3),
+                    userId,
+                ]
+            );
+
+            await db.query(
+                `INSERT INTO approval_flow_policies (module_key, escalation_days, delegate_role, updated_by)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    escalation_days = VALUES(escalation_days),
+                    delegate_role = VALUES(delegate_role),
+                    updated_by = VALUES(updated_by),
+                    updated_at = CURRENT_TIMESTAMP`,
+                [
+                    moduleKey,
+                    Math.max(0, Number(row.escalation_days || DEFAULT_APPROVAL_FLOW[moduleKey].escalation_days || 0)),
+                    String(row.delegate_role || DEFAULT_APPROVAL_FLOW[moduleKey].delegate_role || ''),
                     userId,
                 ]
             );

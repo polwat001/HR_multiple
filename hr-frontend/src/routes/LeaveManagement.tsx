@@ -1,14 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Plus, Settings } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Calendar, Plus, Settings, Pencil, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Permission, UserRole } from "@/types/roles";
-import { apiGet, apiPost, apiPut } from "@/lib/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -39,10 +38,12 @@ const LeaveManagement = () => {
   const { t } = useLanguage();
   const { hasPermission, hasRole, user } = useAuth();
   const roleViewKey = resolveRoleViewKey(user as any);
+  const isSuperAdmin = hasRole(UserRole.SUPER_ADMIN);
   const isManagerView = roleViewKey === "manager";
   const ownUserId = Number((user as any)?.user_id || 0);
   const canRequestLeave = hasPermission(Permission.REQUEST_LEAVE);
   const canManageLeave = hasPermission(Permission.APPROVE_DEPARTMENT_LEAVE) || hasPermission(Permission.MANAGE_COMPANY_LEAVE) || hasPermission(Permission.MANAGE_ALL_LEAVE);
+  const canApproveLeaveTransactions = canManageLeave && !isSuperAdmin;
   const canManageLeavePolicy = hasPermission(Permission.MANAGE_COMPANY_LEAVE) || hasPermission(Permission.MANAGE_ALL_LEAVE);
   const canManageHoliday = hasPermission(Permission.MANAGE_COMPANY_HOLIDAYS) || hasPermission(Permission.MANAGE_ALL_HOLIDAYS);
   const isEmployeeOnly = canRequestLeave && !canManageLeave;
@@ -67,6 +68,7 @@ const LeaveManagement = () => {
   const [showEmployeeRequestForm, setShowEmployeeRequestForm] = useState(false);
   const [employeeView, setEmployeeView] = useState<"history" | "request">("history");
   const [employeeStatusFilter, setEmployeeStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [calendarMonth, setCalendarMonth] = useState(new Date().toISOString().slice(0, 7));
 
   const getLeaveTypeLabel = (code?: string, fallbackName?: string, id?: number) => {
     const leaveTypeCode = inferLeaveTypeCode(code, fallbackName, id);
@@ -167,27 +169,26 @@ const LeaveManagement = () => {
     fetchPolicies();
   }, [canManageLeavePolicy]);
 
-  useEffect(() => {
+  const fetchHolidays = useCallback(async () => {
     if (!canManageHoliday) return;
-
-    const fetchHolidays = async () => {
-      try {
-        const res = await apiGet<any>("/holidays");
-        const rows = Array.isArray(res) ? res : res?.data || [];
-        setHolidays(
-          rows.map((row: any) => ({
-            id: Number(row.id),
-            holiday_date: String(row.holiday_date || row.date || ""),
-            holiday_name_th: String(row.holiday_name_th || row.name_th || row.holiday_name || "-"),
-          }))
-        );
-      } catch (error) {
-        console.error("Failed to fetch holidays:", error);
-      }
-    };
-
-    fetchHolidays();
+    try {
+      const res = await apiGet<any>("/holidays");
+      const rows = Array.isArray(res) ? res : res?.data || [];
+      setHolidays(
+        rows.map((row: any) => ({
+          id: Number(row.id),
+          holiday_date: String(row.holiday_date || row.date || ""),
+          holiday_name_th: String(row.holiday_name_th || row.name_th || row.holiday_name || "-"),
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to fetch holidays:", error);
+    }
   }, [canManageHoliday]);
+
+  useEffect(() => {
+    fetchHolidays();
+  }, [fetchHolidays]);
 
   useEffect(() => {
     if (leaveTypeOptions.length === 0 || leaveForm.leaveTypeId) return;
@@ -373,6 +374,70 @@ const LeaveManagement = () => {
     return counts;
   }, [sortedMyLeaveHistory]);
 
+  const monthEvents = useMemo(() => {
+    const leaveEvents = requests
+      .filter((r: any) => String(r?.start_date || "").startsWith(calendarMonth) || String(r?.end_date || "").startsWith(calendarMonth))
+      .map((r: any) => ({
+        id: `leave-${r.id}`,
+        date: String(r.start_date || ""),
+        title: `${getLeaveTypeLabel(r.leave_type_code, r.leave_type_name, r.leave_type_id || r.id)} - ${r.firstname_th || ""} ${r.lastname_th || ""}`.trim(),
+        status: String(r.status || "pending").toLowerCase(),
+        kind: "leave" as const,
+      }));
+
+    const holidayEvents = holidays
+      .filter((h) => String(h.holiday_date || "").startsWith(calendarMonth))
+      .map((h) => ({
+        id: `holiday-${h.id}`,
+        date: String(h.holiday_date || ""),
+        title: h.holiday_name_th,
+        status: "holiday",
+        kind: "holiday" as const,
+      }));
+
+    return [...holidayEvents, ...leaveEvents].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  }, [calendarMonth, holidays, requests, t]);
+
+  const handleCreateHoliday = async () => {
+    const date = window.prompt(t("leaveManagement.holidays.table.date"));
+    if (!date) return;
+    const name = window.prompt(t("leaveManagement.holidays.table.name"));
+    if (!name) return;
+
+    try {
+      await apiPost("/holidays", { date, holiday_name_th: name, is_paid: 1 });
+      await fetchHolidays();
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to create holiday");
+    }
+  };
+
+  const handleEditHoliday = async (holiday: HolidayRow) => {
+    const date = window.prompt(t("leaveManagement.holidays.table.date"), holiday.holiday_date || "");
+    if (!date) return;
+    const name = window.prompt(t("leaveManagement.holidays.table.name"), holiday.holiday_name_th || "");
+    if (!name) return;
+
+    try {
+      await apiPut(`/holidays/${holiday.id}`, { date, holiday_name_th: name });
+      await fetchHolidays();
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to update holiday");
+    }
+  };
+
+  const handleDeleteHoliday = async (holiday: HolidayRow) => {
+    const confirmed = window.confirm(`${t("leaveManagement.holidays.edit")}: ${holiday.holiday_name_th}?`);
+    if (!confirmed) return;
+
+    try {
+      await apiDelete(`/holidays/${holiday.id}`);
+      await fetchHolidays();
+    } catch (error: any) {
+      window.alert(error?.message || "Failed to delete holiday");
+    }
+  };
+
   if (isEmployeeOnly) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -532,20 +597,12 @@ const LeaveManagement = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Tabs defaultValue="my-leave">
-        <TabsList>
-          <TabsTrigger value="my-leave">{t("leaveManagement.tabs.myLeave")}</TabsTrigger>
-          {canRequestLeave && <TabsTrigger value="request">{t("leaveManagement.tabs.requestLeave")}</TabsTrigger>}
-          {canManageLeave && <TabsTrigger value="approval">{t("leaveManagement.tabs.teamRequests")}</TabsTrigger>}
-          {canManageLeavePolicy && <TabsTrigger value="balance-adjust">{t("leaveManagement.tabs.balanceAdjustment")}</TabsTrigger>}
-          {canManageLeavePolicy && <TabsTrigger value="policy">{t("leaveManagement.tabs.leavePolicy")}</TabsTrigger>}
-          <TabsTrigger value="calendar">{t("leaveManagement.tabs.leaveCalendar")}</TabsTrigger>
-          {canManageHoliday && <TabsTrigger value="holidays">{t("leaveManagement.tabs.holidayManagement")}</TabsTrigger>}
-        </TabsList>
+      <div className="space-y-6">
 
-      <TabsContent value="my-leave" className="mt-4">
+      <div className="mt-4">
         <div className="space-y-4">
           <Card className="shadow-card">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.myLeave")}</h3>
             <CardHeader>
                 <CardTitle className="text-base">{t("leaveManagement.myLeave.balanceTitle")}</CardTitle>
             </CardHeader>
@@ -604,10 +661,11 @@ const LeaveManagement = () => {
             </CardContent>
           </Card>
         </div>
-      </TabsContent>
+      </div>
 
       {canRequestLeave && (
-      <TabsContent value="request" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.requestLeave")}</h3>
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle className="text-base">{t("leaveManagement.request.title")}</CardTitle>
@@ -679,14 +737,20 @@ const LeaveManagement = () => {
             </Button>
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
 
       {canManageLeave && (
-      <TabsContent value="approval" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.teamRequests")}</h3>
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle className="text-base">{t("leaveManagement.approval.title")}</CardTitle>
+            {isSuperAdmin ? (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mt-2">
+                Super Admin can monitor requests for support, but direct approve/reject is disabled.
+              </p>
+            ) : null}
           </CardHeader>
           <CardContent>
             {loadingRequests ? (
@@ -723,10 +787,14 @@ const LeaveManagement = () => {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Button size="sm" variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => handleUpdateLeaveStatus(r, "rejected")}>{t("leaveManagement.actions.reject")}</Button>
-                            <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => handleUpdateLeaveStatus(r, "approved")}>{t("leaveManagement.actions.approve")}</Button>
-                          </div>
+                          {canApproveLeaveTransactions ? (
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => handleUpdateLeaveStatus(r, "rejected")}>{t("leaveManagement.actions.reject")}</Button>
+                              <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => handleUpdateLeaveStatus(r, "approved")}>{t("leaveManagement.actions.approve")}</Button>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">Read only</Badge>
+                          )}
                         </td>
                       </tr>
                     );
@@ -736,11 +804,12 @@ const LeaveManagement = () => {
             )}
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
 
       {canManageLeavePolicy && (
-      <TabsContent value="balance-adjust" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.balanceAdjustment")}</h3>
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle className="text-base">{t("leaveManagement.balanceAdjust.title")}</CardTitle>
@@ -763,11 +832,12 @@ const LeaveManagement = () => {
             )}
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
 
       {canManageLeavePolicy && (
-      <TabsContent value="policy" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.leavePolicy")}</h3>
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4" /> {t("leaveManagement.policy.title")}</CardTitle>
@@ -805,28 +875,61 @@ const LeaveManagement = () => {
             </div>
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
 
       {canManageLeave && (
-      <TabsContent value="calendar" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.leaveCalendar")}</h3>
         <Card className="shadow-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-center py-10 text-muted-foreground">
-              <Calendar className="h-10 w-10 mr-3 opacity-40" />
-              <p className="text-sm">{t("leaveManagement.calendar.placeholder")}</p>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">{t("leaveManagement.tabs.leaveCalendar")}</CardTitle>
+            <Input type="month" value={calendarMonth} onChange={(e) => setCalendarMonth(e.target.value)} className="w-[180px]" />
+          </CardHeader>
+          <CardContent className="p-0">
+            {monthEvents.length === 0 ? (
+              <div className="flex items-center justify-center py-10 text-muted-foreground">
+                <Calendar className="h-10 w-10 mr-3 opacity-40" />
+                <p className="text-sm">{t("leaveManagement.calendar.placeholder")}</p>
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.date")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.type")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.status")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthEvents.map((event) => (
+                    <tr key={event.id} className="border-b last:border-b-0">
+                      <td className="px-4 py-3 font-mono text-xs">{event.date}</td>
+                      <td className="px-4 py-3">{event.title}</td>
+                      <td className="px-4 py-3">
+                        {event.kind === "holiday" ? (
+                          <Badge variant="secondary">Holiday</Badge>
+                        ) : (
+                          <Badge variant="outline" className={getStatusClass(event.status)}>{getStatusLabel(event.status)}</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
 
       {canManageHoliday && (
-      <TabsContent value="holidays" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.holidayManagement")}</h3>
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("leaveManagement.holidays.title")}</CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5"><Plus className="h-4 w-4" /> {t("leaveManagement.holidays.add")}</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCreateHoliday}><Plus className="h-4 w-4" /> {t("leaveManagement.holidays.add")}</Button>
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
@@ -841,7 +944,10 @@ const LeaveManagement = () => {
                     <td className="px-4 py-3 font-mono text-xs">{h.holiday_date}</td>
                     <td className="px-4 py-3">{h.holiday_name_th}</td>
                     <td className="px-4 py-3">
-                      <Button size="sm" variant="outline">{t("leaveManagement.holidays.edit")}</Button>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEditHoliday(h)}><Pencil className="h-3.5 w-3.5 mr-1" />{t("leaveManagement.holidays.edit")}</Button>
+                        <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => handleDeleteHoliday(h)}><Trash2 className="h-3.5 w-3.5 mr-1" />{t("leaveManagement.actions.reject")}</Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -849,9 +955,9 @@ const LeaveManagement = () => {
             </table>
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
-    </Tabs>
+    </div>
   </div>
   );
 };

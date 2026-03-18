@@ -31,6 +31,7 @@ const Dashboard = () => {
   const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [otSummary, setOtSummary] = useState<any>({ total_hours: 0 });
+  const [dashboardSnapshot, setDashboardSnapshot] = useState<any>(null);
   
   // Filters
   const [selectedDept, setSelectedDept] = useState("all");
@@ -64,6 +65,15 @@ const Dashboard = () => {
         const empArray = Array.isArray(empData) ? empData : empData?.data || [];
         setEmployees(empArray);
 
+        // ดึง dashboard summary โดยตรงจาก API กลาง
+        try {
+          const dashboardRes = await apiGet<any>("/reports/dashboard");
+          setDashboardSnapshot(dashboardRes?.data || null);
+        } catch (error) {
+          console.error("Failed to fetch dashboard snapshot:", error);
+          setDashboardSnapshot(null);
+        }
+
         // ดึง contracts
         const contractData = await apiGet<any>("/contracts");
         setContracts(Array.isArray(contractData) ? contractData : contractData?.data || []);
@@ -78,7 +88,7 @@ const Dashboard = () => {
 
         // ดึง public holidays
         try {
-          const holidaysData = await apiGet<any>("/holidays");
+          const holidaysData = await apiGet<any>("/holidays/upcoming?days=60");
           setPublicHolidays(Array.isArray(holidaysData) ? holidaysData : holidaysData?.data || []);
         } catch (error) {
           console.error("Failed to fetch holidays:", error);
@@ -147,7 +157,10 @@ const Dashboard = () => {
   });
 
   // Calculate metrics
-  const totalHeadcount = deptFilteredEmployees.length;
+  const totalHeadcount =
+    selectedDept === "all"
+      ? Number(dashboardSnapshot?.total_employees || deptFilteredEmployees.length)
+      : deptFilteredEmployees.length;
   
   const currentDate = new Date(selectedMonth);
   const newJoiners = deptFilteredEmployees.filter((e: any) => {
@@ -222,7 +235,7 @@ const Dashboard = () => {
     { key: "resigned", label: t("dashboard.statCards.resigned"), value: resigned, icon: LogOut, color: "text-destructive" },
     { key: "total_ot", label: t("dashboard.statCards.totalOtHours"), value: totalOtHours, icon: Clock, color: "text-warning" },
     { key: "contracts_expiring", label: t("dashboard.statCards.contractsExpiring"), value: expiringContracts.length, icon: FileWarning, color: "text-orange-600" },
-    { key: "pending_approvals", label: t("dashboard.statCards.pendingApprovals"), value: (pendingApprovals || []).length, icon: AlertCircle, color: "text-info" },
+    { key: "pending_approvals", label: t("dashboard.statCards.pendingApprovals"), value: Number(dashboardSnapshot?.pending_leave_requests || (pendingApprovals || []).length), icon: AlertCircle, color: "text-info" },
   ];
 
   const ownLeaveBalance = (leaveBalances || []).reduce(

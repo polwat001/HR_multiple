@@ -357,3 +357,31 @@ exports.changePassword = async (req, res) => {
         res.status(500).json({ message: 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน' });
     }
 };
+
+/**
+ * GET /api/users/roles
+ * ดึงรายการ role ทั้งหมดจากฐานข้อมูล
+ */
+exports.getRolesCatalog = async (req, res) => {
+    try {
+        const { role_level } = req.user;
+        if (Number(role_level || 0) < 50) {
+            return res.status(403).json({ message: 'คุณไม่มีสิทธิ์เข้าถึงรายการบทบาท' });
+        }
+
+        const [rows] = await db.query(
+            `SELECT id, role_name, role_level
+             FROM roles
+             ORDER BY role_level DESC, id ASC`
+        );
+
+        res.status(200).json({
+            message: 'ดึงรายการบทบาทสำเร็จ',
+            count: rows.length,
+            data: rows,
+        });
+    } catch (error) {
+        console.error('Get Roles Catalog Error:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงรายการบทบาท' });
+    }
+};

@@ -9,6 +9,9 @@ router.use(authMiddleware);
 // ✅ GET /api/users - ดึงข้อมูลผู้ใช้งานทั้งหมด
 router.get('/', userController.getUsers);
 
+// ✅ GET /api/users/roles - ดึง catalog ของ roles
+router.get('/roles', userController.getRolesCatalog);
+
 // ✅ GET /api/users/:id - ดึงข้อมูลผู้ใช้งานรายคนพอดี
 router.get('/:id', userController.getUserById);
 

@@ -2,6 +2,106 @@ const db = require('../config/db');
 
 const OT_RATE_PER_HOUR = 600;
 
+const DEFAULT_OT_APPROVAL_CONFIG = {
+    level1: 'Manager',
+    level2: 'HR Company',
+    level3: 'Central HR',
+    escalation_days: 2,
+    delegate_role: 'HR Company',
+};
+
+const normalizeUserRoles = (user) => {
+    const roleList = Array.isArray(user?.roles) && user.roles.length > 0
+        ? user.roles
+        : [user?.role_name].filter(Boolean);
+    return roleList.map((role) => String(role || '').trim()).filter(Boolean);
+};
+
+const calculatePendingDays = (createdAtLike) => {
+    const createdAt = createdAtLike ? new Date(createdAtLike) : null;
+    if (!createdAt || Number.isNaN(createdAt.getTime())) return 0;
+    const diffMs = Date.now() - createdAt.getTime();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+};
+
+const appendAuditLogSafe = async ({ user_id, username, action, target, ip_address, metadata }) => {
+    try {
+        await db.query(
+            `INSERT INTO audit_logs (user_id, username, action, target, ip_address, metadata_json)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [user_id || null, username || null, action, target || null, ip_address || null, JSON.stringify(metadata || {})]
+        );
+    } catch (error) {
+        // keep transactional flow intact even if audit write fails
+        console.error('OT Audit Log Error:', error.message);
+    }
+};
+
+async function getOtApprovalConfig() {
+    try {
+        const [flowRows] = await db.query(
+            `SELECT level1, level2, level3
+             FROM approval_flow_configs
+             WHERE module_key = 'ot'
+             LIMIT 1`
+        );
+        const [policyRows] = await db.query(
+            `SELECT escalation_days, delegate_role
+             FROM approval_flow_policies
+             WHERE module_key = 'ot'
+             LIMIT 1`
+        );
+
+        const flow = flowRows[0] || {};
+        const policy = policyRows[0] || {};
+
+        return {
+            level1: String(flow.level1 || DEFAULT_OT_APPROVAL_CONFIG.level1),
+            level2: String(flow.level2 || DEFAULT_OT_APPROVAL_CONFIG.level2),
+            level3: String(flow.level3 || DEFAULT_OT_APPROVAL_CONFIG.level3),
+            escalation_days: Math.max(0, Number(policy.escalation_days || DEFAULT_OT_APPROVAL_CONFIG.escalation_days)),
+            delegate_role: String(policy.delegate_role || DEFAULT_OT_APPROVAL_CONFIG.delegate_role),
+        };
+    } catch (error) {
+        return { ...DEFAULT_OT_APPROVAL_CONFIG };
+    }
+}
+
+const canApproveByFlow = ({ userRoles, approvalConfig, pendingDays }) => {
+    const level1Role = String(approvalConfig.level1 || '').trim();
+    const level2Role = String(approvalConfig.level2 || '').trim();
+    const level3Role = String(approvalConfig.level3 || '').trim();
+    const delegateRole = String(approvalConfig.delegate_role || '').trim();
+    const escalationDays = Math.max(0, Number(approvalConfig.escalation_days || 0));
+    const configuredRoles = [level1Role, level2Role, level3Role].filter((r) => r && r !== '-');
+
+    const hasLevel1 = Boolean(level1Role) && userRoles.includes(level1Role);
+    const hasHigherLevel = [level2Role, level3Role].some((r) => r && r !== '-' && userRoles.includes(r));
+    const hasConfiguredRole = configuredRoles.some((r) => userRoles.includes(r));
+
+    if (hasLevel1) {
+        return { allowed: true };
+    }
+
+    if (hasHigherLevel) {
+        if (pendingDays >= escalationDays) return { allowed: true };
+        return {
+            allowed: false,
+            reason: `คำร้องยังไม่ถึงเกณฑ์ escalation (${pendingDays}/${escalationDays} วัน)`,
+        };
+    }
+
+    if (!hasConfiguredRole && delegateRole && userRoles.includes(delegateRole)) {
+        if (pendingDays >= escalationDays) return { allowed: true };
+        return {
+            allowed: false,
+            reason: `สิทธิ์ delegate ใช้งานได้เมื่อคำร้องค้างอย่างน้อย ${escalationDays} วัน`,
+        };
+    }
+
+    return { allowed: false, reason: 'บทบาทของคุณไม่อยู่ในสายอนุมัติที่ตั้งค่าไว้' };
+};
+
 function buildScopeCondition(user) {
     const { user_id, role_level, company_id } = user;
 
@@ -207,7 +307,7 @@ exports.updateOtStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
-        const { user_id, role_level } = req.user;
+        const { user_id, role_level, company_id, username } = req.user;
 
         if (!['approved', 'rejected'].includes(String(status))) {
             return res.status(400).json({ message: 'สถานะต้องเป็น approved หรือ rejected' });
@@ -217,23 +317,56 @@ exports.updateOtStatus = async (req, res) => {
             return res.status(403).json({ message: 'คุณไม่มีสิทธิ์อนุมัติ OT' });
         }
 
-        if (role_level === 20) {
-            const [scopeRows] = await db.query(
-                `SELECT ot.id
-                 FROM ot_requests ot
-                 JOIN employees e ON ot.employee_id = e.id
-                 WHERE ot.id = ?
-                   AND (e.user_id = ? OR e.manager_id = (SELECT id FROM employees WHERE user_id = ?))`,
-                [id, user_id, user_id]
-            );
+        // System Admin is support-only and must not directly approve/reject OT.
+        if (Number(role_level || 0) >= 99) {
+            return res.status(403).json({ message: 'Super Admin ใช้โหมด Support เท่านั้น ไม่สามารถอนุมัติ/ปฏิเสธ OT โดยตรงได้' });
+        }
 
-            if (scopeRows.length === 0) {
+        const [requestRows] = await db.query(
+            `SELECT ot.id, ot.status AS current_status, ot.created_at,
+                    e.user_id AS employee_user_id, e.manager_id, e.company_id,
+                    (SELECT id FROM employees WHERE user_id = ?) AS approver_employee_id
+             FROM ot_requests ot
+             JOIN employees e ON ot.employee_id = e.id
+             WHERE ot.id = ?
+             LIMIT 1`,
+            [user_id, id]
+        );
+
+        if (!requestRows.length) {
+            return res.status(404).json({ message: 'ไม่พบคำขอ OT ที่ต้องการอัปเดต' });
+        }
+
+        const requestRow = requestRows[0];
+
+        if (String(requestRow.current_status || '').toLowerCase() !== 'pending') {
+            return res.status(400).json({ message: 'อนุมัติ/ปฏิเสธได้เฉพาะคำขอที่อยู่ในสถานะ pending เท่านั้น' });
+        }
+
+        if (Number(role_level || 0) === 50 && Number(company_id || 0) > 0 && Number(requestRow.company_id || 0) !== Number(company_id || 0)) {
+            return res.status(403).json({ message: 'HR Company อนุมัติ OT ได้เฉพาะบริษัทของตนเองเท่านั้น' });
+        }
+
+        if (role_level === 20) {
+            const approverEmployeeId = Number(requestRow.approver_employee_id || 0);
+            const inManagerScope = Number(requestRow.employee_user_id || 0) === Number(user_id || 0)
+                || (approverEmployeeId > 0 && Number(requestRow.manager_id || 0) === approverEmployeeId);
+
+            if (!inManagerScope) {
                 return res.status(403).json({ message: 'คุณไม่มีสิทธิ์อนุมัติคำขอ OT นี้นอกทีมของคุณ' });
             }
         }
 
-        const [approverRows] = await db.query('SELECT id FROM employees WHERE user_id = ? LIMIT 1', [user_id]);
-        const approverId = approverRows[0]?.id || null;
+        const approvalConfig = await getOtApprovalConfig();
+        const userRoles = normalizeUserRoles(req.user);
+        const pendingDays = calculatePendingDays(requestRow.created_at);
+        const flowDecision = canApproveByFlow({ userRoles, approvalConfig, pendingDays });
+
+        if (!flowDecision.allowed) {
+            return res.status(403).json({ message: flowDecision.reason || 'คุณไม่มีสิทธิ์อนุมัติคำขอ OT นี้ตาม Approval Flow ที่ตั้งค่าไว้' });
+        }
+
+        const approverId = Number(requestRow.approver_employee_id || 0) || null;
 
         const [result] = await db.query(
             'UPDATE ot_requests SET status = ?, approver_id = ? WHERE id = ?',
@@ -243,6 +376,28 @@ exports.updateOtStatus = async (req, res) => {
         if (!result || result.affectedRows === 0) {
             return res.status(404).json({ message: 'ไม่พบคำขอ OT ที่ต้องการอัปเดต' });
         }
+
+        await appendAuditLogSafe({
+            user_id,
+            username,
+            action: 'UPDATE_OT_STATUS',
+            target: `ot_request:${id}`,
+            ip_address: req.ip || req.connection?.remoteAddress || null,
+            metadata: {
+                request_id: Number(id),
+                before_status: String(requestRow.current_status || ''),
+                after_status: String(status),
+                approver_id: approverId,
+                approval_flow: {
+                    level1: approvalConfig.level1,
+                    level2: approvalConfig.level2,
+                    level3: approvalConfig.level3,
+                    escalation_days: approvalConfig.escalation_days,
+                    delegate_role: approvalConfig.delegate_role,
+                    pending_days: pendingDays,
+                },
+            },
+        });
 
         res.status(200).json({ message: `อัปเดตสถานะ OT เป็น ${status} เรียบร้อยแล้ว` });
     } catch (error) {

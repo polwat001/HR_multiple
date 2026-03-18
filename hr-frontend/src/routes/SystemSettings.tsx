@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 
@@ -12,6 +11,8 @@ const SystemSettings = () => {
   const [groupName, setGroupName] = useState("");
   const [defaultTimezone, setDefaultTimezone] = useState("");
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string>("");
+  const [runningAction, setRunningAction] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -31,15 +32,16 @@ const SystemSettings = () => {
   const handleSaveSettings = async () => {
     try {
       setSaving(true);
+      setMessage("");
       await apiPut("/admin/system-settings", {
         settings: {
           groupName,
           defaultTimezone,
         },
       });
-      window.alert("Saved system settings");
+      setMessage("Saved system settings");
     } catch (error: any) {
-      window.alert(error?.message || "Failed to save settings");
+      setMessage(error?.message || "Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -47,28 +49,28 @@ const SystemSettings = () => {
 
   const handleSystemAction = async (actionKey: string) => {
     try {
+      setRunningAction(actionKey);
+      setMessage("");
       await apiPost(`/admin/system-actions/${actionKey}`, {});
-      window.alert(`Executed action: ${actionKey}`);
+      setMessage(`Executed action: ${actionKey}`);
     } catch (error: any) {
-      window.alert(error?.message || `Failed action: ${actionKey}`);
+      setMessage(error?.message || `Failed action: ${actionKey}`);
+    } finally {
+      setRunningAction(null);
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Tabs defaultValue="general">
-        <TabsList>
-          <TabsTrigger value="general">{t("systemSettings.tabs.general")}</TabsTrigger>
-          <TabsTrigger value="data-fix">{t("systemSettings.tabs.dataFix")}</TabsTrigger>
-          <TabsTrigger value="security">{t("systemSettings.tabs.security")}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="general" className="mt-4">
+      <div className="space-y-6">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("systemSettings.tabs.general")}</h3>
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">{t("systemSettings.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
               <div>
                 <Label htmlFor="groupName">{t("systemSettings.groupName")}</Label>
                 <Input id="groupName" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
@@ -80,9 +82,10 @@ const SystemSettings = () => {
               <Button onClick={handleSaveSettings} disabled={saving}>{saving ? "Saving..." : t("systemSettings.saveSettings")}</Button>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="data-fix" className="mt-4">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("systemSettings.tabs.dataFix")}</h3>
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">{t("systemSettings.dataCorrectionTitle")}</CardTitle>
@@ -92,15 +95,16 @@ const SystemSettings = () => {
                 {t("systemSettings.dataCorrectionDesc")}
               </p>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" onClick={() => handleSystemAction("recalculate-leave")}>{t("systemSettings.recalculateLeave")}</Button>
-                <Button variant="outline" onClick={() => handleSystemAction("reindex-attendance")}>{t("systemSettings.reindexAttendance")}</Button>
-                <Button variant="destructive" onClick={() => handleSystemAction("delete-invalid")}>{t("systemSettings.deleteInvalid")}</Button>
+                <Button variant="outline" onClick={() => handleSystemAction("recalculate-leave")} disabled={runningAction !== null}>{runningAction === "recalculate-leave" ? "Running..." : t("systemSettings.recalculateLeave")}</Button>
+                <Button variant="outline" onClick={() => handleSystemAction("reindex-attendance")} disabled={runningAction !== null}>{runningAction === "reindex-attendance" ? "Running..." : t("systemSettings.reindexAttendance")}</Button>
+                <Button variant="destructive" onClick={() => handleSystemAction("delete-invalid")} disabled={runningAction !== null}>{runningAction === "delete-invalid" ? "Running..." : t("systemSettings.deleteInvalid")}</Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="security" className="mt-4">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("systemSettings.tabs.security")}</h3>
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">{t("systemSettings.securityTitle")}</CardTitle>
@@ -108,14 +112,14 @@ const SystemSettings = () => {
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">{t("systemSettings.securityDesc")}</p>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" onClick={() => handleSystemAction("force-logout")}>{t("systemSettings.forceLogout")}</Button>
-                <Button variant="outline" onClick={() => handleSystemAction("rotate-api-keys")}>{t("systemSettings.rotateApiKeys")}</Button>
-                <Button onClick={() => handleSystemAction("apply-security-policy")}>{t("systemSettings.applyPolicy")}</Button>
+                <Button variant="outline" onClick={() => handleSystemAction("force-logout")} disabled={runningAction !== null}>{runningAction === "force-logout" ? "Running..." : t("systemSettings.forceLogout")}</Button>
+                <Button variant="outline" onClick={() => handleSystemAction("rotate-api-keys")} disabled={runningAction !== null}>{runningAction === "rotate-api-keys" ? "Running..." : t("systemSettings.rotateApiKeys")}</Button>
+                <Button onClick={() => handleSystemAction("apply-security-policy")} disabled={runningAction !== null}>{runningAction === "apply-security-policy" ? "Running..." : t("systemSettings.applyPolicy")}</Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 };

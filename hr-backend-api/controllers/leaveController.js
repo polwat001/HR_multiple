@@ -1,5 +1,106 @@
 const db = require('../config/db');
 
+const DEFAULT_LEAVE_APPROVAL_CONFIG = {
+    level1: 'Manager',
+    level2: 'HR Company',
+    level3: 'Central HR',
+    escalation_days: 3,
+    delegate_role: 'HR Company',
+};
+
+const normalizeUserRoles = (user) => {
+    const roleList = Array.isArray(user?.roles) && user.roles.length > 0
+        ? user.roles
+        : [user?.role_name].filter(Boolean);
+    return roleList.map((role) => String(role || '').trim()).filter(Boolean);
+};
+
+const calculatePendingDays = (createdAtLike) => {
+    const createdAt = createdAtLike ? new Date(createdAtLike) : null;
+    if (!createdAt || Number.isNaN(createdAt.getTime())) return 0;
+    const diffMs = Date.now() - createdAt.getTime();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+};
+
+const appendAuditLogSafe = async ({ user_id, username, action, target, ip_address, metadata }) => {
+    try {
+        await db.query(
+            `INSERT INTO audit_logs (user_id, username, action, target, ip_address, metadata_json)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [user_id || null, username || null, action, target || null, ip_address || null, JSON.stringify(metadata || {})]
+        );
+    } catch (error) {
+        // keep transactional flow intact even if audit write fails
+        console.error('Leave Audit Log Error:', error.message);
+    }
+};
+
+async function getLeaveApprovalConfig() {
+    try {
+        const [flowRows] = await db.query(
+            `SELECT level1, level2, level3
+             FROM approval_flow_configs
+             WHERE module_key = 'leave'
+             LIMIT 1`
+        );
+        const [policyRows] = await db.query(
+            `SELECT escalation_days, delegate_role
+             FROM approval_flow_policies
+             WHERE module_key = 'leave'
+             LIMIT 1`
+        );
+
+        const flow = flowRows[0] || {};
+        const policy = policyRows[0] || {};
+
+        return {
+            level1: String(flow.level1 || DEFAULT_LEAVE_APPROVAL_CONFIG.level1),
+            level2: String(flow.level2 || DEFAULT_LEAVE_APPROVAL_CONFIG.level2),
+            level3: String(flow.level3 || DEFAULT_LEAVE_APPROVAL_CONFIG.level3),
+            escalation_days: Math.max(0, Number(policy.escalation_days || DEFAULT_LEAVE_APPROVAL_CONFIG.escalation_days)),
+            delegate_role: String(policy.delegate_role || DEFAULT_LEAVE_APPROVAL_CONFIG.delegate_role),
+        };
+    } catch (error) {
+        // Fallback defaults when config tables are not ready yet.
+        return { ...DEFAULT_LEAVE_APPROVAL_CONFIG };
+    }
+}
+
+const canApproveByFlow = ({ userRoles, approvalConfig, pendingDays }) => {
+    const level1Role = String(approvalConfig.level1 || '').trim();
+    const level2Role = String(approvalConfig.level2 || '').trim();
+    const level3Role = String(approvalConfig.level3 || '').trim();
+    const delegateRole = String(approvalConfig.delegate_role || '').trim();
+    const escalationDays = Math.max(0, Number(approvalConfig.escalation_days || 0));
+    const configuredRoles = [level1Role, level2Role, level3Role].filter((r) => r && r !== '-');
+
+    const hasLevel1 = Boolean(level1Role) && userRoles.includes(level1Role);
+    const hasHigherLevel = [level2Role, level3Role].some((r) => r && r !== '-' && userRoles.includes(r));
+    const hasConfiguredRole = configuredRoles.some((r) => userRoles.includes(r));
+
+    if (hasLevel1) {
+        return { allowed: true };
+    }
+
+    if (hasHigherLevel) {
+        if (pendingDays >= escalationDays) return { allowed: true };
+        return {
+            allowed: false,
+            reason: `คำร้องยังไม่ถึงเกณฑ์ escalation (${pendingDays}/${escalationDays} วัน)`,
+        };
+    }
+
+    if (!hasConfiguredRole && delegateRole && userRoles.includes(delegateRole)) {
+        if (pendingDays >= escalationDays) return { allowed: true };
+        return {
+            allowed: false,
+            reason: `สิทธิ์ delegate ใช้งานได้เมื่อคำร้องค้างอย่างน้อย ${escalationDays} วัน`,
+        };
+    }
+
+    return { allowed: false, reason: 'บทบาทของคุณไม่อยู่ในสายอนุมัติที่ตั้งค่าไว้' };
+};
+
 let leaveTypeCodeSchemaReady = false;
 
 const inferLeaveTypeCodeFromName = (leaveTypeName) => {
@@ -126,7 +227,14 @@ const ensureLeaveBalancesForYear = async (user, year) => {
         const companyId = Number(employee.company_id || 0);
         const vacationDays = policyByCompany.get(companyId) || 6;
 
-        const allowedLeaveTypes = leaveTypes.filter((leaveType) => Number(leaveType.company_id || 0) === companyId);
+        const companyLeaveTypes = leaveTypes.filter((leaveType) => Number(leaveType.company_id || 0) === companyId);
+        const globalLeaveTypes = leaveTypes.filter((leaveType) => leaveType.company_id === null || leaveType.company_id === undefined);
+        const allowedLeaveTypes =
+            companyLeaveTypes.length > 0
+                ? companyLeaveTypes
+                : globalLeaveTypes.length > 0
+                    ? globalLeaveTypes
+                    : leaveTypes;
 
         for (const leaveType of allowedLeaveTypes) {
             const leaveTypeId = Number(leaveType.id);
@@ -318,8 +426,14 @@ exports.getLeaveTypes = async (req, res) => {
                 return res.status(404).json({ message: 'ไม่พบข้อมูลพนักงานสำหรับผู้ใช้งานนี้' });
             }
 
-            sql += ` AND lt.company_id = ?`;
-            params.push(empRows[0].company_id);
+            const employeeCompanyId = empRows[0].company_id;
+            if (employeeCompanyId === null || employeeCompanyId === undefined) {
+                // Fallback for legacy employee rows without company_id mapping.
+                // In this case do not scope by company and return available leave types.
+            } else {
+                sql += ` AND (lt.company_id = ? OR lt.company_id IS NULL)`;
+                params.push(employeeCompanyId);
+            }
         }
 
         sql += ` ORDER BY lt.id ASC`;
@@ -395,39 +509,98 @@ exports.updateLeaveStatus = async (req, res) => {
     try {
         const { id } = req.params; // ID ของใบลา
         const { status } = req.body; // 'approved' หรือ 'rejected'
-        const { role_level, user_id } = req.user;
+        const { role_level, user_id, company_id, username } = req.user;
         const leaveApprovalScope = req.user?.module_scopes?.leave_approval_scope;
+
+        if (!['approved', 'rejected'].includes(String(status))) {
+            return res.status(400).json({ message: 'สถานะต้องเป็น approved หรือ rejected' });
+        }
+
+        // System Admin is support-only and must not directly approve/reject transactional leave.
+        if (Number(role_level || 0) >= 99) {
+            return res.status(403).json({ message: 'Super Admin ใช้โหมด Support เท่านั้น ไม่สามารถอนุมัติ/ปฏิเสธใบลาโดยตรงได้' });
+        }
 
         // ตรวจสอบสิทธิ์ว่ามีสิทธิ์อนุมัติไหม (ต้องเป็น Manager ขึ้นไป)
         if (role_level < 20) {
             return res.status(403).json({ message: 'คุณไม่มีสิทธิ์อนุมัติวันลา' });
         }
 
+        const [requestRows] = await db.query(
+            `SELECT lr.id, lr.status AS current_status, lr.created_at,
+                    e.user_id AS employee_user_id, e.manager_id, e.company_id,
+                    (SELECT id FROM employees WHERE user_id = ?) AS approver_employee_id
+             FROM leave_requests lr
+             JOIN employees e ON lr.employee_id = e.id
+             WHERE lr.id = ?
+             LIMIT 1`,
+            [user_id, id]
+        );
+
+        if (!requestRows.length) {
+            return res.status(404).json({ message: 'ไม่พบคำร้องใบลาที่ต้องการอัปเดต' });
+        }
+
+        const requestRow = requestRows[0];
+
+        if (String(requestRow.current_status || '').toLowerCase() !== 'pending') {
+            return res.status(400).json({ message: 'อนุมัติ/ปฏิเสธได้เฉพาะคำร้องที่อยู่ในสถานะ pending เท่านั้น' });
+        }
+
+        if (Number(role_level || 0) === 50 && Number(company_id || 0) > 0 && Number(requestRow.company_id || 0) !== Number(company_id || 0)) {
+            return res.status(403).json({ message: 'HR Company อนุมัติคำร้องได้เฉพาะบริษัทของตนเองเท่านั้น' });
+        }
+
         // For overlapping role (Manager + HR Company), enforce manager-only approval scope.
         if (leaveApprovalScope === 'manager') {
-            const [scopeRows] = await db.query(
-                `SELECT lr.id
-                 FROM leave_requests lr
-                 JOIN employees e ON lr.employee_id = e.id
-                 WHERE lr.id = ?
-                   AND (e.user_id = ? OR e.manager_id = (SELECT id FROM employees WHERE user_id = ?))`,
-                [id, user_id, user_id]
-            );
+            const approverEmployeeId = Number(requestRow.approver_employee_id || 0);
+            const inManagerScope = Number(requestRow.employee_user_id || 0) === Number(user_id || 0)
+                || (approverEmployeeId > 0 && Number(requestRow.manager_id || 0) === approverEmployeeId);
 
-            if (scopeRows.length === 0) {
+            if (!inManagerScope) {
                 return res.status(403).json({ message: 'คุณไม่มีสิทธิ์อนุมัติคำร้องนี้นอกเหนือจากทีมของคุณ' });
             }
         }
 
+        const approvalConfig = await getLeaveApprovalConfig();
+        const userRoles = normalizeUserRoles(req.user);
+        const pendingDays = calculatePendingDays(requestRow.created_at);
+        const flowDecision = canApproveByFlow({ userRoles, approvalConfig, pendingDays });
+
+        if (!flowDecision.allowed) {
+            return res.status(403).json({ message: flowDecision.reason || 'คุณไม่มีสิทธิ์อนุมัติคำร้องนี้ตาม Approval Flow ที่ตั้งค่าไว้' });
+        }
+
         // หา ID ของพนักงานที่กดอนุมัติ
-        const [approver] = await db.query(`SELECT id FROM employees WHERE user_id = ?`, [user_id]);
-        const approver_id = approver[0].id;
+        const approver_id = Number(requestRow.approver_employee_id || 0) || null;
 
         // อัปเดตสถานะใบลา
         await db.query(
             `UPDATE leave_requests SET status = ?, approver_id = ? WHERE id = ?`,
             [status, approver_id, id]
         );
+
+        await appendAuditLogSafe({
+            user_id,
+            username,
+            action: 'UPDATE_LEAVE_STATUS',
+            target: `leave_request:${id}`,
+            ip_address: req.ip || req.connection?.remoteAddress || null,
+            metadata: {
+                request_id: Number(id),
+                before_status: String(requestRow.current_status || ''),
+                after_status: String(status),
+                approver_id,
+                approval_flow: {
+                    level1: approvalConfig.level1,
+                    level2: approvalConfig.level2,
+                    level3: approvalConfig.level3,
+                    escalation_days: approvalConfig.escalation_days,
+                    delegate_role: approvalConfig.delegate_role,
+                    pending_days: pendingDays,
+                },
+            },
+        });
 
         // ⭐️ ถ้าอนุมัติ (approved) ให้ไปหักโควต้าในกระเป๋าวันลาด้วย
         if (status === 'approved') {

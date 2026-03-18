@@ -93,7 +93,6 @@ export type ModuleKey =
   | "employees"
   | "attendance"
   | "leave"
-  | "contacts"
   | "contracts"
   | "holidays"
   | "reports"
@@ -158,13 +157,6 @@ export const MODULE_ACCESS_MATRIX: Record<ModuleKey, ModuleAccessConfig> = {
     key: "leave",
     label: "Leave",
     path: "/leave",
-    roles: [UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.HR_COMPANY, UserRole.CENTRAL_HR, UserRole.SUPER_ADMIN],
-    showInNav: true,
-  },
-  contacts: {
-    key: "contacts",
-    label: "Contact Directory",
-    path: "/contacts",
     roles: [UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.HR_COMPANY, UserRole.CENTRAL_HR, UserRole.SUPER_ADMIN],
     showInNav: true,
   },
@@ -234,7 +226,6 @@ export const NAV_MODULE_ORDER: ModuleKey[] = [
   "employees",
   "attendance",
   "leave",
-  "contacts",
   "contracts",
   "holidays",
   "reports",

@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Shield, Plus, Users, ClipboardList, UserCog } from "lucide-react";
-import { apiGet, apiPost, apiPut } from "@/lib/api";
+import { apiDelete, apiDeleteWithBody, apiGet, apiPost, apiPut } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 type UserRow = {
@@ -28,7 +28,14 @@ type AuditLogRow = {
   when: string;
 };
 
-const rolesCatalog = [
+type RoleCatalogRow = {
+  id: number;
+  name: string;
+  roleLevel?: number;
+  description?: string;
+};
+
+const fallbackRolesCatalog: RoleCatalogRow[] = [
   {
     id: 1, name: "Super Admin", description: "Full access to all modules and companies",
   },
@@ -54,7 +61,10 @@ const modules = [
   "leave",
   "contract",
   "reports",
+  "payroll",
+  "approval_flow",
   "permissions",
+  "system_settings",
   "holidays",
   "audit_log",
 ];
@@ -62,8 +72,8 @@ const modules = [
 const initialPermissionMatrix = modules.reduce((acc, moduleName) => {
   acc[moduleName] = {
     view: true,
-    create: moduleName !== "dashboard" && moduleName !== "reports" && moduleName !== "audit_log",
-    edit: moduleName !== "dashboard" && moduleName !== "reports",
+    create: !["dashboard", "reports", "payroll", "approval_flow", "permissions", "system_settings", "audit_log"].includes(moduleName),
+    edit: !["dashboard", "reports", "payroll", "audit_log"].includes(moduleName),
     delete: ["employee", "contract", "permissions"].includes(moduleName),
   };
   return acc;
@@ -71,7 +81,9 @@ const initialPermissionMatrix = modules.reduce((acc, moduleName) => {
 
 const UserPermissions = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [selectedRole, setSelectedRole] = useState(0);
+  const [roleCatalog, setRoleCatalog] = useState<RoleCatalogRow[]>(fallbackRolesCatalog);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [logs, setLogs] = useState<AuditLogRow[]>([]);
   const [matrix, setMatrix] = useState(initialPermissionMatrix);
@@ -81,7 +93,7 @@ const UserPermissions = () => {
   const [usersLoading, setUsersLoading] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     userId: "",
-    role: rolesCatalog[0].name,
+    role: fallbackRolesCatalog[0].name,
     companyScope: "All Companies",
     departmentScope: "All Departments",
   });
@@ -95,15 +107,58 @@ const UserPermissions = () => {
   const assignments = useMemo(() => {
     return users
       .filter((u) => !!u.roles)
-      .map((u) => ({
-        userId: u.id,
-        role: u.roles,
-        companyScope: u.companies || "-",
-        departmentScope: "-",
-      }));
+      .flatMap((u) => {
+        const roleParts = String(u.roles)
+          .split(",")
+          .map((part) => part.trim())
+          .filter(Boolean);
+        return roleParts.map((roleName) => ({
+          userId: u.id,
+          role: roleName,
+          companyScope: u.companies || "-",
+          departmentScope: "-",
+        }));
+      });
   }, [users]);
 
-  const selectedRoleName = rolesCatalog[selectedRole]?.name;
+  const currentUserId = Number((user as any)?.user_id || 0);
+  const isSuperAdmin = String((user as any)?.role || "").toLowerCase() === "super admin" || Number((user as any)?.role_level || 0) >= 99;
+
+  const selectedRoleName = roleCatalog[selectedRole]?.name;
+  const matrixModuleKeys = useMemo(() => {
+    const serverKeys = Object.keys(matrix || {});
+    const knownFirst = modules.filter((m) => serverKeys.includes(m));
+    const extraFromServer = serverKeys.filter((m) => !knownFirst.includes(m));
+    return [...knownFirst, ...extraFromServer];
+  }, [matrix]);
+
+  useEffect(() => {
+    const fetchRoleCatalog = async () => {
+      try {
+        const res = await apiGet<any>("/users/roles");
+        const rows = Array.isArray(res) ? res : res?.data || [];
+        const mapped: RoleCatalogRow[] = rows.map((row: any) => ({
+          id: Number(row.id),
+          name: String(row.role_name || row.name || ""),
+          roleLevel: Number(row.role_level || 0),
+          description: String(row.role_name || row.name || ""),
+        })).filter((row: RoleCatalogRow) => row.id > 0 && row.name);
+
+        if (mapped.length > 0) {
+          setRoleCatalog(mapped);
+          setNewAssignment((prev) => ({
+            ...prev,
+            role: mapped.some((r) => r.name === prev.role) ? prev.role : mapped[0].name,
+          }));
+          setSelectedRole((prev) => Math.min(prev, mapped.length - 1));
+        }
+      } catch (error) {
+        console.error("Failed to fetch roles catalog, fallback to defaults:", error);
+      }
+    };
+
+    fetchRoleCatalog();
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -134,6 +189,27 @@ const UserPermissions = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    const loadSelectedUserScope = async () => {
+      const selectedId = Number(newAssignment.userId || 0);
+      if (!selectedId) return;
+
+      try {
+        const res = await apiGet<any>(`/users/${selectedId}`);
+        const userData = res?.data || res;
+        const companyIds = String(userData?.company_ids || "").trim();
+        setNewAssignment((prev) => ({
+          ...prev,
+          companyScope: companyIds || prev.companyScope || "All Companies",
+        }));
+      } catch (error) {
+        console.error("Failed to fetch user details:", error);
+      }
+    };
+
+    loadSelectedUserScope();
+  }, [newAssignment.userId]);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -202,7 +278,7 @@ const UserPermissions = () => {
   };
 
   const handleAddAssignment = () => {
-    const roleId = rolesCatalog.find((r) => r.name === newAssignment.role)?.id;
+    const roleId = roleCatalog.find((r) => r.name === newAssignment.role)?.id;
     if (!newAssignment.userId || !roleId) return;
 
     apiPost(`/users/${newAssignment.userId}/assign-role`, {
@@ -227,21 +303,89 @@ const UserPermissions = () => {
     }
   };
 
+  const handleCreateUser = async () => {
+    const username = window.prompt("Username");
+    if (!username) return;
+    const email = window.prompt("Email");
+    if (!email) return;
+    const password = window.prompt("Password (min 6 chars)");
+    if (!password) return;
+
+    try {
+      await apiPost("/users", {
+        username,
+        email,
+        password,
+        status: "active",
+      });
+      await fetchUsers();
+    } catch (error) {
+      console.error("Failed to create user:", error);
+      alert(t("userPermission.messages.saveFailed"));
+    }
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    if (!isSuperAdmin) {
+      alert("Only Super Admin can delete users.");
+      return;
+    }
+    if (!window.confirm("Delete this user account?")) return;
+
+    try {
+      await apiDelete(`/users/${id}`);
+      await fetchUsers();
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      alert("Delete user failed.");
+    }
+  };
+
+  const handleRemoveRole = async (targetUserId: number, roleName: string) => {
+    const roleId = roleCatalog.find((r) => r.name.toLowerCase() === roleName.toLowerCase())?.id;
+    if (!roleId) {
+      alert(`Unknown role: ${roleName}`);
+      return;
+    }
+
+    try {
+      await apiDeleteWithBody(`/users/${targetUserId}/remove-role`, { role_id: roleId });
+      await fetchUsers();
+    } catch (error) {
+      console.error("Failed to remove role:", error);
+      alert("Remove role failed.");
+    }
+  };
+
+  const handleChangeOwnPassword = async () => {
+    if (!currentUserId) return;
+
+    const oldPassword = window.prompt("Current password");
+    if (!oldPassword) return;
+    const newPassword = window.prompt("New password");
+    if (!newPassword) return;
+
+    try {
+      await apiPut(`/users/${currentUserId}/change-password`, { oldPassword, newPassword });
+      alert("Password updated successfully.");
+    } catch (error) {
+      console.error("Failed to change password:", error);
+      alert("Change password failed.");
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <Tabs defaultValue="accounts">
-        <TabsList>
-          <TabsTrigger value="accounts">{t("userPermission.tabs.accounts")}</TabsTrigger>
-          <TabsTrigger value="assignments">{t("userPermission.tabs.assignments")}</TabsTrigger>
-          <TabsTrigger value="roles">{t("userPermission.tabs.roles")}</TabsTrigger>
-          <TabsTrigger value="logs">{t("userPermission.tabs.logs")}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="accounts" className="mt-4">
+      <div className="space-y-6">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("userPermission.tabs.accounts")}</h3>
           <Card className="shadow-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> {t("userPermission.accounts.title")}</CardTitle>
-              <Button size="sm" variant="outline" className="gap-1.5"><Plus className="h-4 w-4" /> {t("userPermission.accounts.addUser")}</Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={handleChangeOwnPassword}>Change My Password</Button>
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCreateUser}><Plus className="h-4 w-4" /> {t("userPermission.accounts.addUser")}</Button>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <table className="w-full text-sm">
@@ -272,9 +416,16 @@ const UserPermissions = () => {
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
-                        <Button size="sm" variant="outline" onClick={() => toggleUserStatus(u.id, u.status)}>
-                          {u.status === "active" ? t("userPermission.accounts.actions.lock") : t("userPermission.accounts.actions.unlock")}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={() => toggleUserStatus(u.id, u.status)}>
+                            {u.status === "active" ? t("userPermission.accounts.actions.lock") : t("userPermission.accounts.actions.unlock")}
+                          </Button>
+                          {isSuperAdmin && (
+                            <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(u.id)}>
+                              Delete
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -282,13 +433,14 @@ const UserPermissions = () => {
               </table>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="roles" className="mt-4">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("userPermission.tabs.roles")}</h3>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Role List */}
             <div className="space-y-2">
-              {rolesCatalog.map((r, i) => (
+              {roleCatalog.map((r, i) => (
                 <Card
                   key={r.id}
                   className={`shadow-card cursor-pointer transition-all ${i === selectedRole ? "ring-2 ring-primary" : "hover:shadow-card-hover"}`}
@@ -310,7 +462,7 @@ const UserPermissions = () => {
             <Card className="shadow-card lg:col-span-2">
               <CardHeader>
                 <CardTitle className="text-base">
-                  {t("userPermission.roles.permissionMatrix")} - {rolesCatalog[selectedRole].name}
+                  {t("userPermission.roles.permissionMatrix")} - {roleCatalog[selectedRole]?.name || "-"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -324,7 +476,7 @@ const UserPermissions = () => {
                     <th className="text-center px-4 py-2 font-medium text-muted-foreground">{t("userPermission.roles.table.delete")}</th>
                   </tr></thead>
                   <tbody>
-                    {modules.map((m) => {
+                    {matrixModuleKeys.map((m) => {
                       const row = matrix[m];
                       if (!row) return null;
                       return (
@@ -347,9 +499,10 @@ const UserPermissions = () => {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="assignments" className="mt-4">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("userPermission.tabs.assignments")}</h3>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="shadow-card lg:col-span-1">
               <CardHeader>
@@ -375,7 +528,7 @@ const UserPermissions = () => {
                     value={newAssignment.role}
                     onChange={(e) => setNewAssignment((prev) => ({ ...prev, role: e.target.value }))}
                   >
-                    {rolesCatalog.map((r) => (
+                    {roleCatalog.map((r) => (
                       <option key={r.id} value={r.name}>{r.name}</option>
                     ))}
                   </select>
@@ -403,6 +556,7 @@ const UserPermissions = () => {
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.assignments.table.role")}</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.assignments.table.companyScope")}</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("userPermission.assignments.table.departmentScope")}</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
                   </tr></thead>
                   <tbody>
                     {assignments.map((a, idx) => {
@@ -413,6 +567,11 @@ const UserPermissions = () => {
                           <td className="px-4 py-3"><Badge variant="default" className="text-xs">{a.role}</Badge></td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">{a.companyScope}</td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">{a.departmentScope}</td>
+                          <td className="px-4 py-3">
+                            <Button size="sm" variant="outline" onClick={() => handleRemoveRole(a.userId, a.role)}>
+                              Remove Role
+                            </Button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -421,9 +580,10 @@ const UserPermissions = () => {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="logs" className="mt-4">
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2">{t("userPermission.tabs.logs")}</h3>
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><ClipboardList className="h-4 w-4" /> {t("userPermission.logs.title")}</CardTitle>
@@ -449,8 +609,8 @@ const UserPermissions = () => {
               </table>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 };

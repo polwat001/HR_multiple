@@ -1,10 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, Check, X } from "lucide-react";
+import { Upload, Check, X, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Permission, UserRole } from "@/types/roles";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -32,18 +31,61 @@ type ApprovalRow = {
   status?: string;
 };
 
+const toDateOnly = (value: unknown): string => {
+  if (!value) return "-";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, "0");
+    const d = String(value.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  const raw = String(value);
+  const directMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (directMatch) return directMatch[1];
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, "0");
+    const d = String(parsed.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  return "-";
+};
+
+const toTimeOnly = (value: unknown): string => {
+  if (!value) return "-";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
+  }
+
+  const raw = String(value);
+  // Prefer time part after date delimiter first to avoid matching "20:26" from year 2026.
+  const hhmm = raw.match(/[T\s](\d{2}:\d{2})(:\d{2})?/) || raw.match(/^(\d{2}:\d{2})(:\d{2})?/);
+  if (hhmm) return hhmm[1];
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return `${String(parsed.getHours()).padStart(2, "0")}:${String(parsed.getMinutes()).padStart(2, "0")}`;
+  }
+
+  return "-";
+};
+
 const toUiAttendanceRow = (row: any) => ({
   id: Number(row.id),
   userId: row.user_id ? Number(row.user_id) : null,
-  workDate: row.work_date || "-",
+  workDate: toDateOnly(row.work_date),
   code: row.employee_code || "-",
   name: `${row.firstname_th || ""} ${row.lastname_th || ""}`.trim() || "-",
   shiftId: row.shift_id ? Number(row.shift_id) : null,
   shiftName: row.shift_name || "",
   shiftTimeIn: row.shift_time_in || "-",
   shiftTimeOut: row.shift_time_out || "-",
-  timeIn: row.check_in_time || "-",
-  timeOut: row.check_out_time || "-",
+  timeIn: toTimeOnly(row.check_in_time),
+  timeOut: toTimeOnly(row.check_out_time),
   status: String(row.status || "present").toLowerCase(),
   gps: row.gps || "-",
 });
@@ -82,6 +124,7 @@ const TimeAttendance = () => {
   const roleViewKey = resolveRoleViewKey(user as any);
   const isManagerView = roleViewKey === "manager";
   const ownUserId = Number((user as any)?.user_id || 0);
+  const userCompanyId = Number((user as any)?.company_id || 0);
   const canCreateShift = roleViewKey === "hr_company" || roleViewKey === "central_hr" || roleViewKey === "super_admin";
   const canRequestOt = hasPermission(Permission.REQUEST_OT);
   const canApproveOt = hasPermission(Permission.APPROVE_DEPARTMENT_OT) || hasPermission(Permission.MANAGE_COMPANY_OT) || hasPermission(Permission.MANAGE_ALL_OT);
@@ -118,6 +161,7 @@ const TimeAttendance = () => {
   const [showEmployeeOtForm, setShowEmployeeOtForm] = useState(false);
   const [attendanceActionLoading, setAttendanceActionLoading] = useState<"check-in" | "check-out" | null>(null);
   const [attendanceActionMessage, setAttendanceActionMessage] = useState("");
+  const [attendanceActionMessageTone, setAttendanceActionMessageTone] = useState<"success" | "warning" | "error">("success");
   const [employeeOtRows, setEmployeeOtRows] = useState<Array<{
     id: number;
     requestDate: string;
@@ -141,8 +185,16 @@ const TimeAttendance = () => {
   const fetchSchedules = useCallback(async () => {
     try {
       setSchedulesLoading(true);
-      const res = await apiGet<any>("/schedules");
-      const rows = Array.isArray(res) ? res : res?.data || [];
+      // Prefer /shifts to keep API coverage complete; fallback to /schedules for compatibility.
+      let rows: any[] = [];
+      try {
+        const shiftRes = await apiGet<any>("/shifts");
+        rows = Array.isArray(shiftRes) ? shiftRes : shiftRes?.data || [];
+      } catch (shiftError) {
+        console.error("Failed to fetch shifts, fallback to schedules:", shiftError);
+        const scheduleRes = await apiGet<any>("/schedules");
+        rows = Array.isArray(scheduleRes) ? scheduleRes : scheduleRes?.data || [];
+      }
 
       const shiftsWithEmployees: ShiftRow[] = await Promise.all(
         rows.map(async (row: any) => {
@@ -176,22 +228,38 @@ const TimeAttendance = () => {
   }, []);
 
   const fetchAdjustmentApprovals = useCallback(async () => {
+    if (!canManageAdjustments) {
+      setAdjustmentRows([]);
+      return;
+    }
+
     try {
       setAdjustmentsLoading(true);
-      const res = await apiGet<any>("/approvals/pending");
-      const rows = Array.isArray(res) ? res : res?.data || [];
+      const [pendingRes, allRes] = await Promise.all([
+        apiGet<any>("/approvals/pending"),
+        apiGet<any>("/approvals"),
+      ]);
+      const pendingRows = Array.isArray(pendingRes) ? pendingRes : pendingRes?.data || [];
+      const allRows = Array.isArray(allRes) ? allRes : allRes?.data || [];
+      const rows = [...pendingRows, ...allRows].filter(
+        (item: any, index: number, self: any[]) => index === self.findIndex((x) => Number(x.id) === Number(item.id))
+      );
       const attendanceAdjustments = rows.filter((item: any) => {
         const type = String(item?.approval_type || "").toLowerCase();
         return type.includes("attendance") || type.includes("adjust") || type.includes("time");
       });
       setAdjustmentRows(attendanceAdjustments);
     } catch (error) {
-      console.error("Failed to fetch adjustment approvals:", error);
+      const message = error instanceof Error ? error.message : "";
+      const isForbidden = /ไม่มีสิทธิ์|forbidden|403/i.test(message);
+      if (!isForbidden) {
+        console.error("Failed to fetch adjustment approvals:", error);
+      }
       setAdjustmentRows([]);
     } finally {
       setAdjustmentsLoading(false);
     }
-  }, []);
+  }, [canManageAdjustments]);
 
   const fetchAttendance = useCallback(async () => {
       try {
@@ -205,11 +273,15 @@ const TimeAttendance = () => {
 
   useEffect(() => {
     const run = async () => {
-      await Promise.all([fetchOt(), fetchAttendance(), fetchSchedules(), fetchAdjustmentApprovals()]);
+      const tasks: Array<Promise<unknown>> = [fetchOt(), fetchAttendance(), fetchSchedules()];
+      if (canManageAdjustments) {
+        tasks.push(fetchAdjustmentApprovals());
+      }
+      await Promise.all(tasks);
     };
 
     run();
-  }, [fetchOt, fetchAttendance, fetchSchedules, fetchAdjustmentApprovals]);
+  }, [fetchOt, fetchAttendance, fetchSchedules, fetchAdjustmentApprovals, canManageAdjustments]);
 
   const handleCreateShift = async () => {
     if (!canCreateShift) {
@@ -223,12 +295,22 @@ const TimeAttendance = () => {
 
     try {
       setIsCreatingShift(true);
-      await apiPost("/schedules", {
-        shift_name: newShift.shiftName,
-        time_in: newShift.timeIn,
-        time_out: newShift.timeOut,
-        grace_period_mins: Number(newShift.graceMinutes || 0),
-      });
+      try {
+        await apiPost("/shifts", {
+          company_id: userCompanyId,
+          shift_name: newShift.shiftName,
+          time_in: newShift.timeIn,
+          time_out: newShift.timeOut,
+        });
+      } catch (shiftCreateError) {
+        console.error("Failed to create shift via /shifts, fallback to /schedules:", shiftCreateError);
+        await apiPost("/schedules", {
+          shift_name: newShift.shiftName,
+          time_in: newShift.timeIn,
+          time_out: newShift.timeOut,
+          grace_period_mins: Number(newShift.graceMinutes || 0),
+        });
+      }
       setNewShift({ shiftName: "", timeIn: "", timeOut: "", graceMinutes: "0" });
       await fetchSchedules();
       alert(t("timeAttendance.messages.shiftCreated"));
@@ -253,13 +335,27 @@ const TimeAttendance = () => {
     try {
       setAttendanceActionLoading(action);
       setAttendanceActionMessage("");
+      setAttendanceActionMessageTone("success");
       const endpoint = action === "check-in" ? "/attendance/check-in" : "/attendance/check-out";
       await apiPost(endpoint, {});
       setAttendanceActionMessage(action === "check-in" ? t("timeAttendance.messages.checkInSuccess") : t("timeAttendance.messages.checkOutSuccess"));
+      setAttendanceActionMessageTone("success");
       await fetchAttendance();
     } catch (error: any) {
       const message = error instanceof Error ? error.message : t("timeAttendance.messages.attendanceSaveFailed");
+      const alreadyCheckedIn = action === "check-in" && /ลงเวลาเข้างานแล้ว|checked\s*in\s*already/i.test(message);
+      const alreadyCheckedOut = action === "check-out" && /ลงเวลาออกงานแล้ว|checked\s*out\s*already/i.test(message);
+      const checkOutWithoutCheckIn = action === "check-out" && /ยังไม่ได้ลงเวลาเข้างานวันนี้|not\s*checked\s*in/i.test(message);
+
+      if (alreadyCheckedIn || alreadyCheckedOut || checkOutWithoutCheckIn) {
+        setAttendanceActionMessage(message);
+        setAttendanceActionMessageTone("warning");
+        await fetchAttendance();
+        return;
+      }
+
       setAttendanceActionMessage(message);
+      setAttendanceActionMessageTone("error");
     } finally {
       setAttendanceActionLoading(null);
     }
@@ -367,12 +463,14 @@ const TimeAttendance = () => {
   if (isEmployeeOnly) {
     const myShift = visibleScheduleRows[0];
     const latestAttendance = attendanceRows[0];
-    const todayString = new Date().toISOString().slice(0, 10);
-    const todayAttendance = attendanceRows.find((row) => row.workDate === todayString);
-    const hasCheckedInToday = Boolean(todayAttendance?.timeIn && todayAttendance.timeIn !== "-");
-    const hasCheckedOutToday = Boolean(todayAttendance?.timeOut && todayAttendance.timeOut !== "-");
+    const now = new Date();
+    const todayString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const todayAttendances = attendanceRows.filter((row) => row.workDate === todayString);
+    const hasCheckedInToday = todayAttendances.some((row) => Boolean(row?.timeIn && row.timeIn !== "-"));
+    const hasCheckedOutToday = todayAttendances.some((row) => Boolean(row?.timeOut && row.timeOut !== "-"));
     const checkInDisabled = attendanceActionLoading !== null || hasCheckedInToday;
-    const checkOutDisabled = attendanceActionLoading !== null || !hasCheckedInToday || hasCheckedOutToday;
+    // Keep checkout clickable when frontend state is uncertain; backend is source of truth.
+    const checkOutDisabled = attendanceActionLoading !== null || hasCheckedOutToday;
 
     return (
       <div className="space-y-6 animate-fade-in">
@@ -424,7 +522,18 @@ const TimeAttendance = () => {
             </div>
 
             {attendanceActionMessage ? (
-              <p className="text-sm text-muted-foreground">{attendanceActionMessage}</p>
+              <p
+                className={`text-sm flex items-center gap-1.5 ${
+                  attendanceActionMessageTone === "warning"
+                    ? "text-amber-700"
+                    : attendanceActionMessageTone === "error"
+                      ? "text-destructive"
+                      : "text-emerald-700"
+                }`}
+              >
+                {attendanceActionMessageTone === "warning" ? <AlertTriangle className="h-4 w-4 shrink-0" /> : null}
+                {attendanceActionMessage}
+              </p>
             ) : null}
 
             <div className="rounded-lg border bg-muted/20 p-4">
@@ -546,16 +655,10 @@ const TimeAttendance = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Tabs defaultValue="shifts">
-        <TabsList>
-          <TabsTrigger value="shifts">{t("timeAttendance.tabs.workSchedule")}</TabsTrigger>
-          {!isEmployeeOnly && <TabsTrigger value="attendance">{t("timeAttendance.tabs.attendanceLog")}</TabsTrigger>}
-          {canManageAdjustments && <TabsTrigger value="adjustments">{t("timeAttendance.tabs.adjustmentRequests")}</TabsTrigger>}
-          {canRequestOt && <TabsTrigger value="ot-request">{t("timeAttendance.tabs.otRequest")}</TabsTrigger>}
-          {canApproveOt && <TabsTrigger value="ot-approval">{t("timeAttendance.tabs.teamOtRequests")}</TabsTrigger>}
-        </TabsList>
+      <div className="space-y-6">
 
-      <TabsContent value="shifts" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("timeAttendance.tabs.workSchedule")}</h3>
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("timeAttendance.shiftManagement.title")}</CardTitle>
@@ -643,10 +746,11 @@ const TimeAttendance = () => {
             </div>
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
 
       {!isEmployeeOnly && (
-      <TabsContent value="attendance" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("timeAttendance.tabs.attendanceLog")}</h3>
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("timeAttendance.attendanceLog.title")}</CardTitle>
@@ -722,11 +826,12 @@ const TimeAttendance = () => {
             )}
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
 
       {canManageAdjustments && (
-      <TabsContent value="adjustments" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("timeAttendance.tabs.adjustmentRequests")}</h3>
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("timeAttendance.adjustments.title")}</CardTitle>
@@ -774,11 +879,12 @@ const TimeAttendance = () => {
             </table>
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
 
       {canRequestOt && (
-      <TabsContent value="ot-request" className="mt-4">
+      <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("timeAttendance.tabs.otRequest")}</h3>
         <Card className="shadow-card">
           <CardHeader><CardTitle className="text-base">{t("timeAttendance.otRequest.title")}</CardTitle></CardHeader>
           <CardContent>
@@ -808,11 +914,12 @@ const TimeAttendance = () => {
             </div>
           </CardContent>
         </Card>
-      </TabsContent>
+      </div>
       )}
 
       {canApproveOt && (
-        <TabsContent value="ot-approval" className="mt-4">
+        <div className="mt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-2">{t("timeAttendance.tabs.teamOtRequests")}</h3>
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("timeAttendance.otApproval.title")}</CardTitle>
@@ -860,9 +967,9 @@ const TimeAttendance = () => {
             </table>
           </CardContent>
         </Card>
-        </TabsContent>
+        </div>
       )}
-    </Tabs>
+    </div>
   </div>
   );
 };
