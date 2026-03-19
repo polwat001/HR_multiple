@@ -29,11 +29,11 @@ const Login = () => {
   const [success, setSuccess] = useState(false);
 
   const testAccounts = [
-    { role: "Super Admin", username: "Super_Admin", password: "123456" },
-    { role: "Central HR", username: "admin_central", password: "123456" },
-    { role: "HR Company", username: "hr_tech", password: "123456" },
-    { role: "Manager", username: "manager_it", password: "123456" },
-    { role: "Employee", username: "emp_somchai", password: "123456" },
+    { role: "Super Admin", username: "Super_Admin", password: "1234" },
+    { role: "Central HR", username: "admin_central", password: "1234" },
+    { role: "HR Company", username: "hr_tech", password: "1234" },
+    { role: "Manager", username: "manager_it", password: "1234" },
+    { role: "Employee", username: "emp_somchai", password: "1234" },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -184,7 +184,7 @@ const Login = () => {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-blue-700">{t("auth.commonPassword")}: <code className="bg-blue-50 px-1.5 py-0.5 rounded">123456</code></p>
+            <p className="text-[11px] text-blue-700">{t("auth.commonPassword")}: <code className="bg-blue-50 px-1.5 py-0.5 rounded">1234</code></p>
           </div>
         </CardContent>
       </Card>
