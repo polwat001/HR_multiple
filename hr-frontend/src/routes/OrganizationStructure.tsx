@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronRight, ChevronDown, Building2, Building, GitBranch, FolderOpen, Briefcase, Plus } from "lucide-react";
+import { ChevronRight, ChevronDown, Building2, Building, GitBranch, FolderOpen, Briefcase, Plus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +32,7 @@ const typeConfig: Record<string, { icon: any; color: string }> = {
   branch: { icon: GitBranch, color: "text-warning" },
   department: { icon: FolderOpen, color: "text-info" },
   position: { icon: Briefcase, color: "text-purple-600" },
+  employee: { icon: User, color: "text-slate-600" },
 };
 
 interface OrgNode {
@@ -76,6 +77,17 @@ interface Position {
   department_id?: string;
 }
 
+interface EmployeeRow {
+  id: string;
+  employee_code?: string;
+  firstname_th: string;
+  lastname_th: string;
+  position_id?: string;
+  department_id?: string;
+  company_id?: string;
+  status?: string;
+}
+
 type DragPayload = {
   sourceType: "department" | "position";
   sourceId: string;
@@ -85,17 +97,30 @@ type DragPayload = {
 type TreeNodeProps = {
   node: OrgNode;
   level?: number;
+  isLast?: boolean;
+  ancestorContinuations?: boolean[];
   canManageOrg: boolean;
   onMoveDepartment: (sourceDepartmentId: string, targetParentDepartmentId: string | null, targetCompanyId: string) => Promise<void>;
   onMovePosition: (sourcePositionId: string, targetDepartmentId: string | null, targetCompanyId: string) => Promise<void>;
 };
 
-const TreeNode = ({ node, level = 0, canManageOrg, onMoveDepartment, onMovePosition }: TreeNodeProps) => {
+const TreeNode = ({
+  node,
+  level = 0,
+  isLast = false,
+  ancestorContinuations = [],
+  canManageOrg,
+  onMoveDepartment,
+  onMovePosition,
+}: TreeNodeProps) => {
   const [expanded, setExpanded] = useState(level < 2);
   const [isDropActive, setIsDropActive] = useState(false);
   const config = typeConfig[node.type] || typeConfig.department;
   const Icon = config.icon;
   const hasChildren = node.children && node.children.length > 0;
+  const connectorStep = 26;
+  const connectorBase = 16;
+  const nodePaddingLeft = connectorBase + level * connectorStep + 12;
 
   const canDrag = canManageOrg && (node.type === "department" || node.type === "position");
   const canDrop = canManageOrg && (node.type === "company" || node.type === "department");
@@ -151,13 +176,13 @@ const TreeNode = ({ node, level = 0, canManageOrg, onMoveDepartment, onMovePosit
   };
 
   return (
-    <div>
+    <div className="relative">
       <div
         className={cn(
-          "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors",
+          "relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer hover:bg-muted/60 transition-colors",
           isDropActive && "ring-1 ring-primary bg-primary/5",
         )}
-        style={{ paddingLeft: `${level * 24 + 12}px` }}
+        style={{ paddingLeft: `${nodePaddingLeft}px` }}
         onClick={() => setExpanded(!expanded)}
         draggable={canDrag}
         onDragStart={onDragStart}
@@ -165,6 +190,39 @@ const TreeNode = ({ node, level = 0, canManageOrg, onMoveDepartment, onMovePosit
         onDragLeave={onDragLeave}
         onDrop={onDrop}
       >
+        {ancestorContinuations.map((show, idx) => {
+          if (!show) return null;
+          const x = connectorBase + idx * connectorStep;
+          return (
+            <span
+              key={`ancestor-line-${node.id}-${idx}`}
+              className="pointer-events-none absolute w-px bg-border/80"
+              style={{ left: `${x}px`, top: "-8px", bottom: "-8px" }}
+            />
+          );
+        })}
+
+        {level > 0 && (
+          <>
+            <span
+              className="pointer-events-none absolute w-px bg-border/80"
+              style={{
+                left: `${connectorBase + (level - 1) * connectorStep}px`,
+                top: isLast ? "-8px" : "-8px",
+                bottom: isLast ? "50%" : "-8px",
+              }}
+            />
+            <span
+              className="pointer-events-none absolute h-px bg-border/80"
+              style={{
+                left: `${connectorBase + (level - 1) * connectorStep}px`,
+                top: "50%",
+                width: `${connectorStep}px`,
+              }}
+            />
+          </>
+        )}
+
         {hasChildren ? (
           expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
         ) : (
@@ -178,11 +236,13 @@ const TreeNode = ({ node, level = 0, canManageOrg, onMoveDepartment, onMovePosit
       </div>
       {expanded && hasChildren && (
         <div>
-          {node.children.map((child) => (
+          {node.children.map((child, idx) => (
             <TreeNode
               key={child.id}
               node={child}
               level={level + 1}
+              isLast={idx === node.children.length - 1}
+              ancestorContinuations={[...ancestorContinuations, !isLast]}
               canManageOrg={canManageOrg}
               onMoveDepartment={onMoveDepartment}
               onMovePosition={onMovePosition}
@@ -207,12 +267,14 @@ const OrganizationStructure = () => {
     roleViewKey === "hr_company" ||
     roleViewKey === "central_hr" ||
     roleViewKey === "super_admin";
+  const isTreeOnlyPage = (router.pathname || "").endsWith("/organization/tree");
   const canManageCompanyMaster = roleViewKey === "central_hr" || roleViewKey === "super_admin";
 
   const [data, setData] = useState<OrgNode | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
 
   const [companyForm, setCompanyForm] = useState({
     code: "",
@@ -240,6 +302,7 @@ const OrganizationStructure = () => {
 
   const [activeTab, setActiveTab] = useState(isEmployeeView ? "org-chart" : "companies");
   const resolveTabFromPath = (pathname: string) => {
+    if (pathname.endsWith("/organization/tree")) return "org-chart";
     if (pathname.endsWith("/organization/division")) return "division";
     if (pathname.endsWith("/organization/section")) return "section";
     if (pathname.endsWith("/organization/department")) return "department";
@@ -278,7 +341,7 @@ const OrganizationStructure = () => {
     return [];
   };
 
-  const buildTree = (companyRows: Company[], deptRows: Department[], positionRows: Position[]): OrgNode => {
+  const buildTree = (companyRows: Company[], deptRows: Department[], positionRows: Position[], employeeRows: EmployeeRow[]): OrgNode => {
     const companyNodes: OrgNode[] = companyRows.map((c) => {
       const deptsInCompany = deptRows.filter((d) => {
         if (d.company_id) return String(d.company_id) === String(c.id);
@@ -319,6 +382,8 @@ const OrganizationStructure = () => {
         return true;
       });
 
+      const positionNodeMap = new Map<string, OrgNode>();
+
       positionsInCompany.forEach((p) => {
         const posNode: OrgNode = {
           id: `position-${p.id}`,
@@ -329,6 +394,7 @@ const OrganizationStructure = () => {
           departmentId: p.department_id ? String(p.department_id) : undefined,
           children: [],
         };
+        positionNodeMap.set(String(p.id), posNode);
 
         if (p.department_id) {
           const deptParent = deptNodeMap.get(String(p.department_id));
@@ -339,6 +405,38 @@ const OrganizationStructure = () => {
         }
 
         rootDeptNodes.push(posNode);
+      });
+
+      const employeesInCompany = employeeRows.filter((e) => {
+        if (e.company_id) return String(e.company_id) === String(c.id);
+        return true;
+      });
+
+      employeesInCompany.forEach((e) => {
+        const employeeNode: OrgNode = {
+          id: `employee-${e.id}`,
+          rawId: String(e.id),
+          NAME: `${e.firstname_th || ""} ${e.lastname_th || ""}`.trim() || String(e.employee_code || `EMP-${e.id}`),
+          type: "employee",
+          companyId: String(e.company_id || c.id),
+          departmentId: e.department_id ? String(e.department_id) : undefined,
+          costCenter: e.employee_code ? `${e.employee_code}${e.status ? ` • ${e.status}` : ""}` : e.status,
+          children: [],
+        };
+
+        const posNode = e.position_id ? positionNodeMap.get(String(e.position_id)) : null;
+        if (posNode) {
+          posNode.children.push(employeeNode);
+          return;
+        }
+
+        const deptNode = e.department_id ? deptNodeMap.get(String(e.department_id)) : null;
+        if (deptNode) {
+          deptNode.children.push(employeeNode);
+          return;
+        }
+
+        rootDeptNodes.push(employeeNode);
       });
 
       return {
@@ -363,20 +461,23 @@ const OrganizationStructure = () => {
 
   const fetchData = async () => {
     try {
-      const [companyRes, departmentRes, positionRes] = await Promise.all([
+      const [companyRes, departmentRes, positionRes, employeeRes] = await Promise.all([
         apiGet<any>("/organization/companies"),
         apiGet<any>("/organization/departments"),
         apiGet<any>("/organization/positions"),
+        apiGet<any>("/employees"),
       ]);
 
       const companyRows = normalizeRows<Company>(companyRes);
       const deptRows = normalizeRows<Department>(departmentRes);
       const positionRows = normalizeRows<Position>(positionRes);
+      const employeeRows = normalizeRows<EmployeeRow>(employeeRes);
 
       setCompanies(companyRows);
       setDepartments(deptRows);
       setPositions(positionRows);
-      setData(buildTree(companyRows, deptRows, positionRows));
+      setEmployees(employeeRows);
+      setData(buildTree(companyRows, deptRows, positionRows, employeeRows));
       setError(null);
     } catch (fetchError) {
       const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
@@ -399,6 +500,12 @@ const OrganizationStructure = () => {
       setActiveTab("org-chart");
     }
   }, [activeTab, isEmployeeView]);
+
+  useEffect(() => {
+    if (isTreeOnlyPage && activeTab !== "org-chart") {
+      setActiveTab("org-chart");
+    }
+  }, [activeTab, isTreeOnlyPage]);
 
   const departmentChildrenSet = useMemo(() => {
     const set = new Set<string>();
@@ -656,7 +763,7 @@ const OrganizationStructure = () => {
   if (error) return <div className="p-6 text-center text-red-600">{t("organizationStructure.errorPrefix")}: {error}</div>;
   if (!data) return <div className="p-6 text-center">{t("organizationStructure.noData")}</div>;
 
-  const showAllMasterSections = canUseMasterTabs && activeTab === "all";
+  const showAllMasterSections = canUseMasterTabs && activeTab === "all" && !isTreeOnlyPage;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -1123,7 +1230,7 @@ const OrganizationStructure = () => {
         </div>}
 
         {(activeTab === "org-chart" || showAllMasterSections) && <div className="mt-4">
-          {canUseMasterTabs && (isSuperAdmin || companies.length > 0) && canManageOrg && (
+          {!isTreeOnlyPage && canUseMasterTabs && (isSuperAdmin || companies.length > 0) && canManageOrg && (
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle className="text-base">{t("organizationStructure.adminTools.title")}</CardTitle>
@@ -1138,13 +1245,20 @@ const OrganizationStructure = () => {
             </Card>
           )}
 
-          <Card className="shadow-card">
+          <Card className={cn("shadow-card", isTreeOnlyPage && "shadow-none") }>
             <CardHeader>
-              <CardTitle className="text-base">{t("organizationStructure.orgChartTitle")}</CardTitle>
+              <CardTitle className="text-base">
+                {isTreeOnlyPage ? t("organizationStructure.orgChartTitle") + " (Tree View)" : t("organizationStructure.orgChartTitle")}
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className={cn(isTreeOnlyPage && "px-0 md:px-2")}>
+              <div className="mb-3 text-xs text-muted-foreground">
+                Companies: {companies.length} | Departments: {departments.length} | Positions: {positions.length} | Employees: {employees.length}
+              </div>
               <TreeNode
                 node={data}
+                isLast
+                ancestorContinuations={[]}
                 canManageOrg={canManageOrg}
                 onMoveDepartment={handleMoveDepartment}
                 onMovePosition={handleMovePosition}

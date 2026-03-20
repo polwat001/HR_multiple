@@ -585,7 +585,7 @@ const Dashboard = () => {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-0 lg:grid-cols-2 gap-6">
         {/* Department Distribution Donut Chart */}
         <Card className="shadow-card">
           <CardHeader className="pb-2">
@@ -634,7 +634,7 @@ const Dashboard = () => {
       </div>
 
       {/* Alert Tables Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-0 lg:grid-cols-2 gap-6">
         {/* Expiring Contracts */}
         <Card className="shadow-card">
           <CardHeader className="pb-2">

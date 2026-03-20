@@ -80,6 +80,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       const config = MODULE_ACCESS_MATRIX[key];
       const organizationSubItems = key === "organization"
         ? [
+            { label: "Tree View", path: "/organization/tree", icon: Building2 },
             { label: "Division", labelKey: "module.organizationSub.division", path: "/organization/division", icon: Building2 },
             { label: "Section", labelKey: "module.organizationSub.section", path: "/organization/section", icon: GitBranch },
             { label: "Department", labelKey: "module.organizationSub.department", path: "/organization/department", icon: FolderOpen },
@@ -87,12 +88,17 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             { label: "Level", labelKey: "module.organizationSub.level", path: "/organization/level", icon: Landmark },
           ]
         : undefined;
+      const leaveSubItems = key === "leave" && Number((user as any)?.role_level || 0) >= 20
+        ? [
+            { label: "Approval Inbox", path: "/approvals", icon: ClipboardList },
+          ]
+        : undefined;
       return {
         moduleKey: key,
         icon: key === "organization" ? Building2 : moduleIconMap[key],
         label: config.label,
         path: config.path,
-        subItems: organizationSubItems,
+        subItems: [...(organizationSubItems || []), ...(leaveSubItems || [])],
       };
     })
     .filter((item) => MODULE_ACCESS_MATRIX[item.moduleKey].showInNav);

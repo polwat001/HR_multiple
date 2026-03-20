@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCompany } from "@/contexts/CompanyContexts";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Search, Filter, Plus, Pencil, Trash2 } from "lucide-react";
-import { apiDelete, apiGet } from "@/lib/api";
+import { apiDelete, apiGet, apiPost } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
 
 // 1. Interface
@@ -27,6 +27,48 @@ interface Employee {
   department_name?: string;
   company_name?: string;
   status?: string;
+}
+
+interface SavedFilter {
+  id: string;
+  name: string;
+  search: string;
+  deptFilter: string;
+  statusFilter: string;
+}
+
+interface ImportResultRow {
+  row: number;
+  employee_code: string;
+  ok: boolean;
+  message: string;
+}
+
+function parseCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    const next = line[i + 1];
+    if (ch === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i += 1;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (ch === "," && !inQuotes) {
+      out.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  out.push(current.trim());
+  return out;
 }
 
 const statusStyles: Record<string, string> = {
@@ -53,7 +95,20 @@ const EmployeeList = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [savedFilterName, setSavedFilterName] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importSummary, setImportSummary] = useState<{ total: number; success: number; failed: number } | null>(null);
+  const [importResults, setImportResults] = useState<ImportResultRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const savedFilterStorageKey = useMemo(() => {
+    const uid = String((user as any)?.user_id || "anonymous");
+    return `employee_list_saved_filters_${uid}`;
+  }, [user]);
 
   // 2. ดึงข้อมูลจาก API
   useEffect(() => {
@@ -70,6 +125,29 @@ const EmployeeList = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(savedFilterStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setSavedFilters(
+          parsed.filter((f) => typeof f?.id === "string" && typeof f?.name === "string")
+        );
+      }
+    } catch (error) {
+      console.error("Failed to load saved employee filters", error);
+    }
+  }, [savedFilterStorageKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(savedFilterStorageKey, JSON.stringify(savedFilters));
+    } catch (error) {
+      console.error("Failed to persist saved employee filters", error);
+    }
+  }, [savedFilterStorageKey, savedFilters]);
+
   // 3. ระบบ Filter
   const companyFilter = searchParams.get("company") || selectedCompany.id;
 
@@ -82,6 +160,7 @@ const EmployeeList = () => {
       
       if (companyFilter !== "all" && empCompId && empCompId !== targetCompId) return false;
       if (deptFilter !== "all" && emp.department_name !== deptFilter) return false;
+      if (statusFilter !== "all" && String(emp.status || "").toLowerCase() !== statusFilter) return false;
       
       if (search) {
         const q = search.toLowerCase();
@@ -94,12 +173,20 @@ const EmployeeList = () => {
       }
       return true;
     });
-  }, [employees, companyFilter, deptFilter, isManagerView, ownUserId, search]);
+  }, [employees, companyFilter, deptFilter, isManagerView, ownUserId, search, statusFilter]);
 
   // ดึงรายชื่อแผนกที่ไม่ซ้ำกัน
   const departments = useMemo(() => {
     return [...new Set(employees.map((e) => e.department_name))].filter((d): d is string => Boolean(d));
   }, [employees]);
+
+  const visibleIdSet = useMemo(() => new Set(filtered.map((emp) => String(emp.id))), [filtered]);
+  const allVisibleSelected = filtered.length > 0 && filtered.every((emp) => selectedIds.includes(String(emp.id)));
+  const selectedCount = selectedIds.length;
+
+  useEffect(() => {
+    setSelectedIds((prev) => prev.filter((id) => visibleIdSet.has(id)));
+  }, [visibleIdSet]);
 
   const handleDeleteEmployee = async (id: string) => {
     if (!canManageEmployees) return;
@@ -111,6 +198,237 @@ const EmployeeList = () => {
     } catch (error) {
       console.error("Delete employee failed:", error);
       alert(t("employeeList.deleteFailed"));
+    }
+  };
+
+  const toggleRowSelection = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const toggleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIdSet.has(id)));
+      return;
+    }
+    const merged = new Set([...selectedIds, ...filtered.map((emp) => String(emp.id))]);
+    setSelectedIds(Array.from(merged));
+  };
+
+  const exportSelectedCsv = () => {
+    const selectedRows = filtered.filter((emp) => selectedIds.includes(String(emp.id)));
+    if (!selectedRows.length) {
+      alert("กรุณาเลือกรายการก่อน Export");
+      return;
+    }
+
+    const headers = ["employee_code", "firstname_th", "lastname_th", "company_name", "department_name", "position_name", "status"];
+    const escapeCsv = (value: unknown) => {
+      const text = String(value ?? "").replace(/"/g, '""');
+      return `"${text}"`;
+    };
+    const lines = [
+      headers.join(","),
+      ...selectedRows.map((row) => headers.map((key) => escapeCsv((row as any)[key])).join(",")),
+    ];
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `employees_selected_${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const deleteSelectedEmployees = async () => {
+    if (!canManageEmployees) return;
+    const ids = filtered.map((emp) => String(emp.id)).filter((id) => selectedIds.includes(id));
+    if (!ids.length) {
+      alert("กรุณาเลือกรายการก่อนลบ");
+      return;
+    }
+
+    if (!window.confirm(`ยืนยันลบพนักงานที่เลือก ${ids.length} รายการ?`)) return;
+
+    try {
+      for (const id of ids) {
+        await apiDelete(`/employees/${id}`);
+      }
+      setEmployees((prev) => prev.filter((emp) => !ids.includes(String(emp.id))));
+      setSelectedIds((prev) => prev.filter((id) => !ids.includes(id)));
+    } catch (error) {
+      console.error("Bulk delete employee failed:", error);
+      alert("ลบข้อมูลบางรายการไม่สำเร็จ");
+    }
+  };
+
+  const saveCurrentFilter = () => {
+    const name = savedFilterName.trim();
+    if (!name) {
+      alert("กรุณาตั้งชื่อ Saved Filter");
+      return;
+    }
+    const newRow: SavedFilter = {
+      id: `${Date.now()}`,
+      name,
+      search,
+      deptFilter,
+      statusFilter,
+    };
+    setSavedFilters((prev) => [newRow, ...prev].slice(0, 20));
+    setSavedFilterName("");
+  };
+
+  const applySavedFilter = (id: string) => {
+    if (id === "none") return;
+    const found = savedFilters.find((f) => f.id === id);
+    if (!found) return;
+    setSearch(found.search);
+    setDeptFilter(found.deptFilter);
+    setStatusFilter(found.statusFilter);
+  };
+
+  const removeSavedFilter = (id: string) => {
+    setSavedFilters((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const triggerImportFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const downloadTemplateCsv = () => {
+    const headers = [
+      "employee_code",
+      "firstname_th",
+      "lastname_th",
+      "company_id",
+      "department_id",
+      "position_id",
+      "manager_id",
+      "employee_type",
+      "status",
+      "phone",
+      "email",
+    ];
+    const sample = [
+      "E9001",
+      "สมชาย",
+      "ใจดี",
+      "1",
+      "2",
+      "4",
+      "3",
+      "full_time",
+      "active",
+      "0812345678",
+      "somchai@example.com",
+    ];
+    const content = [headers.join(","), sample.join(",")].join("\n");
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "employee_import_template.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      setImportSummary(null);
+      setImportResults([]);
+
+      const text = await file.text();
+      const lines = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      if (lines.length < 2) {
+        alert("ไฟล์ CSV ไม่มีข้อมูลสำหรับ import");
+        return;
+      }
+
+      const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+      const required = ["employee_code", "firstname_th", "lastname_th"];
+      const missing = required.filter((key) => !headers.includes(key));
+      if (missing.length > 0) {
+        alert(`CSV ขาดคอลัมน์จำเป็น: ${missing.join(", ")}`);
+        return;
+      }
+
+      const toNumberOrUndefined = (value: string | undefined) => {
+        const n = Number(String(value || "").trim());
+        return Number.isFinite(n) && n > 0 ? n : undefined;
+      };
+
+      const results: ImportResultRow[] = [];
+      let success = 0;
+
+      for (let i = 1; i < lines.length; i += 1) {
+        const cols = parseCsvLine(lines[i]);
+        const rowObj: Record<string, string> = {};
+        headers.forEach((h, idx) => {
+          rowObj[h] = cols[idx] || "";
+        });
+
+        const employeeCode = String(rowObj.employee_code || "").trim();
+        const firstname = String(rowObj.firstname_th || "").trim();
+        const lastname = String(rowObj.lastname_th || "").trim();
+
+        if (!employeeCode || !firstname || !lastname) {
+          results.push({
+            row: i + 1,
+            employee_code: employeeCode || "-",
+            ok: false,
+            message: "ข้อมูลจำเป็นไม่ครบ (employee_code / firstname_th / lastname_th)",
+          });
+          continue;
+        }
+
+        const companyFromSelected = Number(String(selectedCompany?.id || "").replace("company-", ""));
+        const payload: Record<string, unknown> = {
+          employee_code: employeeCode,
+          firstname_th: firstname,
+          lastname_th: lastname,
+          company_id:
+            toNumberOrUndefined(rowObj.company_id) ||
+            (Number.isFinite(companyFromSelected) && companyFromSelected > 0 ? companyFromSelected : undefined),
+          department_id: toNumberOrUndefined(rowObj.department_id),
+          position_id: toNumberOrUndefined(rowObj.position_id),
+          manager_id: toNumberOrUndefined(rowObj.manager_id),
+          employee_type: String(rowObj.employee_type || "full_time").trim() || "full_time",
+          status: String(rowObj.status || "active").trim() || "active",
+          phone: String(rowObj.phone || "").trim() || undefined,
+          email: String(rowObj.email || "").trim() || undefined,
+        };
+
+        try {
+          await apiPost<any>("/employees", payload);
+          success += 1;
+          results.push({ row: i + 1, employee_code: employeeCode, ok: true, message: "นำเข้าสำเร็จ" });
+        } catch (error: any) {
+          results.push({
+            row: i + 1,
+            employee_code: employeeCode,
+            ok: false,
+            message: String(error?.message || "นำเข้าไม่สำเร็จ"),
+          });
+        }
+      }
+
+      setImportResults(results);
+      setImportSummary({ total: lines.length - 1, success, failed: lines.length - 1 - success });
+
+      const empData = await apiGet<any>("/employees");
+      setEmployees(Array.isArray(empData) ? empData : empData?.data || []);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -147,18 +465,134 @@ const EmployeeList = () => {
               </SelectContent>
             </Select>
 
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="สถานะ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">ทุกสถานะ</SelectItem>
+                <SelectItem value="active">active</SelectItem>
+                <SelectItem value="probation">probation</SelectItem>
+                <SelectItem value="resigned">resigned</SelectItem>
+                <SelectItem value="inactive">inactive</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-2">
+              <Input
+                className="w-[170px]"
+                placeholder="ชื่อ Saved Filter"
+                value={savedFilterName}
+                onChange={(e) => setSavedFilterName(e.target.value)}
+              />
+              <Button size="sm" variant="outline" onClick={saveCurrentFilter}>Save Filter</Button>
+            </div>
+
+            <Select onValueChange={applySavedFilter} value="none">
+              <SelectTrigger className="w-[190px]">
+                <SelectValue placeholder="ใช้ Saved Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">เลือก Saved Filter</SelectItem>
+                {savedFilters.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <div className="text-sm text-muted-foreground ml-auto">
               {t("employeeList.foundCount").replace("{{count}}", String(filtered.length))}
             </div>
 
             {canManageEmployees && (
-              <Button size="sm" className="gap-1.5" onClick={() => router.push("/employees/new")}>
-                <Plus className="h-4 w-4" /> {t("employeeList.addEmployee")}
-              </Button>
+              <>
+                <Button size="sm" variant="outline" onClick={downloadTemplateCsv}>Template CSV</Button>
+                <Button size="sm" variant="outline" onClick={triggerImportFile} disabled={importing}>
+                  {importing ? "Importing..." : "Import CSV"}
+                </Button>
+                <Button size="sm" className="gap-1.5" onClick={() => router.push("/employees/new")}>
+                  <Plus className="h-4 w-4" /> {t("employeeList.addEmployee")}
+                </Button>
+              </>
             )}
           </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+
+          {savedFilters.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {savedFilters.map((f) => (
+                <div key={f.id} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs">
+                  <button type="button" className="hover:underline" onClick={() => applySavedFilter(f.id)}>{f.name}</button>
+                  <button type="button" className="text-muted-foreground hover:text-destructive" onClick={() => removeSavedFilter(f.id)}>x</button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      <Card className="shadow-card">
+        <CardContent className="p-4 flex flex-wrap items-center gap-3">
+          <div className="text-sm text-muted-foreground">Selected: {selectedCount}</div>
+          <Button size="sm" variant="outline" onClick={exportSelectedCsv} disabled={selectedCount === 0}>
+            Export Selected CSV
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setSelectedIds([])} disabled={selectedCount === 0}>
+            Clear Selection
+          </Button>
+          {canManageEmployees && (
+            <Button size="sm" variant="destructive" onClick={deleteSelectedEmployees} disabled={selectedCount === 0}>
+              Delete Selected
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {importSummary && (
+        <Card className="shadow-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Import Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              Total: {importSummary.total} | Success: {importSummary.success} | Failed: {importSummary.failed}
+            </div>
+            <div className="max-h-56 overflow-y-auto rounded-md border border-border">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b bg-muted/40 text-left">
+                    <th className="px-3 py-2">Row</th>
+                    <th className="px-3 py-2">Employee Code</th>
+                    <th className="px-3 py-2">Result</th>
+                    <th className="px-3 py-2">Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importResults.map((r) => (
+                    <tr key={`${r.row}-${r.employee_code}`} className="border-b last:border-b-0">
+                      <td className="px-3 py-2">{r.row}</td>
+                      <td className="px-3 py-2 font-mono">{r.employee_code}</td>
+                      <td className="px-3 py-2">
+                        <Badge variant="outline" className={r.ok ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"}>
+                          {r.ok ? "OK" : "FAIL"}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2">{r.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Table Section */}
       <Card className="shadow-card overflow-hidden">
@@ -171,6 +605,9 @@ const EmployeeList = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                      <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAllVisible} />
+                    </th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.profile")}</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.employeeCode")}</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("employeeList.table.fullName")}</th>
@@ -190,6 +627,13 @@ const EmployeeList = () => {
                           className="border-b last:border-b-0 hover:bg-muted/30 cursor-pointer transition-colors"
                           onClick={() => router.push(`/employees/${emp.id}`)}
                         >
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(String(emp.id))}
+                              onChange={() => toggleRowSelection(String(emp.id))}
+                            />
+                          </td>
                           <td className="px-4 py-3">
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -261,7 +705,7 @@ const EmployeeList = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={(canManageEmployees || canTransferCrossCompany) ? 8 : 7} className="p-8 text-center text-muted-foreground">{t("employeeList.empty")}</td>
+                      <td colSpan={(canManageEmployees || canTransferCrossCompany) ? 9 : 8} className="p-8 text-center text-muted-foreground">{t("employeeList.empty")}</td>
                     </tr>
                   )}
                 </tbody>
