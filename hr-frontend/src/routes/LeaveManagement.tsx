@@ -109,7 +109,8 @@ const LeaveManagement = () => {
     };
 
     fetchLeaveRequests();
-  }, []);
+  }, []); 
+  
 
   useEffect(() => {
     const fetchBalances = async () => {
@@ -142,7 +143,8 @@ const LeaveManagement = () => {
     };
 
     fetchLeaveTypes();
-  }, []);
+  }, []); 
+
 
   useEffect(() => {
     if (!canManageLeavePolicy) return;
@@ -189,6 +191,7 @@ const LeaveManagement = () => {
   useEffect(() => {
     fetchHolidays();
   }, [fetchHolidays]);
+
 
   useEffect(() => {
     if (leaveTypeOptions.length === 0 || leaveForm.leaveTypeId) return;
@@ -596,236 +599,130 @@ const LeaveManagement = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+  <div className="space-y-10 animate-fade-in pb-10">
+    {/* ---------------- SECTION 1: MY LEAVE ---------------- */}
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <h2 className="text-xl font-bold tracking-tight text-foreground">
+          {t("leaveManagement.tabs.myLeave")}
+        </h2>
+      </div>
+
       <div className="space-y-6">
-
-      <div className="mt-4">
-        <div className="space-y-4">
-          <Card className="shadow-card">
-          <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.myLeave")}</h3>
-            <CardHeader>
-                <CardTitle className="text-base">{t("leaveManagement.myLeave.balanceTitle")}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/40">
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.leaveType")}</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.quota")}</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.used")}</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.pending")}</th>
-                    <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.myLeave.table.balance")}</th>
-                </tr></thead>
-                <tbody>
-                  {leaveBalanceByType.length === 0 ? (
-                    <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">{t("leaveManagement.myLeave.emptyBalance")}</td>
-                    </tr>
-                  ) : (
-                    leaveBalanceByType.map((row) => (
-                      <tr key={row.leaveTypeCode} className="border-b last:border-b-0">
-                        <td className="px-4 py-3 font-medium">{row.leaveTypeName}</td>
-                        <td className="px-4 py-3 text-center">{row.quota}</td>
-                        <td className="px-4 py-3 text-center">{row.used}</td>
-                        <td className="px-4 py-3 text-center">{row.pending}</td>
-                        <td className="px-4 py-3 text-center font-semibold">{row.balance}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-base">{t("leaveManagement.myLeave.historyTitle")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingRequests ? (
-                <p className="text-sm text-muted-foreground">{t("leaveManagement.loading")}</p>
-              ) : myLeaveHistory.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("leaveManagement.noHistory")}</p>
-              ) : (
-                <div className="space-y-3">
-                  {myLeaveHistory.slice(0, 8).map((r: any) => (
-                    <div key={r.id} className="rounded-md border border-border p-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium">{getLeaveTypeLabel(r.leave_type_code, r.leave_type_name, r.leave_type_id || r.id)}</p>
-                        <p className="text-xs text-muted-foreground">{r.start_date} - {r.end_date} ({r.total_days} {t("leaveManagement.common.day")})</p>
-                      </div>
-                      <Badge variant="secondary" className="capitalize">{r.status || "-"}</Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {canRequestLeave && (
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.requestLeave")}</h3>
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-base">{t("leaveManagement.request.title")}</CardTitle>
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="bg-muted/20 border-b pb-4">
+            <CardTitle className="text-base font-semibold">
+              {t("leaveManagement.myLeave.balanceTitle")}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {requestError ? <p className="text-sm text-destructive">{requestError}</p> : null}
-            {requestSuccess ? <p className="text-sm text-success">{requestSuccess}</p> : null}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.leaveType")}</p>
-                <select
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                  value={leaveForm.leaveTypeId}
-                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, leaveTypeId: e.target.value }))}
-                >
-                  {leaveTypeOptions.map((item) => (
-                    <option key={item.id} value={item.id}>{getLeaveTypeLabel(item.leaveTypeCode, item.name, item.id)}</option>
-                  ))}
-                </select>
+          <CardContent className="pt-6">
+            {leaveBalanceByType.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                <p className="text-sm">{t("leaveManagement.myLeave.emptyBalance")}</p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.totalDaysHours")}</p>
-                <Input
-                  type="number"
-                  step="0.5"
-                  value={leaveForm.totalDays}
-                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, totalDays: e.target.value }))}
-                  placeholder={t("leaveManagement.fields.totalDaysPlaceholder")}
-                />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.startDate")}</p>
-                <Input
-                  type="date"
-                  value={leaveForm.startDate}
-                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.endDate")}</p>
-                <Input
-                  type="date"
-                  value={leaveForm.endDate}
-                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.fields.reason")}</p>
-              <Textarea
-                value={leaveForm.reason}
-                onChange={(e) => setLeaveForm((prev) => ({ ...prev, reason: e.target.value }))}
-                placeholder={t("leaveManagement.fields.reasonPlaceholder")}
-              />
-            </div>
-
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">{t("leaveManagement.request.attachment")}</p>
-              <Input type="file" onChange={handleLeaveAttachment} />
-              {leaveForm.attachmentName ? (
-                <p className="text-xs text-muted-foreground mt-1">{t("leaveManagement.request.selectedFile")}: {leaveForm.attachmentName}</p>
-              ) : null}
-            </div>
-
-            <Button size="sm" onClick={handleCreateLeaveRequest} disabled={formLoading}>
-              {formLoading ? t("leaveManagement.actions.submitting") : t("leaveManagement.request.create")}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-      )}
-
-      {canManageLeave && (
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.teamRequests")}</h3>
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-base">{t("leaveManagement.approval.title")}</CardTitle>
-            {isSuperAdmin ? (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mt-2">
-                Super Admin can monitor requests for support, but direct approve/reject is disabled.
-              </p>
-            ) : null}
-          </CardHeader>
-          <CardContent>
-            {loadingRequests ? (
-              <p className="text-sm text-muted-foreground">{t("leaveManagement.approval.loading")}</p>
-            ) : teamPendingRequests.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("leaveManagement.approval.empty")}</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.employee")}</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.leaveType")}</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.dateRange")}</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.overlapWarning")}</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.approval.table.action")}</th>
-                </tr></thead>
-                <tbody>
-                  {teamPendingRequests.map((r: any) => {
-                    const overlap = overlapWarningByRequestId.get(r.id) || { approved: 0, pending: 0 };
-                    const overlapCount = Number(overlap.approved || 0) + Number(overlap.pending || 0);
-                    return (
-                      <tr key={r.id} className="border-b last:border-b-0">
-                        <td className="px-4 py-3">{r.firstname_th || ""} {r.lastname_th || ""}</td>
-                        <td className="px-4 py-3">{getLeaveTypeLabel(r.leave_type_code, r.leave_type_name, r.leave_type_id || r.id)}</td>
-                        <td className="px-4 py-3 text-xs">{r.start_date} - {r.end_date} ({r.total_days} {t("leaveManagement.common.day")})</td>
-                        <td className="px-4 py-3">
-                          {overlapCount > 0 ? (
-                            <div className="rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning">
-                              {t("leaveManagement.approval.overlapWarning")
-                                .replace("{{count}}", String(overlapCount))
-                                .replace("{{approved}}", String(overlap.approved || 0))}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">{t("leaveManagement.approval.noOverlap")}</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {canApproveLeaveTransactions ? (
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => handleUpdateLeaveStatus(r, "rejected")}>{t("leaveManagement.actions.reject")}</Button>
-                              <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={() => handleUpdateLeaveStatus(r, "approved")}>{t("leaveManagement.actions.approve")}</Button>
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="text-muted-foreground">Read only</Badge>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="grid grid-rows-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {leaveBalanceByType.map((row) => {
+                  const percent = row.quota
+                    ? Math.min((row.used / row.quota) * 100, 100)
+                    : 0;
+
+                  return (
+                    <div
+                      key={row.leaveTypeCode}
+                      className="group rounded-xl border border-border/60 p-5 bg-card hover:border-primary/30 hover:shadow-md transition-all duration-200"
+                    >
+                      {/* Title & Quota */}
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {row.leaveTypeName}
+                        </p>
+                        <Badge variant="secondary" className="font-mono">
+                          {row.quota} {t("leaveManagement.common.day")}
+                        </Badge>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden mb-5">
+                        <div
+                          className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-3 divide-x divide-border">
+                        <div className="flex flex-col items-center justify-center">
+                          <p className="text-2xl font-bold text-blue-500">{row.used}</p>
+                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mt-1">
+                            {t("leaveManagement.myLeave.table.used")}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-center justify-center">
+                          <p className="text-2xl font-bold text-amber-500">{row.pending}</p>
+                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mt-1">
+                            {t("leaveManagement.myLeave.table.pending")}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-center justify-center">
+                          <p className="text-2xl font-bold text-emerald-500">{row.balance}</p>
+                          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mt-1">
+                            {t("leaveManagement.myLeave.table.balance")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>
-      </div>
-      )}
 
-      {canManageLeavePolicy && (
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.balanceAdjustment")}</h3>
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-base">{t("leaveManagement.balanceAdjust.title")}</CardTitle>
+        {/* Leave History */}
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="bg-muted/20 border-b pb-4">
+            <CardTitle className="text-base font-semibold">
+              {t("leaveManagement.myLeave.historyTitle")}
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            {balances.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("leaveManagement.balanceAdjust.empty")}</p>
+          <CardContent className="pt-6">
+            {loadingRequests ? (
+              <div className="flex items-center justify-center py-6">
+                <p className="text-sm text-muted-foreground animate-pulse">{t("leaveManagement.loading")}</p>
+              </div>
+            ) : myLeaveHistory.length === 0 ? (
+              <div className="flex items-center justify-center py-6 text-muted-foreground">
+                <p className="text-sm">{t("leaveManagement.noHistory")}</p>
+              </div>
             ) : (
-              <div className="space-y-3">
-                {balances.slice(0, 12).map((b: any) => (
-                  <div key={b.id} className="rounded-md border border-border p-3 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium">{b.firstname_th || ""} {b.lastname_th || ""} - {getLeaveTypeLabel(b.leave_type_code, b.leave_type_name, b.leave_type_id || b.id)}</p>
-                      <p className="text-xs text-muted-foreground">{t("leaveManagement.balanceAdjust.summary").replace("{{quota}}", String(b.quota || 0)).replace("{{used}}", String(b.used || 0)).replace("{{balance}}", String(b.balance || 0))}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {myLeaveHistory.slice(0, 8).map((r: any) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between rounded-lg border border-border/60 p-4 hover:bg-muted/20 transition-colors"
+                  >
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-foreground">
+                        {getLeaveTypeLabel(r.leave_type_code, r.leave_type_name, r.leave_type_id || r.id)}
+                      </p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {r.start_date} <span className="text-muted-foreground/50">to</span> {r.end_date} 
+                        <span className="font-medium px-1 bg-muted rounded">
+                          {r.total_days} {t("leaveManagement.common.day")}
+                        </span>
+                      </p>
                     </div>
-                    <Button size="sm" variant="outline">{t("leaveManagement.balanceAdjust.adjust")}</Button>
+                    <Badge
+                      variant="outline"
+                      className={`capitalize ${
+                        r.status === "approved" ? "border-emerald-500 text-emerald-600 bg-emerald-50" :
+                        r.status === "rejected" ? "border-red-500 text-red-600 bg-red-50" :
+                        "border-amber-500 text-amber-600 bg-amber-50"
+                      }`}
+                    >
+                      {r.status || "-"}
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -833,133 +730,491 @@ const LeaveManagement = () => {
           </CardContent>
         </Card>
       </div>
-      )}
+    </div>
 
-      {canManageLeavePolicy && (
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.leavePolicy")}</h3>
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4" /> {t("leaveManagement.policy.title")}</CardTitle>
+    {/* ---------------- SECTION 2: REQUEST LEAVE ---------------- */}
+    {canRequestLeave && (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mt-8">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            {t("leaveManagement.tabs.requestLeave")}
+          </h2>
+        </div>
+        
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="bg-muted/20 border-b pb-4">
+            <CardTitle className="text-base font-semibold">
+              {t("leaveManagement.request.title")}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.policy.table.company")}</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.policy.table.serviceYears")}</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.policy.table.vacationDays")}</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.policy.table.sickCert")}</th>
-              </tr></thead>
-              <tbody>
-                {policyRows.map((row, index) => (
-                  <tr key={row.company_id} className="border-b last:border-b-0">
-                    <td className="px-4 py-3 font-medium">{row.company_name || row.company_code}</td>
-                    <td className="px-4 py-3">
-                      <Input value={row.service_years} onChange={(e) => handlePolicyChange(index, "service_years", e.target.value)} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <Input value={row.vacation_days} onChange={(e) => handlePolicyChange(index, "vacation_days", e.target.value)} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <Input
-                        value={row.sick_cert_required_after_days}
-                        onChange={(e) => handlePolicyChange(index, "sick_cert_required_after_days", e.target.value)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="p-4 border-t">
-              <Button size="sm" onClick={handleSavePolicies} disabled={policySaving}>{policySaving ? "Saving..." : t("leaveManagement.policy.save")}</Button>
+          <CardContent className="pt-6 space-y-6">
+            {requestError && (
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md">
+                {requestError}
+              </div>
+            )}
+            {requestSuccess && (
+              <div className="bg-success/10 border border-success/20 text-success text-sm p-3 rounded-md">
+                {requestSuccess}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  {t("leaveManagement.fields.leaveType")}
+                </label>
+                <select
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                  value={leaveForm.leaveTypeId}
+                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, leaveTypeId: e.target.value }))}
+                >
+                  {leaveTypeOptions.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {getLeaveTypeLabel(item.leaveTypeCode, item.name, item.id)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  {t("leaveManagement.fields.totalDaysHours")}
+                </label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={leaveForm.totalDays}
+                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, totalDays: e.target.value }))}
+                  placeholder={t("leaveManagement.fields.totalDaysPlaceholder")}
+                  className="focus-visible:ring-primary"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  {t("leaveManagement.fields.startDate")}
+                </label>
+                <Input
+                  type="date"
+                  value={leaveForm.startDate}
+                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                  className="focus-visible:ring-primary"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  {t("leaveManagement.fields.endDate")}
+                </label>
+                <Input
+                  type="date"
+                  value={leaveForm.endDate}
+                  onChange={(e) => setLeaveForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                  className="focus-visible:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                {t("leaveManagement.fields.reason")}
+              </label>
+              <Textarea
+                value={leaveForm.reason}
+                onChange={(e) => setLeaveForm((prev) => ({ ...prev, reason: e.target.value }))}
+                placeholder={t("leaveManagement.fields.reasonPlaceholder")}
+                className="min-h-[100px] resize-y focus-visible:ring-primary"
+              />
+            </div>
+
+            <div className="space-y-2 p-4 border border-dashed rounded-lg bg-muted/10">
+              <label className="text-sm font-medium text-foreground flex flex-col gap-1 cursor-pointer">
+                <span>{t("leaveManagement.request.attachment")}</span>
+                <span className="text-xs text-muted-foreground font-normal">Upload supporting documents if required (e.g., Medical Certificate)</span>
+              </label>
+              <Input type="file" onChange={handleLeaveAttachment} className="mt-2" />
+              {leaveForm.attachmentName && (
+                <p className="text-sm text-primary font-medium mt-2 flex items-center gap-1">
+                  📎 {t("leaveManagement.request.selectedFile")}: {leaveForm.attachmentName}
+                </p>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <Button 
+                size="lg" 
+                className="w-full sm:w-auto px-8" 
+                onClick={handleCreateLeaveRequest} 
+                disabled={formLoading}
+              >
+                {formLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 rounded-full border-2 border-b-transparent animate-spin" />
+                    {t("leaveManagement.actions.submitting")}
+                  </span>
+                ) : (
+                  t("leaveManagement.request.create")
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
-      )}
+    )}
 
-      {canManageLeave && (
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.leaveCalendar")}</h3>
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">{t("leaveManagement.tabs.leaveCalendar")}</CardTitle>
-            <Input type="month" value={calendarMonth} onChange={(e) => setCalendarMonth(e.target.value)} className="w-[180px]" />
+    {/* ---------------- SECTION 3: TEAM REQUESTS ---------------- */}
+    {canManageLeave && (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mt-8">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            {t("leaveManagement.tabs.teamRequests")}
+          </h2>
+        </div>
+
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="bg-muted/20 border-b pb-4">
+            <CardTitle className="text-base font-semibold">
+              {t("leaveManagement.approval.title")}
+            </CardTitle>
+            {isSuperAdmin && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-4 py-2.5">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                Super Admin can monitor requests for support, but direct approve/reject is disabled.
+              </div>
+            )}
           </CardHeader>
           <CardContent className="p-0">
-            {monthEvents.length === 0 ? (
-              <div className="flex items-center justify-center py-10 text-muted-foreground">
-                <Calendar className="h-10 w-10 mr-3 opacity-40" />
-                <p className="text-sm">{t("leaveManagement.calendar.placeholder")}</p>
+            {loadingRequests ? (
+              <div className="p-8 text-center text-sm text-muted-foreground animate-pulse">
+                {t("leaveManagement.approval.loading")}
+              </div>
+            ) : teamPendingRequests.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                {t("leaveManagement.approval.empty")}
               </div>
             ) : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="border-b bg-muted/40">
+                      <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.approval.table.employee")}</th>
+                      <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.approval.table.leaveType")}</th>
+                      <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.approval.table.dateRange")}</th>
+                      <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.approval.table.overlapWarning")}</th>
+                      <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap text-right">{t("leaveManagement.approval.table.action")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {teamPendingRequests.map((r: any) => {
+                      const overlap = overlapWarningByRequestId.get(r.id) || { approved: 0, pending: 0 };
+                      const overlapCount = Number(overlap.approved || 0) + Number(overlap.pending || 0);
+                      return (
+                        <tr key={r.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-5 py-4 font-medium whitespace-nowrap">
+                            {r.firstname_th || ""} {r.lastname_th || ""}
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap">
+                            <Badge variant="outline" className="font-normal bg-background">
+                              {getLeaveTypeLabel(r.leave_type_code, r.leave_type_name, r.leave_type_id || r.id)}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-4 text-muted-foreground whitespace-nowrap">
+                            {r.start_date} <span className="mx-1">→</span> {r.end_date} 
+                            <span className="ml-2 px-1.5 py-0.5 rounded bg-muted text-xs font-medium text-foreground">
+                              {r.total_days} {t("leaveManagement.common.day")}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap">
+                            {overlapCount > 0 ? (
+                              <div className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                                ⚠️ {t("leaveManagement.approval.overlapWarning")
+                                  .replace("{{count}}", String(overlapCount))
+                                  .replace("{{approved}}", String(overlap.approved || 0))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground px-2">
+                                {t("leaveManagement.approval.noOverlap")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 text-right whitespace-nowrap">
+                            {canApproveLeaveTransactions ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <Button size="sm" variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors" onClick={() => handleUpdateLeaveStatus(r, "rejected")}>
+                                  {t("leaveManagement.actions.reject")}
+                                </Button>
+                                <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm" onClick={() => handleUpdateLeaveStatus(r, "approved")}>
+                                  {t("leaveManagement.actions.approve")}
+                                </Button>
+                              </div>
+                            ) : (
+                              <Badge variant="secondary" className="text-muted-foreground font-normal">Read only</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* ---------------- SECTION 4: BALANCE ADJUSTMENT ---------------- */}
+    {canManageLeavePolicy && (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mt-8">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            {t("leaveManagement.tabs.balanceAdjustment")}
+          </h2>
+        </div>
+
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="bg-muted/20 border-b pb-4">
+            <CardTitle className="text-base font-semibold">
+              {t("leaveManagement.balanceAdjust.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {balances.length === 0 ? (
+              <div className="text-center py-6 text-sm text-muted-foreground">
+                {t("leaveManagement.balanceAdjust.empty")}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {balances.slice(0, 12).map((b: any) => (
+                  <div key={b.id} className="rounded-lg border border-border/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card hover:shadow-sm transition-all">
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-semibold text-foreground">
+                        {b.firstname_th || ""} {b.lastname_th || ""} 
+                        <span className="text-muted-foreground font-normal ml-2 text-xs border-l pl-2">
+                          {getLeaveTypeLabel(b.leave_type_code, b.leave_type_name, b.leave_type_id || b.id)}
+                        </span>
+                      </p>
+                      <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium bg-muted/30 text-muted-foreground">
+                        {t("leaveManagement.balanceAdjust.summary")
+                          .replace("{{quota}}", String(b.quota || 0))
+                          .replace("{{used}}", String(b.used || 0))
+                          .replace("{{balance}}", String(b.balance || 0))}
+                      </div>
+                    </div>
+                    <Button size="sm" variant="secondary" className="sm:shrink-0 w-full sm:w-auto">
+                      {t("leaveManagement.balanceAdjust.adjust")}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* ---------------- SECTION 5: LEAVE POLICY ---------------- */}
+    {canManageLeavePolicy && (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mt-8">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            {t("leaveManagement.tabs.leavePolicy")}
+          </h2>
+        </div>
+
+        <Card className="shadow-sm border-border/50 overflow-hidden">
+          <CardHeader className="bg-muted/20 border-b pb-4 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Settings className="h-4 w-4 text-primary" /> 
+              {t("leaveManagement.policy.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.date")}</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.type")}</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.table.status")}</th>
+                    <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.policy.table.company")}</th>
+                    <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.policy.table.serviceYears")}</th>
+                    <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.policy.table.vacationDays")}</th>
+                    <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.policy.table.sickCert")}</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {monthEvents.map((event) => (
-                    <tr key={event.id} className="border-b last:border-b-0">
-                      <td className="px-4 py-3 font-mono text-xs">{event.date}</td>
-                      <td className="px-4 py-3">{event.title}</td>
-                      <td className="px-4 py-3">
-                        {event.kind === "holiday" ? (
-                          <Badge variant="secondary">Holiday</Badge>
-                        ) : (
-                          <Badge variant="outline" className={getStatusClass(event.status)}>{getStatusLabel(event.status)}</Badge>
-                        )}
+                <tbody className="divide-y divide-border">
+                  {policyRows.map((row, index) => (
+                    <tr key={row.company_id} className="hover:bg-muted/10 transition-colors">
+                      <td className="px-5 py-4 font-medium text-foreground whitespace-nowrap">
+                        {row.company_name || row.company_code}
+                      </td>
+                      <td className="px-5 py-3 min-w-[120px]">
+                        <Input 
+                          value={row.service_years} 
+                          onChange={(e) => handlePolicyChange(index, "service_years", e.target.value)} 
+                          className="h-9 focus-visible:ring-primary"
+                        />
+                      </td>
+                      <td className="px-5 py-3 min-w-[120px]">
+                        <Input 
+                          value={row.vacation_days} 
+                          onChange={(e) => handlePolicyChange(index, "vacation_days", e.target.value)} 
+                          className="h-9 focus-visible:ring-primary"
+                        />
+                      </td>
+                      <td className="px-5 py-3 min-w-[180px]">
+                        <Input
+                          value={row.sick_cert_required_after_days}
+                          onChange={(e) => handlePolicyChange(index, "sick_cert_required_after_days", e.target.value)}
+                          className="h-9 focus-visible:ring-primary"
+                        />
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="p-5 border-t bg-muted/10 flex justify-end">
+              <Button size="default" className="px-6" onClick={handleSavePolicies} disabled={policySaving}>
+                {policySaving ? "Saving..." : t("leaveManagement.policy.save")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+
+    {/* ---------------- SECTION 6: LEAVE CALENDAR ---------------- */}
+    {canManageLeave && (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mt-8">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            {t("leaveManagement.tabs.leaveCalendar")}
+          </h2>
+        </div>
+
+        <Card className="shadow-sm border-border/50 overflow-hidden">
+          <CardHeader className="bg-muted/20 border-b pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardTitle className="text-base font-semibold">
+              {t("leaveManagement.tabs.leaveCalendar")}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input 
+                type="month" 
+                value={calendarMonth} 
+                onChange={(e) => setCalendarMonth(e.target.value)} 
+                className="w-full sm:w-[180px] h-9 focus-visible:ring-primary" 
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {monthEvents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground bg-muted/5">
+                <Calendar className="h-12 w-12 mb-4 opacity-20" />
+                <p className="text-sm font-medium">{t("leaveManagement.calendar.placeholder")}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="border-b bg-muted/40">
+                      <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.table.date")}</th>
+                      <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.table.type")}</th>
+                      <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.table.status")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {monthEvents.map((event) => (
+                      <tr key={event.id} className="hover:bg-muted/10 transition-colors">
+                        <td className="px-5 py-4 font-mono text-sm text-muted-foreground whitespace-nowrap">
+                          {event.date}
+                        </td>
+                        <td className="px-5 py-4 font-medium text-foreground whitespace-nowrap">
+                          {event.title}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          {event.kind === "holiday" ? (
+                            <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200">
+                              Holiday
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className={getStatusClass(event.status)}>
+                              {getStatusLabel(event.status)}
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
-      )}
+    )}
 
-      {canManageHoliday && (
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">{t("leaveManagement.tabs.holidayManagement")}</h3>
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">{t("leaveManagement.holidays.title")}</CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCreateHoliday}><Plus className="h-4 w-4" /> {t("leaveManagement.holidays.add")}</Button>
+    {/* ---------------- SECTION 7: HOLIDAY MANAGEMENT ---------------- */}
+    {canManageHoliday && (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mt-8">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            {t("leaveManagement.tabs.holidayManagement")}
+          </h2>
+        </div>
+
+        <Card className="shadow-sm border-border/50 overflow-hidden">
+          <CardHeader className="bg-muted/20 border-b pb-4 flex flex-row items-center justify-between gap-4">
+            <CardTitle className="text-base font-semibold">
+              {t("leaveManagement.holidays.title")}
+            </CardTitle>
+            <Button size="sm" className="gap-2 shadow-sm shrink-0" onClick={handleCreateHoliday}>
+              <Plus className="h-4 w-4" /> {t("leaveManagement.holidays.add")}
+            </Button>
           </CardHeader>
+
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.holidays.table.date")}</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.holidays.table.name")}</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("leaveManagement.holidays.table.action")}</th>
-              </tr></thead>
-              <tbody>
-                {holidays.map((h) => (
-                  <tr key={h.id} className="border-b last:border-b-0 hover:bg-muted/30">
-                    <td className="px-4 py-3 font-mono text-xs">{h.holiday_date}</td>
-                    <td className="px-4 py-3">{h.holiday_name_th}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEditHoliday(h)}><Pencil className="h-3.5 w-3.5 mr-1" />{t("leaveManagement.holidays.edit")}</Button>
-                        <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => handleDeleteHoliday(h)}><Trash2 className="h-3.5 w-3.5 mr-1" />{t("leaveManagement.actions.reject")}</Button>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.holidays.table.date")}</th>
+                    <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap">{t("leaveManagement.holidays.table.name")}</th>
+                    <th className="px-5 py-4 font-semibold text-muted-foreground whitespace-nowrap text-right">{t("leaveManagement.holidays.table.action")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {holidays.map((h) => (
+                    <tr key={h.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-5 py-4 font-mono text-sm text-muted-foreground whitespace-nowrap">
+                        {h.holiday_date}
+                      </td>
+                      <td className="px-5 py-4 font-medium text-foreground whitespace-nowrap">
+                        {h.holiday_name_th}
+                      </td>
+                      <td className="px-5 py-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="sm" variant="outline" className="h-8 hover:bg-muted" onClick={() => handleEditHoliday(h)}>
+                            <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                            {t("leaveManagement.holidays.edit")}
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-8 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => handleDeleteHoliday(h)}>
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                            {t("leaveManagement.actions.reject")} {/* Note: ใช้ translation ของ Reject ตามต้นฉบับ */}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       </div>
-      )}
-    </div>
+    )}
   </div>
-  );
+);
 };
 
 export default LeaveManagement;

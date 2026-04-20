@@ -111,6 +111,7 @@ export default function ApprovalFlowConfiguration() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <h3 className="text-lg font-semibold">{t("approvalFlow.title")}</h3>
       <Card className="shadow-card border-primary/20">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -185,7 +186,9 @@ export default function ApprovalFlowConfiguration() {
           </table>
 
           <div className="mt-4 flex justify-end">
-            <Button onClick={handleSave} disabled={!isSystemAdmin || saving}>{saving ? "Saving..." : t("approvalFlow.save")}</Button>
+            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={handleSave} disabled={!isSystemAdmin || saving}>
+              {saving ? "Saving..." : t("approvalFlow.save")}
+            </Button>
           </div>
         </CardContent>
       </Card>

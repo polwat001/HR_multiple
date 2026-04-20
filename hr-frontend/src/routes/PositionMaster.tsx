@@ -23,6 +23,7 @@ const PositionMaster = () => {
   const [rows, setRows] = useState<PositionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+
   const fetchPositions = useCallback(async () => {
     try {
       setLoading(true);
@@ -44,7 +45,6 @@ const PositionMaster = () => {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     fetchPositions();
   }, [fetchPositions]);
@@ -94,70 +94,153 @@ const PositionMaster = () => {
   const positions = useMemo(() => rows, [rows]);
 
   return (
-  <div className="space-y-6 animate-fade-in">
-    <Card className="shadow-card overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">{t("positionMaster.title")}</CardTitle>
-        {isSuperAdmin && (
-          <Button size="sm" className="gap-1.5" onClick={handleCreatePosition}><Plus className="h-4 w-4" /> {t("positionMaster.add")}</Button>
-        )}
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/40">
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.index")}</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.position")}</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.level")}</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.companies")}</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("positionMaster.table.status")}</th>
-                {isSuperAdmin && <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={isSuperAdmin ? 6 : 5} className="px-4 py-6 text-center text-muted-foreground">Loading...</td>
+    <div className="space-y-6 animate-fade-in">
+      <Card className="shadow-md rounded-2xl overflow-hidden border border-border/60">
+
+        {/* ================= HEADER ================= */}
+        <CardHeader className="flex flex-row items-center justify-between px-6 py-4 border-b bg-muted/30">
+          <CardTitle className="text-lg font-semibold tracking-tight">
+            {t("positionMaster.title")}
+          </CardTitle>
+
+          {isSuperAdmin && (
+            <Button
+              size="sm"
+              className="gap-1.5 shadow-sm"
+              onClick={handleCreatePosition}
+            >
+              <Plus className="h-4 w-4" />
+              {t("positionMaster.add")}
+            </Button>
+          )}
+        </CardHeader>
+
+        {/* ================= TABLE ================= */}
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+
+            <table className="w-full text-sm">
+
+              {/* ================= HEADER ================= */}
+              <thead>
+                <tr className="bg-muted/40 border-b text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="text-left px-6 py-3">#</th>
+                  <th className="text-left px-6 py-3">{t("positionMaster.table.position")}</th>
+                  <th className="text-left px-6 py-3">{t("positionMaster.table.level")}</th>
+                  <th className="text-left px-6 py-3">{t("positionMaster.table.companies")}</th>
+                  <th className="text-left px-6 py-3">{t("positionMaster.table.status")}</th>
+                  {isSuperAdmin && <th className="text-left px-6 py-3">Action</th>}
                 </tr>
-              ) : positions.length === 0 ? (
-                <tr>
-                  <td colSpan={isSuperAdmin ? 6 : 5} className="px-4 py-6 text-center text-muted-foreground">No position data</td>
-                </tr>
-              ) : null}
-              {positions.map((p) => (
-                <tr key={p.id} className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 text-muted-foreground">{p.id}</td>
-                  <td className="px-4 py-3 font-medium">{p.title}</td>
-                  <td className="px-4 py-3">{p.level}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1.5 flex-wrap">
-                      {p.companies.map((c) => (
-                        <Badge key={c} variant="secondary" className="text-xs">{c}</Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={p.status === "active" ? "default" : "secondary"} className="text-xs">
-                      {t(`positionMaster.status.${p.status}`, p.status)}
-                    </Badge>
-                  </td>
-                  {isSuperAdmin && (
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEditPosition(p)}><Pencil className="h-3.5 w-3.5 mr-1" />Edit</Button>
-                        <Button size="sm" variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => handleDeletePosition(p)}><Trash2 className="h-3.5 w-3.5 mr-1" />Delete</Button>
+              </thead>
+
+              {/* ================= BODY ================= */}
+              <tbody className="divide-y">
+
+                {/* Loading */}
+                {loading && (
+                  <tr>
+                    <td colSpan={isSuperAdmin ? 6 : 5} className="px-6 py-10 text-center text-muted-foreground">
+                      Loading...
+                    </td>
+                  </tr>
+                )}
+
+                {/* Empty */}
+                {!loading && positions.length === 0 && (
+                  <tr>
+                    <td colSpan={isSuperAdmin ? 6 : 5} className="px-6 py-10 text-center text-muted-foreground">
+                      No position data
+                    </td>
+                  </tr>
+                )}
+
+                {/* Rows */}
+                {positions.map((p) => (
+                  <tr
+                    key={p.id}
+                    className="group hover:bg-muted/30 transition-all duration-200"
+                  >
+                    {/* Index */}
+                    <td className="px-6 py-4 text-muted-foreground font-medium">
+                      {p.id}
+                    </td>
+
+                    {/* Title */}
+                    <td className="px-6 py-4 font-semibold text-foreground">
+                      {p.title}
+                    </td>
+
+                    {/* Level */}
+                    <td className="px-6 py-4">
+                      <span className="px-2 py-1 text-xs rounded-md bg-muted">
+                        {p.level}
+                      </span>
+                    </td>
+
+                    {/* Companies */}
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {p.companies.map((c) => (
+                          <Badge
+                            key={c}
+                            variant="secondary"
+                            className="text-xs px-2 py-0.5 rounded-full"
+                          >
+                            {c}
+                          </Badge>
+                        ))}
                       </div>
                     </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
+
+                    {/* Status */}
+                    <td className="px-6 py-4">
+                      <Badge
+                        variant={p.status === "active" ? "default" : "secondary"}
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                          p.status === "active"
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : "bg-red-500/10 text-red-600"
+                        }`}
+                      >
+                        {t(`positionMaster.status.${p.status}`, p.status)}
+                      </Badge>
+                    </td>
+
+                    {/* Actions */}
+                    {isSuperAdmin && (
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 opacity-80 group-hover:opacity-100 transition">
+
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEditPosition(p)}
+                            className="h-8 w-8 text-blue-500 hover:bg-blue-500/10"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDeletePosition(p)}
+                            className="h-8 w-8 text-red-600 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+
+              </tbody>
+            </table>
+
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

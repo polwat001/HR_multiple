@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiPost } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Building2, Lock, User } from "lucide-react";
+import { Building2 } from "lucide-react";
+import { UserRole } from "@/types/roles";
 
 // 💡 ปรับ Interface ให้ตรงกับที่ Node.js ของเราส่งมา
 interface LoginResponse {
@@ -20,58 +19,88 @@ interface LoginResponse {
   };
 }
 
+interface MockRolePreset {
+  role: UserRole;
+  username: string;
+  password: string;
+  description: string;
+}
+
 const Login = () => {
   const { language, setLanguage, t } = useLanguage();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
-  const testAccounts = [
-    { role: "Super Admin", username: "Super_Admin", password: "1234" },
-    { role: "Central HR", username: "admin_central", password: "1234" },
-    { role: "HR Company", username: "hr_tech", password: "1234" },
-    { role: "Manager", username: "manager_it", password: "1234" },
-    { role: "Employee", username: "emp_somchai", password: "1234" },
+  const rolePresets: MockRolePreset[] = [
+    {
+      role: UserRole.SUPER_ADMIN,
+      username: "Super_Admin",
+      password: "1234",
+      description: "Full access",
+    },
+    {
+      role: UserRole.CENTRAL_HR,
+      username: "admin_central",
+      password: "1234",
+      description: "Cross-company HR",
+    },
+    {
+      role: UserRole.HR_COMPANY,
+      username: "hr_tech",
+      password: "1234",
+      description: "Company HR operations",
+    },
+    {
+      role: UserRole.MANAGER,
+      username: "manager_it",
+      password: "1234",
+      description: "Team approvals",
+    },
+    {
+      role: UserRole.EMPLOYEE,
+      username: "emp_somchai",
+      password: "1234",
+      description: "Self-service",
+    },
   ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRoleLogin = async (preset: MockRolePreset) => {
     setError("");
     setSuccess(false);
     setLoading(true);
+    setSelectedRole(preset.role);
 
     try {
-      if (!username.trim() || !password.trim()) {
-        throw new Error(t("auth.requiredFields"));
-      }
-
-      // 💡 เรียก API ไปที่เส้น Login ของเรา (คาดหวังว่าใน lib/api มีการตั้งค่า Base URL ไว้แล้ว)
       const response = await apiPost<LoginResponse>("/auth/login", {
-        username: username.trim(),
-        password: password.trim(),
+        username: preset.username,
+        password: preset.password,
       });
 
-      // 💡 บันทึก token และข้อมูล user ลงใน localStorage
+      // Keep auth flow compatible with existing role guards.
+      const simulatedUser = {
+        ...response.user,
+        role: preset.role,
+        role_name: preset.role,
+        roles: [preset.role],
+      };
+
       localStorage.setItem("token", response.token);
-      localStorage.setItem("userData", JSON.stringify(response.user)); 
+      localStorage.setItem("userData", JSON.stringify(simulatedUser));
 
       setSuccess(true);
-      setUsername("");
-      setPassword("");
 
-      // Redirect แบบ hard navigation เพื่อให้ AuthProvider โหลด token ใหม่ทันที
       setTimeout(() => {
         window.location.replace("/dashboard");
-      }, 1000);
-    } catch (err: any) {
-      // 💡 ดึงข้อความ Error จาก Backend มาแสดงผลถ้ามี
+      }, 500);
+    } catch (err: unknown) {
       const errorMessage =
-        err?.response?.data?.message || (err instanceof Error ? err.message : "เข้าสู่ระบบไม่สำเร็จ");
+        err instanceof Error ? err.message : t("auth.loginFailed", "เข้าสู่ระบบไม่สำเร็จ");
       setError(errorMessage);
     } finally {
       setLoading(false);
+      setSelectedRole(null);
     }
   };
 
@@ -86,7 +115,7 @@ const Login = () => {
           </div>
           <CardTitle className="text-2xl text-center">HR System</CardTitle>
           <p className="text-center text-sm text-muted-foreground">
-            {t("auth.loginSubtitle")}
+            {t("auth.loginSubtitle", "เลือกบทบาทเพื่อเข้าสู่ระบบจำลอง")}
           </p>
         </CardHeader>
 
@@ -111,80 +140,50 @@ const Login = () => {
           {success && (
             <Alert className="mb-4 bg-green-50 border-green-200">
               <AlertDescription className="text-green-800">
-                ✅ {t("auth.loginSuccess")}
+                {t("auth.loginSuccess", "เข้าสู่ระบบสำเร็จ")}
               </AlertDescription>
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Username Input */}
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">
-                {t("auth.username")}
-              </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder={t("auth.usernamePlaceholder")}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={loading}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Password Input */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">
-                {t("auth.password")}
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder={t("auth.passwordPlaceholder")}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Login Button */}
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-6 bg-primary  bg-blue-500 hover:bg-blue-600 text-white hover:bg-primary/90"
-            >
-              {loading ? t("auth.loggingIn") : t("auth.loginButton")}
-            </Button>
-          </form>
+          <div className="space-y-3">
+            {rolePresets.map((preset) => (
+              <Button
+                key={preset.role}
+                type="button"
+                disabled={loading}
+                onClick={() => handleRoleLogin(preset)}
+                className="w-full h-auto bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 px-4 py-3"
+                variant="outline"
+              >
+                <div className="w-full flex items-center justify-between text-left">
+                  <div>
+                    <div className="font-semibold">{preset.role}</div>
+                    <div className="text-xs text-slate-500">{preset.description}</div>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {loading && selectedRole === preset.role
+                      ? t("auth.loggingIn", "กำลังเข้าสู่ระบบ...")
+                      : t("auth.loginButton", "เข้าสู่ระบบ")}
+                  </div>
+                </div>
+              </Button>
+            ))}
+          </div>
 
           {/* Test Account Info */}
           <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
-            <p className="text-xs font-medium text-blue-900">{t("auth.testAccounts")}</p>
+            <p className="text-xs font-medium text-blue-900">{t("auth.testAccounts", "บัญชีจำลอง")}</p>
             <div className="space-y-1">
-              {testAccounts.map((acc) => (
-                <button
-                  key={acc.username}
-                  type="button"
-                  className="w-full text-left text-xs text-blue-800 bg-white/80 hover:bg-white px-2 py-1.5 rounded border border-blue-100"
-                  onClick={() => {
-                    setUsername(acc.username);
-                    setPassword(acc.password);
-                    setError("");
-                  }}
+              {rolePresets.map((preset) => (
+                <div
+                  key={preset.username}
+                  className="w-full text-left text-xs text-blue-800 bg-white/80 px-2 py-1.5 rounded border border-blue-100"
                 >
-                  {acc.role}: <code className="bg-blue-50 px-1.5 py-0.5 rounded">{acc.username}</code>
-                </button>
+                  {preset.role}: <code className="bg-blue-50 px-1.5 py-0.5 rounded">{preset.username}</code>
+                </div>
               ))}
             </div>
-            <p className="text-[11px] text-blue-700">{t("auth.commonPassword")}: <code className="bg-blue-50 px-1.5 py-0.5 rounded">1234</code></p>
+            <p className="text-[11px] text-blue-700">{t("auth.commonPassword", "รหัสผ่านร่วม")}: <code className="bg-blue-50 px-1.5 py-0.5 rounded">1234</code></p>
           </div>
         </CardContent>
       </Card>

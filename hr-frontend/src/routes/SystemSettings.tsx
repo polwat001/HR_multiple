@@ -69,7 +69,7 @@ const SystemSettings = () => {
             <CardHeader>
               <CardTitle className="text-base">{t("systemSettings.title")}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="grid grid-cols-2 md:grid-cols-2 gap-4">
               {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
               <div>
                 <Label htmlFor="groupName">{t("systemSettings.groupName")}</Label>
@@ -79,7 +79,9 @@ const SystemSettings = () => {
                 <Label htmlFor="timezone">{t("systemSettings.defaultTimezone")}</Label>
                 <Input id="timezone" value={defaultTimezone} onChange={(e) => setDefaultTimezone(e.target.value)} />
               </div>
-              <Button onClick={handleSaveSettings} disabled={saving}>{saving ? "Saving..." : t("systemSettings.saveSettings")}</Button>
+              <div className="col-span-full flex justify-end">
+                <Button variant="outline" className="border bg-blue-500 text-white hover:bg-blue-600" onClick={handleSaveSettings} disabled={saving}>{saving ? "Saving..." : t("systemSettings.saveSettings")}</Button>
+              </div>
             </CardContent>
           </Card>
         </div>

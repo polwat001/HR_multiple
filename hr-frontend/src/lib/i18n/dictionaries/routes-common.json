@@ -39,27 +39,144 @@
     },
     "payroll": {
       "title": "จัดการเงินเดือน",
-      "descriptionManage": "จัดการรอบเงินเดือนของบริษัท และส่งออกไฟล์ธนาคาร",
-      "descriptionReadOnly": "โหมดอ่านอย่างเดียวสำหรับตรวจสอบและ support payroll",
-      "badge": {
+
+      "overview": {
+        "title": "ภาพรวมรอบเงินเดือน",
+        "description": {
+          "manage": "จัดการรอบเงินเดือนของบริษัท และส่งออกไฟล์ธนาคาร",
+          "readOnly": "โหมดอ่านอย่างเดียวสำหรับตรวจสอบและ support payroll"
+        },
+        "metrics": {
+          "costTrend": "แนวโน้มต้นทุนเงินเดือน",
+          "vsPreviousMonth": "เทียบกับเดือนก่อนหน้า",
+          "currentMonthBreakdown": "รายละเอียดเดือนนี้",
+          "recentCycles": "รอบเงินเดือนล่าสุด"
+        },
+        "actions": {
+          "runWizard": "รันวิซาร์ดเงินเดือน"
+        }
+      },
+
+      "wizard": {
+        "title": "Payroll Wizard",
+        "steps": {
+          "step1": "ซิงค์และตรวจสอบข้อมูล",
+          "step2": "ตั้งค่าเบี้ยเลี้ยงและหักต่างๆ",
+          "step3": "ตรวจสอบก่อนคำนวณจริง",
+          "step4": "อนุมัติและสร้างไฟล์จ่ายเงิน"
+        },
+        "labels": {
+          "name": "ชื่อ",
+          "step": "ขั้นตอน",
+          "lastSync": "ซิงค์ล่าสุด",
+          "syncing": "กำลังซิงค์...",
+          "employee": "พนักงาน",
+          "present": "มาทำงาน",
+          "absent": "ขาดงาน",
+          "otHours": "ชั่วโมง OT",
+          "leaveDays": "วันลา",
+          "missingScan": "สแกนนิ้วที่ขาด",
+          "alert": "แจ้งเตือน"
+          
+        },
+        "actions": {
+          "sync": "ซิงค์ข้อมูล",
+          "importExcel": "นำเข้า Excel",
+          "recalculate": "คำนวณใหม่",
+          "exportDraft": "ส่งออกแบบร่าง",
+          "generating": "กำลังสร้าง...",
+          "generateBankFile": "สร้างไฟล์ธนาคาร",
+          "generatePayslips": "สร้างสลิปเงินเดือน",
+          "back": "ย้อนกลับ",
+          "next": "ถัดไป",
+          "publishing": "กำลังเผยแพร่...",
+          "publishPayslips": "เผยแพร่สลิปเงินเดือน"
+        },
+        "income": {
+          "baseSalary": "เงินเดือนฐาน",
+          "otherIncome": "รายได้อื่นๆ",
+          "ot": "OT",
+          "commission": "คอมมิชชั่น",
+          "travel": "ค่าเดินทาง",
+          "bonus": "โบนัส"
+        },
+        "deduction": {
+          "absentLate": "ขาดงาน/สาย",
+          "late": "หักสาย",
+          "loan": "หักกู้ยืม",
+          "sso": "SSO",
+          "wht": "WHT"
+        },
+        "summary": {
+          "netPay": "เงินเดือนสุทธิ",
+          "totalNetPay": "รวมเงินเดือนสุทธิ",
+          "employees": "จำนวนพนักงาน",
+          "paymentDate": "วันที่จ่ายเงิน"
+        },
+        "status": {
+          "recalculating": "กำลังคำนวณใหม่...",
+          "generating": "กำลังสร้างไฟล์ธนาคาร..."
+        },
+        "employeeSettings": {
+          "title": "ตั้งค่าเงินเดือนพนักงาน",
+          "empty": "ไม่มีข้อมูลตั้งค่าเงินเดือนพนักงาน",
+          "fields": {
+            "bankName": "ชื่อธนาคาร",
+            "bankAccountNo": "เลขบัญชีธนาคาร",
+            "taxDependent": "จำนวนผู้ที่ต้องหักภาษี (เช่น ลูก)",
+            "lifeInsurance": "ยอดหักประกันชีวิต",
+            "ssoEnabled": "หักเงินประกันสังคม (SSO)"
+          },
+          "actions": {
+            "save": "บันทึกการตั้งค่าเงินเดือน"
+          }
+        }
+      },
+
+      "report": {
+        "title": "รายงานเงินเดือน",
+        "description": "ดูและส่งออกรายงานเงินเดือนสำหรับรอบที่เลือก",
+        "filters": {
+          "month": "รอบเดือนเงินเดือน",
+          "department": "แผนก",
+          "allDepartments": "ทุกแผนก"
+        },
+        "downloads": {
+          "attendance": "ดาวน์โหลดรายงานการเข้างาน",
+          "pnd1": "ดาวน์โหลดแบบ ภ.ง.ด. 1 (ภาษีหัก ณ ที่จ่าย)",
+          "sso": "ดาวน์โหลดรายงานประกันสังคม (สปส. 1-10)",
+          "ot": "ดาวน์โหลดรายงานค่าล่วงเวลาแยกตามศูนย์ต้นทุน"
+        }
+      },
+
+      "roles": {
         "hrCompany": "HR Company (จัดการ)",
         "centralHr": "Central HR (อ่านอย่างเดียว)",
         "systemAdmin": "System Admin (อ่านอย่างเดียว)"
       },
+
       "fields": {
         "month": "รอบเดือนเงินเดือน",
+        "company": "บริษัท",
         "employees": "จำนวนพนักงาน",
         "otAmount": "ยอด OT",
-        "netAmount": "ยอดสุทธิ"
+        "netAmount": "ยอดสุทธิ",
+        "paymentDate": "วันที่จ่ายเงิน",
+        "status": "สถานะ",
+        "allowanceAmount": "ยอดค่าเบี้ยเลี้ยง",
+        "deductionAmount": "ยอดหัก",
+        "action": "การจัดการ"
       },
+
       "actions": {
+        "view": "ดูรายละเอียด",
         "runCycle": "รันรอบเงินเดือน",
         "recalculate": "คำนวณ OT/ลาซ้ำ",
         "exportReport": "ส่งออกรายงานเงินเดือน",
         "exportBank": "ส่งออกไฟล์ธนาคาร",
         "generatePayslip": "สร้างสลิปเงินเดือน"
       },
-      "readOnlyNotice": "โหมดอ่านอย่างเดียว: บทบาทนี้ใช้สำหรับตรวจสอบและ support ไม่สามารถรัน Payroll หรือสร้างไฟล์จ่ายเงินได้",
+
       "table": {
         "month": "เดือน",
         "company": "บริษัท",
@@ -68,14 +185,20 @@
         "net": "สุทธิ",
         "status": "สถานะ"
       },
+
       "status": {
-        "closed": "ปิดรอบ",
-        "processing": "กำลังประมวลผล",
         "draft": "ฉบับร่าง",
-        "waiting_approval": "รออนุมัติ",
-        "completed": "เสร็จสมบูรณ์"
+        "processing": "กำลังประมวลผล",
+        "waitingApproval": "รออนุมัติ",
+        "completed": "เสร็จสมบูรณ์",
+        "closed": "ปิดรอบ"
+      },
+
+      "notice": {
+        "readOnly": "โหมดอ่านอย่างเดียว: บทบาทนี้ใช้สำหรับตรวจสอบและ support ไม่สามารถรัน Payroll หรือสร้างไฟล์จ่ายเงินได้"
       }
     },
+
     "systemSettings": {
       "tabs": {
         "general": "ทั่วไป",
@@ -316,6 +439,7 @@
       "accounts": {
         "title": "บัญชีผู้ใช้",
         "addUser": "เพิ่มผู้ใช้",
+        "changePassword": "เปลี่ยนรหัสผ่าน",
         "table": {
           "emailUsername": "อีเมล / ชื่อผู้ใช้",
           "displayName": "ชื่อผู้ใช้งาน",
@@ -501,6 +625,7 @@
         "longPending": "รอนาน"
       },
       "catalog": {
+        "title": "ตัวเลือกบันทึกรายงาน",
         "employee-list": {
           "name": "Employee List (ทะเบียนประวัติพนักงาน)",
           "description": "รายชื่อพนักงานพร้อมข้อมูลสำคัญ"
@@ -631,13 +756,13 @@
         "day": "วัน"
       },
       "tabs": {
-        "myLeave": "ลาของฉัน",
+        "myLeave": "การลาของฉัน",
         "requestLeave": "ขอลา",
         "teamRequests": "คำร้องของลูกทีม",
         "balanceAdjustment": "ปรับ Leave Balance",
         "leavePolicy": "นโยบายการลา",
         "leaveCalendar": "ปฏิทินลา",
-        "holidayManagement": "จัดการวันหยุด"
+        "holidayManagement": "การจัดการวันหยุด"
       },
       "status": {
         "all": "ทั้งหมด",
@@ -1058,27 +1183,143 @@
     },
     "payroll": {
       "title": "Payroll Management",
-      "descriptionManage": "Manage company payroll cycles and export bank files",
-      "descriptionReadOnly": "Read-only mode for payroll verification and support",
-      "badge": {
-        "hrCompany": "HR Company (Manage)",
-        "centralHr": "Central HR (Read)",
-        "systemAdmin": "System Admin (Read)"
+
+      "overview": {
+        "title": "Payroll Cycle Overview",
+        "description": {
+          "manage": "Manage company payroll cycles and export banking files",
+          "readOnly": "Read-only mode for payroll review and support"
+        },
+        "metrics": {
+          "costTrend": "Payroll cost trend",
+          "vsPreviousMonth": "Compared to previous month",
+          "currentMonthBreakdown": "Current month breakdown",
+          "recentCycles": "Recent payroll cycles"
+        },
+        "actions": {
+          "runWizard": "Run Payroll Wizard"
+        }
       },
+
+      "wizard": {
+        "title": "Payroll Wizard",
+        "steps": {
+          "step1": "Sync and validate data",
+          "step2": "Configure allowances and deductions",
+          "step3": "Review before final calculation",
+          "step4": "Approve and generate payment files"
+        },
+        "labels": {
+          "name": "Name",
+          "step": "Step",
+          "lastSync": "Last Sync",
+          "syncing": "Syncing...",
+          "employee": "Employee",
+          "present": "Present",
+          "absent": "Absent",
+          "otHours": "OT Hours",
+          "leaveDays": "Leave Days",
+          "missingScan": "Missing Finger Scan",
+          "alert": "Alert"
+        },
+        "actions": {
+          "sync": "Sync Data",
+          "importExcel": "Import Excel",
+          "recalculate": "Recalculate",
+          "exportDraft": "Export Draft",
+          "generating": "Generating...",
+          "generateBankFile": "Generate Bank File",
+          "generatePayslips": "Generate Payslips",
+          "back": "Back",
+          "next": "Next",
+          "publishing": "Publishing...",
+          "publishPayslips": "Publish Payslips"
+        },
+        "income": {
+          "baseSalary": "Base Salary",
+          "otherIncome": "Other Income",
+          "ot": "OT",
+          "commission": "Commission",
+          "travel": "Travel Allowance",
+          "bonus": "Bonus"
+        },
+        "deduction": {
+          "absentLate": "Absent/Late",
+          "late": "Late Deduction",
+          "loan": "Loan Deduction",
+          "sso": "Social Security (SSO)",
+          "wht": "Withholding Tax (WHT)"
+        },
+        "summary": {
+          "netPay": "Net Pay",
+          "totalNetPay": "Total Net Pay",
+          "employees": "Number of Employees",
+          "paymentDate": "Payment Date"
+        },
+        "status": {
+          "recalculating": "Recalculating...",
+          "generating": "Generating bank file..."
+        },
+        "employeeSettings": {
+          "title": "Employee Payroll Settings",
+          "empty": "No employee payroll settings found",
+          "fields": {
+            "bankName": "Bank Name",
+            "bankAccountNo": "Bank Account Number",
+            "taxDependent": "Tax Dependents (e.g., children)",
+            "lifeInsurance": "Life Insurance Deduction",
+            "ssoEnabled": "Enable Social Security (SSO) Deduction"
+          },
+          "actions": {
+            "save": "Save Payroll Settings"
+          }
+        }
+      },
+
+      "report": {
+        "title": "Payroll Reports",
+        "description": "View and export payroll reports for selected cycles",
+        "filters": {
+          "month": "Payroll Month",
+          "department": "Department",
+          "allDepartments": "All Departments"
+        },
+        "downloads": {
+          "attendance": "Download Attendance Report",
+          "pnd1": "Download P.N.D. 1 (Withholding Tax)",
+          "sso": "Download Social Security Report (SSO 1-10)",
+          "ot": "Download OT Report by Cost Center"
+        }
+      },
+
+      "roles": {
+        "hrCompany": "HR Company (Management)",
+        "centralHr": "Central HR (Read-only)",
+        "systemAdmin": "System Admin (Read-only)"
+      },
+
       "fields": {
         "month": "Payroll Month",
-        "employees": "Employees",
+        "company": "Company",
+        "employees": "Number of Employees",
         "otAmount": "OT Amount",
-        "netAmount": "Net Amount"
+        "netAmount": "Net Amount",
+        "paymentDate": "Payment Date",
+        "status": "Status",
+        "allowanceAmount": "Allowance Amount",
+        "deductionAmount": "Deduction Amount",
+        "action": "Action"
       },
+
       "actions": {
+        "view": "View Details",
         "runCycle": "Run Payroll Cycle",
         "recalculate": "Recalculate OT/Leave",
         "exportReport": "Export Payroll Report",
         "exportBank": "Export Bank File",
         "generatePayslip": "Generate Payslip"
       },
-      "readOnlyNotice": "Read-only mode: this role is for verification and support; it cannot run payroll or generate payout files.",
+
       "table": {
         "month": "Month",
         "company": "Company",
@@ -1087,12 +1328,17 @@
         "net": "Net",
         "status": "Status"
       },
+
       "status": {
-        "closed": "closed",
-        "processing": "processing",
-        "draft": "draft",
-        "waiting_approval": "waiting approval",
-        "completed": "completed"
+        "draft": "Draft",
+        "processing": "Processing",
+        "waitingApproval": "Waiting Approval",
+        "completed": "Completed",
+        "closed": "Closed"
+      },
+
+      "notice": {
+        "readOnly": "Read-only mode: This role is used for review and support only. Payroll execution and payment file generation are disabled."
       }
     },
     "systemSettings": {
@@ -1116,6 +1362,7 @@
       "rotateApiKeys": "Rotate API Keys",
       "applyPolicy": "Apply Policy"
     },
+    
     "auditLog": {
       "filtersTitle": "Audit Log Filters",
       "filter": {
@@ -1335,6 +1582,7 @@
       "accounts": {
         "title": "User Accounts",
         "addUser": "Add User",
+        "changePassword": "Change My Password",
         "table": {
           "emailUsername": "Email / Username",
           "displayName": "Display Name",
@@ -1520,6 +1768,7 @@
         "longPending": "Long Pending"
       },
       "catalog": {
+        "title": "Report Save Options",
         "employee-list": {
           "name": "Employee List",
           "description": "Employee roster with key profile data"

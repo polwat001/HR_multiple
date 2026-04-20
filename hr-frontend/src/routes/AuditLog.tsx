@@ -84,29 +84,29 @@ const AuditLog = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Card className="shadow-card">
+      <Card className="shadow-sm rounded-2xl border bg-background lg:col-span-2">
         <CardHeader>
           <CardTitle className="text-base">{t("auditLog.filtersTitle")}</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+        <CardContent className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-6 gap-3">
           <Input placeholder={t("auditLog.filter.user")} value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
+          <Input placeholder={t("auditLog.filter.ipAddress")} value={ipFilter} onChange={(e) => setIpFilter(e.target.value)} />
           <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
             <option value="">{t("auditLog.filter.allActions")}</option>
             {actionOptions.map((a) => (
               <option key={a} value={a}>{a}</option>
             ))}
-          </select>
-          <Input placeholder={t("auditLog.filter.ipAddress")} value={ipFilter} onChange={(e) => setIpFilter(e.target.value)} />
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </select> 
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}/>
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          <Button variant="outline" onClick={fetchLogs}>{t("auditLog.filter.apply")}</Button>
+          <Button variant="outline" size="sm" className="gap-1.5 bg-blue-500 text-white hover:bg-blue-600 transition shadow-sm font-medium" onClick={fetchLogs}>{t("auditLog.filter.apply")}</Button>
         </CardContent>
       </Card>
 
-      <Card className="shadow-card overflow-hidden">
+      <Card className="shadow-sm rounded-2xl border bg-background lg:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">{t("auditLog.tableTitle")}</CardTitle>
-          <Button size="sm" variant="outline" onClick={handleExportCsv}>{t("auditLog.exportCsv")}</Button>
+          <Button variant="outline" size="sm" className="gap-1.5 bg-green-600 text-white hover:bg-green-700 transition shadow-sm font-medium" onClick={handleExportCsv}>{t("auditLog.exportCsv")}</Button>
         </CardHeader>
         <CardContent className="p-0">
           {error ? <p className="px-4 py-3 text-sm text-destructive">{error}</p> : null}

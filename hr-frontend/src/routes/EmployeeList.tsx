@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Filter, Plus, Pencil, Trash2 } from "lucide-react";
+import { Search, Filter, Plus, Pencil, Trash2, Table } from "lucide-react";
 import { apiDelete, apiGet, apiPost } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
 
@@ -72,10 +72,10 @@ function parseCsvLine(line: string): string[] {
 }
 
 const statusStyles: Record<string, string> = {
-  active: "bg-success/10 text-success border-success/20",
-  probation: "bg-warning/10 text-warning border-warning/20",
-  resigned: "bg-destructive/10 text-destructive border-destructive/20",
-  inactive: "bg-destructive/10 text-destructive border-destructive/20",
+  active: "bg-green-100 text-green-700 border-green-200",
+  probation: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  inactive: "bg-gray-100 text-gray-600 border-gray-200",
+  resigned: "bg-red-100 text-red-600 border-red-200",
 };
 
 const EmployeeList = () => {
@@ -114,6 +114,7 @@ const EmployeeList = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // ดึงข้อมูลจริงจาก API จริง
         const empData = await apiGet<any>("/employees");
         setEmployees(Array.isArray(empData) ? empData : empData?.data || []);
       } catch (error) {
@@ -333,6 +334,8 @@ const EmployeeList = () => {
     URL.revokeObjectURL(url);
   };
 
+  const [showFilters, setShowFilters] = useState(false);
+
   const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -430,131 +433,229 @@ const EmployeeList = () => {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+
   };
 
   if (isLoading) return <div className="p-8 text-center animate-pulse text-muted-foreground">{t("employeeList.loading")}</div>;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Filters Section */}
-      <Card className="shadow-card">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("employeeList.searchPlaceholder")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            
-            <Select value={deptFilter} onValueChange={setDeptFilter}>
-              <SelectTrigger className="w-[180px]">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder={t("employeeList.allDepartments")} />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("employeeList.allDepartments")}</SelectItem>
-                {departments.map((d) => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="space-y-2 animate-fade-in">
+      <div className="flex items-center justify-between flex-wrap gap-3 border-b pb-3">
+        {/* Left: Title */}
+        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight">
+          พนักงาน
+        </h1>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="สถานะ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">ทุกสถานะ</SelectItem>
-                <SelectItem value="active">active</SelectItem>
-                <SelectItem value="probation">probation</SelectItem>
-                <SelectItem value="resigned">resigned</SelectItem>
-                <SelectItem value="inactive">inactive</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Right: Actions */}
+        {canManageEmployees && (
+          <div className="flex items-center gap-2 flex-wrap">
 
-            <div className="flex items-center gap-2">
-              <Input
-                className="w-[170px]"
-                placeholder="ชื่อ Saved Filter"
-                value={savedFilterName}
-                onChange={(e) => setSavedFilterName(e.target.value)}
-              />
-              <Button size="sm" variant="outline" onClick={saveCurrentFilter}>Save Filter</Button>
-            </div>
-
-            <Select onValueChange={applySavedFilter} value="none">
-              <SelectTrigger className="w-[190px]">
-                <SelectValue placeholder="ใช้ Saved Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">เลือก Saved Filter</SelectItem>
-                {savedFilters.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="text-sm text-muted-foreground ml-auto">
-              {t("employeeList.foundCount").replace("{{count}}", String(filtered.length))}
-            </div>
-
-            {canManageEmployees && (
-              <>
-                <Button size="sm" variant="outline" onClick={downloadTemplateCsv}>Template CSV</Button>
-                <Button size="sm" variant="outline" onClick={triggerImportFile} disabled={importing}>
-                  {importing ? "Importing..." : "Import CSV"}
-                </Button>
-                <Button size="sm" className="gap-1.5" onClick={() => router.push("/employees/new")}>
-                  <Plus className="h-4 w-4" /> {t("employeeList.addEmployee")}
-                </Button>
-              </>
-            )}
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={handleImportFile}
-          />
-
-          {savedFilters.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {savedFilters.map((f) => (
-                <div key={f.id} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs">
-                  <button type="button" className="hover:underline" onClick={() => applySavedFilter(f.id)}>{f.name}</button>
-                  <button type="button" className="text-muted-foreground hover:text-destructive" onClick={() => removeSavedFilter(f.id)}>x</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-card">
-        <CardContent className="p-4 flex flex-wrap items-center gap-3">
-          <div className="text-sm text-muted-foreground">Selected: {selectedCount}</div>
-          <Button size="sm" variant="outline" onClick={exportSelectedCsv} disabled={selectedCount === 0}>
-            Export Selected CSV
+          {/* Export */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={downloadTemplateCsv}
+            className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium shadow-none"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 2v13"></path>
+              <path d="m16 6-4-4-4 4"></path>
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+            </svg>
+            ส่งออกข้อมูล
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setSelectedIds([])} disabled={selectedCount === 0}>
-            Clear Selection
+
+          {/* Import */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={triggerImportFile}
+            disabled={importing}
+            className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors font-medium shadow-none disabled:opacity-60"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="rotate-180"
+            >
+              <path d="M12 2v13"></path>
+              <path d="m16 6-4-4-4 4"></path>
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+            </svg>
+            {importing ? "Importing..." : "นำเข้าข้อมูล"}
           </Button>
-          {canManageEmployees && (
-            <Button size="sm" variant="destructive" onClick={deleteSelectedEmployees} disabled={selectedCount === 0}>
-              Delete Selected
+
+            {/* Add Employee */}
+            <Button
+              size="sm"
+              onClick={() => router.push("/employees/new")}
+              className="flex items-center gap-2 px-4 py-2.5 border-blue-700 bg-blue-500 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-none disabled:opacity-60"
+            >
+              <Plus className="h-4 w-4" />
+              {t("employeeList.addEmployee")}
             </Button>
-          )}
-        </CardContent>
-      </Card>
 
+          </div>
+        )}
+
+      </div>
+
+        {/* Filters Section */}
+          <CardContent className="p-4 space-y-4">
+
+            {/* Top Bar */}
+            <div className="flex flex-wrap items-center gap-3">
+
+              {/* Search */}
+              <div className="relative flex-1 min-w-[220px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder={t("employeeList.searchPlaceholder")}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 h-10 rounded-xl border-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500"
+                />
+              </div>
+
+              {/* Filter Button */}
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2 rounded-xl border-slate-200 hover:bg-slate-100"
+                onClick={() => setShowFilters((prev) => !prev)}
+              >
+                <Filter className="h-4 w-4" />
+                {showFilters ? "Hide" : "Filters"}
+              </Button>
+
+              {/* Count */}
+              <div className="text-sm text-slate-500 ml-auto font-medium">
+                {filtered.length} รายการ
+              </div>
+            </div>
+
+            {/* Expand Filters */}
+            {showFilters && (
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100">
+            {/* LEFT: Filters */}
+            <div className="flex items-center gap-3 flex-wrap">
+              
+              {/* Department */}
+              <Select value={deptFilter} onValueChange={setDeptFilter}>
+                <SelectTrigger className="w-[180px] h-10 rounded-xl border-slate-200">
+                  <SelectValue placeholder="แผนก" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ทุกแผนก</SelectItem>
+                  {departments.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Status */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px] h-10 rounded-xl border-slate-200">
+                  <SelectValue placeholder="สถานะ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">ทุกสถานะ</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="probation">Probation</SelectItem>
+                  <SelectItem value="resigned">Resigned</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+
+            </div>
+
+            {/* RIGHT: Actions */}
+            <div className="flex items-center gap-3 flex-wrap">
+
+              {/* Save Filter */}
+              <div className="flex items-center gap-2">
+                <Input
+                  className="w-[180px] h-10 rounded-xl border-slate-200"
+                  placeholder="ตั้งชื่อ filter"
+                  value={savedFilterName}
+                  onChange={(e) => setSavedFilterName(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  className="h-10 px-4 rounded-xl bg-blue-500 hover:bg-blue-600 text-white"
+                  onClick={saveCurrentFilter}
+                >
+                  Save
+                </Button>
+              </div>
+
+              {/* Saved Filter */}
+              <Select onValueChange={applySavedFilter} value="none">
+                <SelectTrigger className="w-[180px] h-10 rounded-xl border-slate-200">
+                  <SelectValue placeholder="Saved Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">เลือก Saved Filter</SelectItem>
+                  {savedFilters.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+            </div>
+
+          </div>
+            )}
+
+            {/* Saved Filter Chips */}
+            {savedFilters.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2">
+
+                {savedFilters.map((f) => (
+                  <div
+                    key={f.id}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-medium transition"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => applySavedFilter(f.id)}
+                      className="hover:text-blue-600"
+                    >
+                      {f.name}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => removeSavedFilter(f.id)}
+                      className="text-slate-400 hover:text-red-500"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
+              </div>
+            )}
+
+          </CardContent>
+      
       {importSummary && (
         <Card className="shadow-card">
           <CardHeader className="pb-2">
@@ -574,6 +675,7 @@ const EmployeeList = () => {
                     <th className="px-3 py-2">Message</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {importResults.map((r) => (
                     <tr key={`${r.row}-${r.employee_code}`} className="border-b last:border-b-0">
@@ -588,17 +690,61 @@ const EmployeeList = () => {
                     </tr>
                   ))}
                 </tbody>
+
               </table>
             </div>
           </CardContent>
         </Card>
+        
       )}
 
       {/* Table Section */}
       <Card className="shadow-card overflow-hidden">
-        <CardHeader className="pb-0 border-b bg-muted/10">
-          <CardTitle className="text-base py-2">{t("employeeList.title")}</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-2 border-b bg-muted/10">
+          {/* Left: Title */}
+          <CardTitle className="text-base">
+            {t("employeeList.title")}
+          </CardTitle>
+
+          <div className="flex items-center justify-end gap-2 flex-wrap">
+
+            {/* Divider */}
+            <div className="h-5 w-px bg-border mx-1" />
+
+            {/* Actions */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={exportSelectedCsv}
+              disabled={selectedCount === 0}
+            >
+              Export
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelectedIds([])}
+              disabled={selectedCount === 0}
+            >
+              Clear
+            </Button>
+            {canManageEmployees && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="shadow-sm border-red-300 text-red-600 hover:bg-red-50"
+                onClick={deleteSelectedEmployees}
+                disabled={selectedCount === 0}
+              >
+                Delete
+              </Button>
+            )}
+          </div>
+
         </CardHeader>
+
+        {/*Table */}
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <TooltipProvider delayDuration={120}>
@@ -642,15 +788,16 @@ const EmployeeList = () => {
                                     <img
                                       src={emp.avatar_url}
                                       alt={`${emp.firstname_th} ${emp.lastname_th}`}
-                                      className="h-9 w-9 rounded-full object-cover border"
+                                      className="h-9 w-9 rounded-full object-cover shadow-sm"
                                     />
                                   ) : (
-                                    <div className="h-9 w-9 rounded-full bg-muted text-muted-foreground border flex items-center justify-center text-xs font-semibold">
+                                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-sm flex items-center justify-center text-xs font-semibold">
                                       {`${emp.firstname_th?.[0] || ""}${emp.lastname_th?.[0] || ""}`.toUpperCase() || "-"}
                                     </div>
                                   )}
                                 </div>
                               </TooltipTrigger>
+
                               <TooltipContent side="right" className="p-2">
                                 {emp.avatar_url ? (
                                   <img
@@ -666,31 +813,50 @@ const EmployeeList = () => {
                               </TooltipContent>
                             </Tooltip>
                           </td>
+
                           <td className="px-4 py-3 font-mono text-xs">{emp.employee_code || t("employeeList.na")}</td>
                           <td className="px-4 py-3">
                             <span className="font-medium text-foreground">{emp.firstname_th} {emp.lastname_th}</span>
                           </td>
+
                           <td className="px-4 py-3">
                             <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                               {emp.company_name || t("employeeList.na")}
                             </span>
                           </td>
+
                           <td className="px-4 py-3">{emp.department_name || t("employeeList.na")}</td>
                           <td className="px-4 py-3">{emp.position_name || t("employeeList.na")}</td>
                           <td className="px-4 py-3">
+
                             <Badge variant="outline" className={statusStyles[emp.status?.toLowerCase() || ""] || ""}>
                               {emp.status || t("employeeList.na")}
                             </Badge>
+
                           </td>
+
                           {(canManageEmployees || canTransferCrossCompany) && (
                             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                               <div className="flex gap-2">
                                 {canManageEmployees ? (
                                   <>
-                                    <Button size="sm" variant="outline" className="h-8 w-8 p-0" title={t("employeeList.actions.edit")} onClick={() => router.push(`/employees/${emp.id}`)}>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                      title={t("employeeList.actions.edit")}
+                                      onClick={() => router.push(`/employees/${emp.id}`)}
+                                    >
                                       <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Button size="sm" variant="destructive" className="h-8 w-8 p-0" title={t("employeeList.actions.delete")} onClick={() => handleDeleteEmployee(String(emp.id))}>
+
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                      title={t("employeeList.actions.delete")}
+                                      onClick={() => handleDeleteEmployee(String(emp.id))}
+                                    >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </>

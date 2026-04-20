@@ -139,6 +139,8 @@ const Dashboard = () => {
     fetchData();
   }, [selectedMonth]);
 
+
+
   // Filter data by selected company and department
   const filteredEmployees = isHrCompanyDashboard
     ? employees
@@ -320,38 +322,38 @@ const Dashboard = () => {
     employee: {
       label: t("dashboard.roles.employee"),
       badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
-      cardClass: "border-emerald-200 bg-emerald-50/40",
-      priorityClass: "ring-2 ring-emerald-300 border-emerald-300",
+      cardClass: "border-border",
+      priorityClass: "",
     },
     manager: {
       label: t("dashboard.roles.manager"),
       badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
-      cardClass: "border-amber-200 bg-amber-50/40",
-      priorityClass: "ring-2 ring-amber-300 border-amber-300",
+      cardClass: "border-border",
+      priorityClass: "",
     },
     hr_company: {
       label: t("dashboard.roles.hrCompany"),
       badgeClass: "bg-blue-100 text-blue-800 border-blue-300",
-      cardClass: "border-blue-200 bg-blue-50/40",
-      priorityClass: "ring-2 ring-blue-300 border-blue-300",
+      cardClass: "border-border",
+      priorityClass: "",
     },
     central_hr: {
       label: t("dashboard.roles.centralHr"),
       badgeClass: "bg-indigo-100 text-indigo-800 border-indigo-300",
-      cardClass: "border-indigo-200 bg-indigo-50/40",
-      priorityClass: "ring-2 ring-indigo-300 border-indigo-300",
+      cardClass: "border-border",
+      priorityClass: "",
     },
     super_admin: {
       label: t("dashboard.roles.superAdmin"),
       badgeClass: "bg-rose-100 text-rose-800 border-rose-300",
-      cardClass: "border-rose-200 bg-rose-50/40",
-      priorityClass: "ring-2 ring-rose-300 border-rose-300",
+      cardClass: "border-border",
+      priorityClass: "",
     },
     default: {
       label: t("dashboard.common.dashboard"),
       badgeClass: "bg-slate-100 text-slate-800 border-slate-300",
       cardClass: "border-border",
-      priorityClass: "ring-2 ring-slate-300 border-slate-300",
+      priorityClass: "",
     },
   }[themeRoleKey];
 
@@ -412,7 +414,7 @@ const Dashboard = () => {
           <p className="text-sm text-muted-foreground mt-1">{t("dashboard.employee.subtitle")}</p>
         </div>
 
-        <div className="grid grid-cols-0 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className={`shadow-card ${roleTheme.cardClass} ${roleTheme.priorityClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.employee.cards.remainingLeave")}</p><p className="text-2xl font-bold mt-1">{ownLeaveBalance}</p></CardContent></Card>
           <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.employee.cards.pendingLeave")}</p><p className="text-2xl font-bold mt-1">{ownPendingLeaves}</p></CardContent></Card>
           <Card className={`shadow-card ${roleTheme.cardClass}`}><CardContent className="p-5"><p className="text-sm text-muted-foreground">{t("dashboard.employee.cards.lateThisMonth")}</p><p className="text-2xl font-bold mt-1">{ownLateThisMonth}</p></CardContent></Card>
@@ -621,20 +623,34 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={attendanceByStatus}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214 20% 90%)" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} tickLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} />
+              <PieChart>
+                <Pie
+                  data={attendanceByStatus}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}   // 👈 ทำให้เป็น donut
+                  outerRadius={100}
+                  paddingAngle={4}
+                  dataKey="value"
+                >
+                  {attendanceByStatus.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.color || ["#22c55e", "#f59e0b", "#ef4444", "#3b82f6"][index % 4]} 
+                    />
+                  ))}
+                </Pie>
+
                 <Tooltip />
-                <Bar dataKey="value" fill="hsl(215 70% 45%)" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Legend />
+                </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
       {/* Alert Tables Row */}
-      <div className="grid grid-cols-0 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-2 gap-6">
         {/* Expiring Contracts */}
         <Card className="shadow-card">
           <CardHeader className="pb-2">
@@ -693,7 +709,6 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
-
       {/* Upcoming Holidays */}
       <Card className="shadow-card">
         <CardHeader className="pb-2">
@@ -717,6 +732,8 @@ const Dashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      
     </div>
   );
 };

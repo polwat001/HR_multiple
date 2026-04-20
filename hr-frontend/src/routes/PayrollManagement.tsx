@@ -295,7 +295,6 @@ export default function PayrollManagement() {
       return;
     }
     if (!selectedSetting) return;
-
     try {
       await apiPut(`/admin/payroll-settings/${selectedSetting.id}`, {
         basic_salary: selectedSetting.basicSalary,
@@ -513,6 +512,7 @@ export default function PayrollManagement() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "PayrollDraft");
     XLSX.writeFile(workbook, `payroll-draft-${selectedMonth.replace("-", "")}.xlsx`);
+    
   };
 
   return (
@@ -521,21 +521,21 @@ export default function PayrollManagement() {
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base">{t("payroll.title")}</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">{isHrCompany ? t("payroll.descriptionManage") : t("payroll.descriptionReadOnly")}</p>
+            <p className="text-sm text-muted-foreground mt-1">{isHrCompany ? t("payroll.overview.description.manage") : t("payroll.overview.description.readOnly")}</p>
           </div>
           <Badge variant="outline">
-            {isHrCompany ? t("payroll.badge.hrCompany") : isCentralHr ? t("payroll.badge.centralHr") : t("payroll.badge.systemAdmin")}
+            {isHrCompany ? t("payroll.roles.hrCompany") : isCentralHr ? t("payroll.roles.centralHr") : t("payroll.roles.systemAdmin")}
           </Badge>
         </CardHeader>
+
         <CardContent>
           {isReadOnly ? (
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">{t("payroll.readOnlyNotice")}</p>
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">{t("payroll.notice.readOnly")}</p>
           ) : null}
 
           <div className="space-y-6">
-
             <div className="space-y-6">
-              <h3 className="text-sm font-semibold text-foreground">Payroll Overview</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("payroll.overview.title")}</h3>
               <div className="grid grid-cols-0 md:grid-cols-2 lg:grid-cols-5 gap-3">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">{t("payroll.fields.month")}</p>
@@ -543,25 +543,25 @@ export default function PayrollManagement() {
                 </div>
                 <Card className="border-border/70">
                   <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground">Total Net Pay</p>
+                    <p className="text-xs text-muted-foreground">{t("payroll.fields.netAmount")}</p>
                     <p className="text-xl font-semibold mt-1">{(currentRow?.netAmount || 0).toLocaleString()}</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/70">
                   <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground">Total Employees</p>
+                    <p className="text-xs text-muted-foreground">{t("payroll.fields.employees")}</p>
                     <p className="text-xl font-semibold mt-1">{currentRow?.employees || 0}</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/70">
                   <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground">Payment Date</p>
+                    <p className="text-xs text-muted-foreground">{t("payroll.fields.paymentDate")}</p>
                     <p className="text-xl font-semibold mt-1">{currentRow?.paymentDate || "-"}</p>
                   </CardContent>
                 </Card>
                 <Card className="border-border/70">
                   <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground">Status</p>
+                    <p className="text-xs text-muted-foreground">{t("payroll.fields.status")}</p>
                     <Badge variant="outline" className={`mt-2 ${statusClassMap[currentRow?.status || "draft"]}`}>
                       {t(`payroll.status.${currentRow?.status || "draft"}`, currentRow?.status || "draft")}
                     </Badge>
@@ -572,7 +572,7 @@ export default function PayrollManagement() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <Card className="shadow-card lg:col-span-2">
                   <CardHeader>
-                    <CardTitle className="text-base">Payroll Cost Trend</CardTitle>
+                    <CardTitle className="text-base">{t("payroll.overview.metrics.costTrend")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-[280px]">
@@ -591,7 +591,7 @@ export default function PayrollManagement() {
                         {monthDelta >= 0 ? "+" : ""}
                         {monthDelta.toLocaleString()} ({monthDeltaPct}%)
                       </span>
-                      <span className="text-muted-foreground ml-2">vs previous month</span>
+                      <span className="text-muted-foreground ml-2">{t("payroll.overview.metrics.vsPreviousMonth")}</span>
                     </div>
                     {currentRow?.note ? <p className="text-xs text-muted-foreground mt-1">{currentRow.note}</p> : null}
                   </CardContent>
@@ -599,32 +599,32 @@ export default function PayrollManagement() {
 
                 <Card className="shadow-card">
                   <CardHeader>
-                    <CardTitle className="text-base">Current Month Breakdown</CardTitle>
+                    <CardTitle className="text-base">{t("payroll.overview.metrics.currentMonthBreakdown")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between"><span className="text-muted-foreground">OT</span><span>{(currentRow?.otAmount || 0).toLocaleString()}</span></div>
-                    <div className="flex items-center justify-between"><span className="text-muted-foreground">Allowances</span><span>{(currentRow?.allowanceAmount || 0).toLocaleString()}</span></div>
-                    <div className="flex items-center justify-between"><span className="text-muted-foreground">Deductions</span><span>{(currentRow?.deductionAmount || 0).toLocaleString()}</span></div>
-                    <div className="border-t pt-2 flex items-center justify-between font-semibold"><span>Net</span><span>{(currentRow?.netAmount || 0).toLocaleString()}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-muted-foreground">{t("payroll.fields.otAmount")}</span><span>{(currentRow?.otAmount || 0).toLocaleString()}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-muted-foreground">{t("payroll.fields.allowanceAmount")}</span><span>{(currentRow?.allowanceAmount || 0).toLocaleString()}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-muted-foreground">{t("payroll.fields.deductionAmount")}</span><span>{(currentRow?.deductionAmount || 0).toLocaleString()}</span></div>
+                    <div className="border-t pt-2 flex items-center justify-between font-semibold"><span>{t("payroll.fields.netAmount")}</span><span>{(currentRow?.netAmount || 0).toLocaleString()}</span></div>
                   </CardContent>
                 </Card>
               </div>
 
               <Card className="shadow-card overflow-hidden">
                 <CardHeader>
-                  <CardTitle className="text-base">Recent Payroll Cycles</CardTitle>
+                  <CardTitle className="text-base">{t("payroll.overview.metrics.recentCycles")}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/40">
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Month</th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Company</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Employees</th>
-                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Net Pay</th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Payment Date</th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("payroll.fields.month")}</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("payroll.fields.company")}</th>
+                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.fields.employees")}</th>
+                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.fields.netAmount")}</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("payroll.fields.paymentDate")}</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("payroll.fields.status")}</th>
+                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("payroll.fields.action")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -650,25 +650,24 @@ export default function PayrollManagement() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Run Payroll Wizard</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("payroll.wizard.title")}</h3>
               <Card className="shadow-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Run Payroll Wizard</CardTitle>
+                  <CardTitle className="text-base">{t("payroll.wizard.title")}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                  <div className="grid grid-rows-1 md:grid-cols-4 gap-2">
                     {[1, 2, 3, 4].map((step) => (
-                      <button
+                      <Card
                         key={step}
-                        type="button"
-                        className={`rounded-md border px-3 py-2 text-sm text-left ${wizardStep === step ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"}`}
+                        className={`p-4 shadow-card cursor-pointer transition-all ${wizardStep === step ?  "p-4 border-2 border-blue-500 bg-blue-100" : "hover:shadow-card-hover"}`}
                         onClick={() => setWizardStep(step)}
                       >
-                        <p className="font-medium">Step {step}</p>
+                        <p className="font-medium">{t("payroll.wizard.labels.step")} {step}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {step === 1 ? "Sync & Verify" : step === 2 ? "Allowances & Deductions" : step === 3 ? "Pre-Calculation Review" : "Approve & Generate"}
+                          {step === 1 ? t("payroll.wizard.steps.step1") : step === 2 ? t("payroll.wizard.steps.step2") : step === 3 ? t("payroll.wizard.steps.step3") : t("payroll.wizard.steps.step4")}
                         </p>
-                      </button>
+                      </Card>
                     ))}
                   </div>
                 </CardContent>
@@ -678,10 +677,10 @@ export default function PayrollManagement() {
                 <Card className="shadow-card overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                      <CardTitle className="text-base">Step 1: Sync & Verify Data</CardTitle>
+                      <CardTitle className="text-base">{t("payroll.wizard.steps.step1")}</CardTitle>
                       <p className="text-xs text-muted-foreground mt-1">Last sync: {lastSyncAt}</p>
                     </div>
-                    <Button onClick={runSyncData} disabled={syncing || isReadOnly}>{syncing ? "Syncing..." : "Sync Data"}</Button>
+                    <Button onClick={runSyncData} disabled={syncing || isReadOnly}>{syncing ? t("payroll.wizard.labels.syncing") : t("payroll.wizard.actions.sync")}</Button>
                   </CardHeader>
                   <CardContent className="p-0">
                     {totalMissingScan > 0 ? (
@@ -692,13 +691,13 @@ export default function PayrollManagement() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b bg-muted/40">
-                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">Employee</th>
-                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">Present</th>
-                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">Absent</th>
-                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">OT Hours</th>
-                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">Leave Days</th>
-                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">Missing Scan</th>
-                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">Alert</th>
+                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.labels.employee")}</th>
+                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.labels.present")}</th>
+                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.labels.absent")}</th>
+                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.labels.otHours")}</th>
+                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.labels.leaveDays")}</th>
+                          <th className="text-center px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.labels.missingScan")}</th>
+                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.labels.alert")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -724,19 +723,19 @@ export default function PayrollManagement() {
               {wizardStep === 2 ? (
                 <Card className="shadow-card overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-base">Step 2: Allowances & Deductions</CardTitle>
-                    <Button variant="outline" disabled={isReadOnly}>Import Excel</Button>
+                    <CardTitle className="text-base">{t("payroll.wizard.steps.step2")}</CardTitle>
+                    <Button variant="outline" disabled={isReadOnly}>{t("payroll.wizard.actions.importExcel")}</Button>
                   </CardHeader>
                   <CardContent className="p-0 overflow-x-auto">
                     <table className="w-full text-sm min-w-[960px]">
                       <thead>
                         <tr className="border-b bg-muted/40">
-                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">Employee</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Commission</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Travel</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Bonus</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Late Deduction</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Loan Deduction</th>
+                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.labels.employee")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.income.commission")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.income.travel")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.income.bonus")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.deduction.late")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.deduction.loan")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -764,24 +763,24 @@ export default function PayrollManagement() {
               {wizardStep === 3 ? (
                 <Card className="shadow-card overflow-hidden">
                   <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-base">Step 3: Pre-Calculation Review</CardTitle>
+                    <CardTitle className="text-base">{t("payroll.wizard.steps.step3")}</CardTitle>
                     <div className="flex gap-2">
-                      <Button variant="outline" onClick={runSyncData} disabled={syncing}>{syncing ? "Recalculating..." : "Recalculate"}</Button>
-                      <Button variant="outline" onClick={handleExportDraftExcel}>Export Draft</Button>
+                      <Button variant="outline" onClick={runSyncData} disabled={syncing}>{syncing ? t("payroll.wizard.status.recalculating") : t("payroll.wizard.actions.recalculate")}</Button>
+                      <Button variant="outline" onClick={handleExportDraftExcel}>{t("payroll.wizard.actions.exportDraft")}</Button>
                     </div>
                   </CardHeader>
                   <CardContent className="p-0 overflow-x-auto">
                     <table className="w-full text-sm min-w-[1280px]">
                       <thead>
                         <tr className="border-b bg-muted/40">
-                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Base Salary</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">+Other Income</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">+OT</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">-Absent/Late</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">-SSO</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">-WHT</th>
-                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">Net Pay</th>
+                          <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.labels.name")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.income.baseSalary")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.income.otherIncome")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.income.ot")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.deduction.absentLate")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.deduction.sso")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.deduction.wht")}</th>
+                          <th className="text-right px-4 py-3 font-medium text-muted-foreground">{t("payroll.wizard.summary.netPay")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -806,20 +805,20 @@ export default function PayrollManagement() {
               {wizardStep === 4 ? (
                 <Card className="shadow-card">
                   <CardHeader>
-                    <CardTitle className="text-base">Step 4: Approve & Generate</CardTitle>
+                    <CardTitle className="text-base">{t("payroll.wizard.steps.step4")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-rows-1 md:grid-cols-3 gap-3">
                       <div className="rounded-md border bg-muted/20 p-4">
-                        <p className="text-xs text-muted-foreground">Total Net Pay</p>
+                        <p className="text-xs text-muted-foreground">{t("payroll.wizard.summary.totalNetPay")}</p>
                         <p className="text-lg font-semibold mt-1">{payrollPreviewRows.reduce((sum, row) => sum + Math.max(0, row.netPay), 0).toLocaleString()}</p>
                       </div>
                       <div className="rounded-md border bg-muted/20 p-4">
-                        <p className="text-xs text-muted-foreground">Employees</p>
+                        <p className="text-xs text-muted-foreground">{t("payroll.wizard.summary.employees")}</p>
                         <p className="text-lg font-semibold mt-1">{payrollPreviewRows.length}</p>
                       </div>
                       <div className="rounded-md border bg-muted/20 p-4">
-                        <p className="text-xs text-muted-foreground">Payment Date</p>
+                        <p className="text-xs text-muted-foreground">{t("payroll.wizard.summary.paymentDate")}</p>
                         <p className="text-lg font-semibold mt-1">{currentRow?.paymentDate || "-"}</p>
                       </div>
                     </div>
@@ -835,7 +834,7 @@ export default function PayrollManagement() {
                           <option value="SCB_CSV">SCB CSV</option>
                           <option value="GENERIC_CSV">Generic CSV</option>
                         </select>
-                        <Button className="min-w-[200px]" onClick={handleGenerateBankFile} disabled={isReadOnly}>Generate Bank File</Button>
+                        <Button className="min-w-[200px]" onClick={handleGenerateBankFile} disabled={isReadOnly}>{t("payroll.wizard.actions.generateBankFile")}</Button>
                       </div>
                       <Button
                         className="min-w-[200px]"
@@ -843,7 +842,7 @@ export default function PayrollManagement() {
                         onClick={() => handleRunSystemAction("generate-payslips")}
                         disabled={runningActionKey !== null || isReadOnly}
                       >
-                        {runningActionKey === "generate-payslips" ? "Generating..." : "Generate Payslips"}
+                        {runningActionKey === "generate-payslips" ? `${t("payroll.wizard.actions.generating")}` : `${t("payroll.wizard.actions.generatePayslips")}`}
                       </Button>
                       <Button
                         className="min-w-[200px]"
@@ -851,7 +850,7 @@ export default function PayrollManagement() {
                         onClick={() => handleRunSystemAction("publish-payslips")}
                         disabled={runningActionKey !== null || isReadOnly}
                       >
-                        {runningActionKey === "publish-payslips" ? "Publishing..." : "Publish Payslips"}
+                        {runningActionKey === "publish-payslips" ? `${t("payroll.wizard.actions.publishing")}` : `${t("payroll.wizard.actions.publishPayslips")}`}
                       </Button>
                     </div>
                   </CardContent>
@@ -859,21 +858,21 @@ export default function PayrollManagement() {
               ) : null}
 
               <div className="flex items-center justify-between">
-                <Button variant="outline" disabled={wizardStep === 1} onClick={() => setWizardStep((s) => Math.max(1, s - 1))}>Back</Button>
-                <Button disabled={wizardStep === 4} onClick={() => setWizardStep((s) => Math.min(4, s + 1))}>Next</Button>
+                <Button variant="outline" disabled={wizardStep === 1} onClick={() => setWizardStep((s) => Math.max(1, s - 1))}>{t("payroll.wizard.actions.back")}</Button>
+                <Button variant="outline" disabled={wizardStep === 4} onClick={() => setWizardStep((s) => Math.min(4, s + 1))}>{t("payroll.wizard.actions.next")}</Button>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Employee Payroll Settings</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("payroll.wizard.employeeSettings.title")}</h3>
               <Card className="shadow-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Employee Payroll Settings</CardTitle>
+                  <CardTitle className="text-base">{t("payroll.wizard.employeeSettings.title")}</CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {selectedSetting ? null : <p className="text-sm text-muted-foreground lg:col-span-2">No payroll settings data</p>}
+                <CardContent className="grid grid-cols-2 lg:grid-cols-22 gap-4">
+                  {selectedSetting ? null : <p className="text-sm text-muted-foreground lg:col-span-2">{t("payroll.wizard.employeeSettings.empty")}</p>}
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">Employee</p>
+                    <p className="text-xs text-muted-foreground mb-2">{t("payroll.wizard.labels.employee")}</p>
                     <select
                       className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                       value={selectedSettingId}
@@ -889,23 +888,23 @@ export default function PayrollManagement() {
                   </div>
 
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Basic Salary</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("payroll.wizard.income.basicSalary")}</p>
                     <Input type="number" value={selectedSetting?.basicSalary || 0} onChange={(e) => updateSelectedSetting("basicSalary", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Bank Name</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("payroll.wizard.employeeSettings.fields.bankName")}</p>
                     <Input value={selectedSetting?.bankName || ""} onChange={(e) => updateSelectedSetting("bankName", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Bank Account No.</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("payroll.wizard.employeeSettings.fields.bankAccountNo")}</p>
                     <Input value={selectedSetting?.bankAccountNo || ""} onChange={(e) => updateSelectedSetting("bankAccountNo", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Tax Dependent (children)</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("payroll.wizard.employeeSettings.fields.taxDependent")}</p>
                     <Input type="number" value={selectedSetting?.taxDependent || 0} onChange={(e) => updateSelectedSetting("taxDependent", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Life Insurance Deduction</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("payroll.wizard.employeeSettings.fields.lifeInsurance")}</p>
                     <Input type="number" value={selectedSetting?.lifeInsuranceDeduction || 0} onChange={(e) => updateSelectedSetting("lifeInsuranceDeduction", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div className="flex items-center gap-2 pt-6">
@@ -916,36 +915,37 @@ export default function PayrollManagement() {
                       onChange={(e) => updateSelectedSetting("ssoEnabled", e.target.checked)}
                       disabled={isReadOnly}
                     />
-                    <label htmlFor="sso-enabled" className="text-sm">Enable SSO Deduction</label>
+                    <label htmlFor="sso-enabled" className="text-sm">{t("payroll.wizard.employeeSettings.fields.ssoEnabled")}</label>
                   </div>
 
                   <div className="lg:col-span-2 flex justify-end">
-                    <Button onClick={handleSaveSetting} disabled={!selectedSetting || isReadOnly}>Save Payroll Setting</Button>
+                    <Button variant="outline" onClick={handleSaveSetting} disabled={!selectedSetting || isReadOnly}>{t("payroll.wizard.employeeSettings.actions.save")}</Button>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
+            {/* Payroll Reports */}
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-foreground">Payroll Reports</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("payroll.report.title")}</h3>
               <Card className="shadow-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Payroll Reports</CardTitle>
+                  <CardTitle className="text-base">{t("payroll.report.title")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Month</p>
+                      <p className="text-xs text-muted-foreground mb-1">{t("payroll.report.filters.month")}</p>
                       <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Department</p>
+                      <p className="text-xs text-muted-foreground mb-1">{t("payroll.report.filters.department")}</p>
                       <select
                         className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                         value={reportDepartment}
                         onChange={(e) => setReportDepartment(e.target.value)}
                       >
-                        <option value="all">All Departments</option>
+                        <option value="all">{t("payroll.report.filters.allDepartments")}</option>
                         {departmentOptions.map((dept) => (
                           <option key={dept} value={dept}>{dept}</option>
                         ))}
@@ -954,10 +954,10 @@ export default function PayrollManagement() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>Download Payroll Summary Report</Button>
-                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>Download P.N.D. 1 (WHT)</Button>
-                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>Download SSO 1-10 Report</Button>
-                    <Button variant="outline" className="justify-start" onClick={handleDownloadOtReport}>Download OT by Cost Center</Button>
+                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>{t("payroll.report.downloads.attendance")}</Button>
+                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>{t("payroll.report.downloads.pnd1")}</Button>
+                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>{t("payroll.report.downloads.sso")}</Button>
+                    <Button variant="outline" className="justify-start" onClick={handleDownloadOtReport}>{t("payroll.report.downloads.ot")}</Button>
                   </div>
                 </CardContent>
               </Card>

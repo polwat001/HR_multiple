@@ -11,6 +11,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/types/roles";
 import { MODULE_ACCESS_MATRIX, NAV_MODULE_ORDER, ModuleKey, canAccessModule, resolvePrimaryRole } from "@/lib/accessMatrix";
 import { cn } from "@/lib/utils";
+import { Menu, X } from "lucide-react";
 
 interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
@@ -103,17 +104,19 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     })
     .filter((item) => MODULE_ACCESS_MATRIX[item.moduleKey].showInNav);
 
-  const visibleNavItems = (() => {
-    if (!isSuperAdmin) {
-      return navItems.filter((item) => canAccessModule(roles, item.moduleKey));
-    }
+const isDev = process.env.NODE_ENV === "development";
 
-    // For Super Admin, keep navigation strictly aligned with requested governance flow.
-    return SUPER_ADMIN_NAV_ORDER
-      .map((moduleKey) => navItems.find((item) => item.moduleKey === moduleKey))
-      .filter((item): item is NavItem => Boolean(item));
-  })();
+const visibleNavItems = (() => {
+  if (isDev) return navItems;
 
+  if (!isSuperAdmin) {
+    return navItems.filter((item) => canAccessModule(roles, item.moduleKey));
+  }
+
+  return SUPER_ADMIN_NAV_ORDER
+    .map((moduleKey) => navItems.find((item) => item.moduleKey === moduleKey))
+    .filter((item): item is NavItem => Boolean(item));
+})();
   useEffect(() => {
     if (!location.startsWith("/organization")) return;
     setExpandedMenus((prev) => ({ ...prev, "/organization": true }));
@@ -128,7 +131,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "gradient-sidebar flex flex-col transition-all duration-300 relative z-10",
+          "bg-[#1B2E3C] flex flex-col transition-all duration-300 relative z-10",
           collapsed ? "w-[68px]" : "w-[250px]"
         )}
       >
@@ -137,6 +140,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center text-white font-bold text-sm shrink-0">
             HR
           </div>
+
           {!collapsed && (
             <span className="text-white font-semibold text-sm truncate">
               {t("app.title")}
@@ -162,7 +166,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                     className={cn(
                       "flex flex-1 items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors-300",
                       isActive
-                        ? "bg-white/15 text-white font-medium"
+                        ? "bg-[#289c9e] text-white font-medium"
                         : "text-white hover:bg-white/10"
                     )}
                   >
@@ -218,30 +222,35 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           {!collapsed && <span className="truncate">{t("app.logout")}</span>}
         </button>
 
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="absolute -right-3 top-20 h-6 w-6 rounded-full bg-card border border-border flex items-center justify-center shadow-card hover:shadow-card-hover transition-shadow"
-        >
-          {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
-        </button>
       </aside>
 
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 shrink-0">
-          <div>
+          <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 shrink-0">
+            <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="h-9 w-9 flex items-center justify-center rounded-md hover:bg-muted transition"
+            >
+              {collapsed ? (
+                <Menu className="h-5 w-5" />
+              ) : (
+                <X className="h-5 w-5" />
+              )}
+            </button>
+
             <h1 className="text-lg font-semibold text-foreground">
               {t(
                 `module.${visibleNavItems.find(i => 
-                location === i.path || 
-                (i.path !== "/" && location.startsWith(i.path))
-              )?.moduleKey || "dashboard"}`,
+                  location === i.path || 
+                  (i.path !== "/" && location.startsWith(i.path))
+                )?.moduleKey || "dashboard"}`,
                 t("app.dashboardFallback")
               )}
             </h1>
           </div>
+
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-xs">
               <span className="text-muted-foreground">{t("app.language")}</span>

@@ -163,7 +163,7 @@ const SelfService = () => {
     estimated_total_amount: 0,
   });
 
-  useEffect(() => {
+    useEffect(() => {
     const fetchData = async () => {
       try {
         if (!hasLoadedOnce) {
@@ -316,6 +316,7 @@ const SelfService = () => {
         setHasLoadedOnce(true);
       }
     };
+    
 
     fetchData();
   }, [authUser?.user_id, selectedMonth]);
@@ -395,6 +396,20 @@ const SelfService = () => {
 
   const otTotal = otSummary.total_hours;
   const otAmount = otSummary.estimated_total_amount;
+  const getStatusStyle = (status?: string) => {
+  switch (status) {
+    case "active":
+      return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+    case "inactive":
+      return "bg-slate-100 text-slate-600 border border-slate-200";
+    case "suspended":
+      return "bg-red-100 text-red-700 border border-red-200";
+    case "pending":
+      return "bg-amber-100 text-amber-700 border border-amber-200";
+    default:
+      return "bg-slate-100 text-slate-600 border border-slate-200";
+  }
+};
 
   const leaveQuotaForDisplay: LeaveBalanceRow[] = useMemo(() => {
     if (leaveTypes.length > 0) {
@@ -465,8 +480,11 @@ const SelfService = () => {
   }
 
   return (
+
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+
+      {/* Month Selector */}
+      <div className="flex flex-col-2 md:flex-row md:items-center md:justify-between gap-3">
         <h2 className="text-2xl font-bold text-foreground">{t("selfService.title")}</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">{t("selfService.monthData")}</span>
@@ -508,224 +526,404 @@ const SelfService = () => {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="flex items-center gap-6 p-6">
-          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-4xl">
-            {displayName?.[0] || "U"}
-          </div>
-          <div className="flex-1 space-y-1">
-            <h3 className="text-xl font-semibold text-foreground">
-              {displayName}
-            </h3>
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><Briefcase className="h-4 w-4" />{profile?.position_name || authUser?.position_name || "-"}</span>
-              <span className="flex items-center gap-1"><Building className="h-4 w-4" />{profile?.department_name || "-"} - {profile?.company_name || "-"}</span>
-              <span className="flex items-center gap-1"><User className="h-4 w-4" />{profile?.employee_code || "-"}</span>
-              <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />{t("selfService.jobInfo.tenure")} {tenure}</span>
-            </div>
-          </div>
-          <Badge variant={profile?.status === "active" ? "default" : "secondary"}>{profile?.status || "-"}</Badge>
-        </CardContent>
-      </Card>
+      {/* ================== Employee Profile Card ================== */}
 
+<Card className="border border-border/50 shadow-sm hover:shadow-md transition-all duration-300">
+  <CardContent className="flex items-center gap-6 p-6">
+
+    {/* Avatar */}
+    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-xl font-bold text-primary shadow-sm">
+      {displayName?.[0] || "U"}
+    </div>
+
+    {/* Info */}
+    <div className="flex-1 space-y-1">
+      <h3 className="text-lg md:text-xl font-semibold text-foreground tracking-tight">
+        {displayName}
+      </h3>
+
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+
+        <span className="flex items-center gap-1">
+          <Briefcase className="h-4 w-4" />
+          {profile?.position_name || authUser?.position_name || "-"}
+        </span>
+
+        <span className="flex items-center gap-1">
+          <Building className="h-4 w-4" />
+          {profile?.department_name || "-"} - {profile?.company_name || "-"}
+        </span>
+
+        <span className="flex items-center gap-1">
+          <User className="h-4 w-4" />
+          {profile?.employee_code || "-"}
+        </span>
+
+        <span className="flex items-center gap-1">
+          <CalendarDays className="h-4 w-4" />
+          {t("selfService.jobInfo.tenure")} {tenure}
+        </span>
+
+      </div>
+    </div>
+
+    {/* Status Badge */}
+    <div>
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusStyle(
+          profile?.status
+        )}`}
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+        {profile?.status || "-"}
+      </span>
+    </div>
+
+  </CardContent>
+</Card>
+
+      <div className="space-y-6">
+
+      {/* Leave Quota + Attendance */}
       <div className="grid grid-cols-0 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("selfService.leaveQuota")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {monthLoading && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="w-16 h-16 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-3 w-44" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Skeleton className="w-16 h-16 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-40" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Skeleton className="w-16 h-16 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-3 w-36" />
-                  </div>
-                </div>
-              </div>
-            )}
-            {!monthLoading && (
-              <>
-                {leaveQuotaForDisplay.map((lq, i) => {
-                  const quota = Number(lq.quota || 0);
-                  const used = Number(lq.used || 0);
-                  const remaining = Number(
-                    lq.balance !== undefined
-                      ? lq.balance
-                      : Math.max(0, quota - used)
-                  );
-                  const hasAnyQuota = quota > 0 || used > 0 || remaining > 0;
-                  const pieData = [
-                    { name: t("selfService.used"), value: used },
-                    { name: t("selfService.remaining"), value: remaining },
-                  ];
-                  return (
-                    <div key={lq.id} className="flex items-center gap-4">
-                      <div className="w-16 h-16">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={18} outerRadius={28} dataKey="value" strokeWidth={0}>
-                              <Cell fill={hasAnyQuota ? LEAVE_COLORS[i % LEAVE_COLORS.length] : "hsl(var(--muted-foreground))"} />
-                              <Cell fill="hsl(var(--muted))" />
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-foreground">{getLeaveTypeLabel(lq.leave_type_code, lq.leave_type_name, lq.leave_type_id || lq.id)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {t("selfService.used")} {used} / {quota} {t("selfService.dayUnit")} - {t("selfService.remaining")} {remaining} {t("selfService.dayUnit")}
-                        </div>
+
+          {/* ================== Leave Quota ================== */}
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">
+                {t("selfService.leaveQuota")}
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {monthLoading && (
+                <div className="space-y-3">
+                  {[1,2,3].map((i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <Skeleton className="w-16 h-16 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-3 w-44" />
                       </div>
                     </div>
-                  );
-                })}
-                {leaveQuotaForDisplay.length === 0 && (
-                  <p className="text-sm text-muted-foreground">{t("selfService.noLeaveQuota")}</p>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
 
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4" /> {t("selfService.attendance.title")} - {monthTitle}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-7 gap-1 text-center text-xs mb-1">
-              {(language === "th" ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]).map((d) => (
-                <div key={d} className="font-medium text-muted-foreground py-1">{d}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {calendarData.map((cell, idx) =>
-                cell.day === 0 ? (
-                  <div key={idx} />
-                ) : (
-                  <div
-                    key={idx}
-                    className="rounded-md border border-border p-1 text-center min-h-[56px] flex flex-col items-center justify-center"
-                    title={buildAttendanceTooltip(cell.record)}
-                  >
-                    <span className="text-xs text-muted-foreground">{cell.day}</span>
-                    {cell.record && (
-                      <>
-                        <span className={`inline-block mt-0.5 h-2.5 w-2.5 rounded-full ${statusColors[String(cell.record.status || "present")] || "bg-emerald-500"}`} />
-                        {cell.record.check_in_time !== "-" && (
-                          <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+              {!monthLoading && (
+                <>
+                  {leaveQuotaForDisplay.map((lq, i) => {
+                    const quota = Number(lq.quota || 0);
+                    const used = Number(lq.used || 0);
+                    const remaining = Number(
+                      lq.balance !== undefined
+                        ? lq.balance
+                        : Math.max(0, quota - used)
+                    );
+
+                    const hasAnyQuota = quota > 0 || used > 0 || remaining > 0;
+
+                    const pieData = [
+                      { name: t("selfService.used"), value: used },
+                      { name: t("selfService.remaining"), value: remaining },
+                    ];
+
+                    return (
+                      <div
+                        key={lq.id}
+                        className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted/40 transition-all duration-200"
+                      >
+                        {/* Pie */}
+                        <div className="w-16 h-16 relative">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={18}
+                                outerRadius={28}
+                                dataKey="value"
+                                strokeWidth={0}
+                              >
+                                <Cell
+                                  fill={
+                                    hasAnyQuota
+                                      ? LEAVE_COLORS[i % LEAVE_COLORS.length]
+                                      : "hsl(var(--muted-foreground))"
+                                  }
+                                />
+                                <Cell fill="hsl(var(--muted))" />
+                              </Pie>
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+
+                          {/* Center Value */}
+                          <div className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-foreground">
+                            {remaining}
+                          </div>
+                        </div>
+
+                        {/* Text */}
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-foreground">
+                            {getLeaveTypeLabel(
+                              lq.leave_type_code,
+                              lq.leave_type_name,
+                              lq.leave_type_id || lq.id
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {t("selfService.used")} {used} / {quota}{" "}
+                            {t("selfService.dayUnit")} -{" "}
+                            {t("selfService.remaining")} {remaining}{" "}
+                            {t("selfService.dayUnit")}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {leaveQuotaForDisplay.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      {t("selfService.noLeaveQuota")}
+                    </p>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ================== Attendance ================== */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                {t("selfService.attendance.title")} - {monthTitle}
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent>
+
+              {/* Day Header */}
+              <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+                {(language === "th"
+                  ? ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"]
+                  : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+                ).map((d) => (
+                  <div key={d} className="font-medium text-muted-foreground py-1">
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar */}
+              <div className="grid grid-cols-7 gap-2">
+                {calendarData.map((cell, idx) =>
+                  cell.day === 0 ? (
+                    <div key={idx} />
+                  ) : (
+                    <div
+                      key={idx}
+                      className={`
+                        rounded-lg border border-border p-1 text-center min-h-[64px]
+                        flex flex-col items-center justify-center
+                        transition-all duration-200
+                        ${cell.record
+                          ? (statusColors[String(cell.record.status || "present")] || "bg-emerald-500") + " text-white"
+                          : "bg-white hover:bg-muted/50"
+                        }
+                      `}
+                      title={buildAttendanceTooltip(cell.record)}
+                    >
+                      {/* Day */}
+                      <span
+                          className={`text-sm md:text-base font-bold ${
+                          cell.record ? "text-white" : "text-muted-foreground"
+                        }`}
+                      >
+                        {cell.day}
+                      </span>
+
+                      {/* Time */}
+                      {cell.record &&
+                        cell.record.check_in_time !== "-" && (
+                          <span
+                            className={`text-[10px] leading-tight mt-0.5 ${
+                              cell.record
+                                ? "text-white/90"
+                                : "text-muted-foreground"
+                            }`}
+                          >
                             {cell.record.check_in_time}
                           </span>
                         )}
-                      </>
-                    )}
-                  </div>
-                )
-              )}
-            </div>
-            <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-              {Object.entries(statusLabels).map(([k, v]) => (
-                <span key={k} className="flex items-center gap-1">
-                  <span className={`h-2.5 w-2.5 rounded-full ${statusColors[k] || "bg-emerald-500"}`} /> {v}
-                </span>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                    </div>
+                  )
+                )}
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-wrap gap-3 mt-4 text-xs text-muted-foreground">
+                {Object.entries(statusLabels).map(([k, v]) => (
+                  <span key={k} className="flex items-center gap-1">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        statusColors[k] || "bg-emerald-500"
+                      }`}
+                    />
+                    {v}
+                  </span>
+                ))}
+              </div>
+
+            </CardContent>
+          </Card>
+
+        </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Timer className="h-4 w-4" /> {t("selfService.otSummary")}
+      {/* ================== OT Summary Card ================== */}
+      <Card className="border border-border/50 shadow-sm hover:shadow-md transition-all duration-300">
+
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 font-semibold">
+            <Timer className="h-4 w-4 text-primary" />
+            {t("selfService.otSummary")}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-6 mb-4">
-            <div className="bg-primary/10 rounded-lg px-4 py-3 text-center">
-              <div className="text-2xl font-bold text-primary">{otTotal}</div>
-              <div className="text-xs text-muted-foreground">{t("selfService.otHours")}</div>
+
+        <CardContent className="space-y-5">
+
+          {/* ================== KPI ================== */}
+          <div className="grid grid-cols-2 gap-4">
+
+            {/* OT Hours */}
+            <div className="rounded-xl border bg-gradient-to-br from-primary/10 to-primary/5 p-4 text-center ">
+              <div className="text-3xl font-bold text-primary tracking-tight">
+                {otTotal}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {t("selfService.otHours")}
+              </div>
             </div>
-            <div className="bg-primary/10 rounded-lg px-4 py-3 text-center">
-              <div className="text-2xl font-bold text-primary">฿{otAmount.toLocaleString()}</div>
-              <div className="text-xs text-muted-foreground">{t("selfService.otValue")}</div>
+
+            {/* OT Amount */}
+            <div className="rounded-xl border bg-gradient-to-br from-primary/10 to-primary/5 p-4 text-center ">
+              <div className="text-3xl font-bold text-primary tracking-tight">
+                ฿{otAmount.toLocaleString()}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {t("selfService.otValue")}
+              </div>
             </div>
+
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("selfService.otTable.date")}</TableHead>
-                <TableHead>{t("selfService.otTable.hours")}</TableHead>
-                <TableHead>{t("selfService.otTable.amount")}</TableHead>
-                <TableHead>{t("selfService.otTable.status")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {monthLoading && (
-                <>
-                  <TableRow>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                  </TableRow>
-                </>
-              )}
-              {!monthLoading && (
-                <>
-              {otRecords.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell>{r.request_date}</TableCell>
-                  <TableCell>{r.hours} {t("selfService.hourAbbr")}</TableCell>
-                  <TableCell>฿{r.amount.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Badge variant={r.status === "approved" ? "default" : "secondary"}>
-                      {r.status === "approved" ? t("selfService.otStatus.approved") : r.status === "pending" ? t("selfService.otStatus.pending") : t("selfService.otStatus.rejected")}
-                    </Badge>
-                  </TableCell>
+
+          {/* ================== TABLE ================== */}
+          <div className="rounded-xl border overflow-hidden">
+
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="text-xs font-semibold">
+                    {t("selfService.otTable.date")}
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    {t("selfService.otTable.hours")}
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    {t("selfService.otTable.amount")}
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold">
+                    {t("selfService.otTable.status")}
+                  </TableHead>
                 </TableRow>
-              ))}
-              {otRecords.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-4">{t("selfService.noOtData")}</TableCell>
-                </TableRow>
-              )}
-                </>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+
+              <TableBody>
+
+                {/* Loading */}
+                {monthLoading && (
+                  <>
+                    {[1,2,3].map((i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                      </TableRow>
+                    ))}
+                  </>
+                )}
+
+                {/* Data */}
+                {!monthLoading && (
+                  <>
+                    {otRecords.map((r) => {
+
+                      const statusStyle =
+                        r.status === "approved"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : r.status === "pending"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-red-100 text-red-700";
+
+                      return (
+                        <TableRow
+                          key={r.id}
+                          className="hover:bg-muted/30 transition-colors"
+                        >
+                          <TableCell className="text-sm font-medium">
+                            {r.request_date}
+                          </TableCell>
+
+                          <TableCell className="text-sm">
+                            {r.hours} {t("selfService.hourAbbr")}
+                          </TableCell>
+
+                          <TableCell className="text-sm font-semibold">
+                            ฿{r.amount.toLocaleString()}
+                          </TableCell>
+
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${statusStyle}`}
+                            >
+                              {r.status === "approved"
+                                ? t("selfService.otStatus.approved")
+                                : r.status === "pending"
+                                ? t("selfService.otStatus.pending")
+                                : t("selfService.otStatus.rejected")}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+
+                    {/* Empty */}
+                    {otRecords.length === 0 && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
+                          className="text-center text-muted-foreground py-6"
+                        >
+                          {t("selfService.noOtData")}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                )}
+
+              </TableBody>
+            </Table>
+
+          </div>
+
         </CardContent>
       </Card>
+
     </div>
   );
 };

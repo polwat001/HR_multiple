@@ -422,7 +422,8 @@ const Reports = () => {
         <CardHeader>
           <CardTitle className="text-base">{t("reports.filters.title")}</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+
+        <CardContent className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-3">
           <div>
             <p className="text-xs text-muted-foreground mb-1">{t("reports.filters.company")}</p>
             {isEmployeeReports || isManagerReports || isCompanyReports ? (
@@ -458,16 +459,6 @@ const Reports = () => {
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground mb-1">{t("reports.dateFrom")}</p>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          </div>
-
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">{t("reports.dateTo")}</p>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          </div>
-
-          <div>
             <p className="text-xs text-muted-foreground mb-1">{t("reports.filters.employeeStatus")}</p>
             <select
               className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
@@ -479,14 +470,28 @@ const Reports = () => {
               ))}
             </select>
           </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">{t("reports.dateFrom")}</p>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">{t("reports.dateTo")}</p>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <div className="grid grid-cols-3 lg:grid-cols-3 gap-6">
         {/* Report List */}
-        <div className="lg:col-span-2 space-y-3">
+  
+        <Card className="lg:col-span-2 space-y-3">
+          <CardHeader>
+            <CardTitle className="text-base">{t("reports.catalog.title")}</CardTitle>
+          </CardHeader>
+
           {visibleReports.map((r) => (
-            <Card key={r.id} className="shadow-card hover:shadow-card-hover transition-shadow cursor-pointer">
+            <div key={r.id} >
               <CardContent className="p-4 flex items-center gap-4">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                   <r.icon className="h-5 w-5" />
@@ -496,17 +501,43 @@ const Reports = () => {
                   <p className="text-xs text-muted-foreground mt-0.5">{t(`reports.catalog.${r.id}.description`)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleExport(r.id, t(`reports.catalog.${r.id}.name`), "excel")}>
-                    <Download className="h-4 w-4" /> {t("reports.exportXlsx")}
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-green-600 text-white hover:bg-green-700 transition"
+                    onClick={() =>
+                      handleExport(
+                        r.id,
+                        t(`reports.catalog.${r.id}.name`),
+                        "excel"
+                      )
+                    }
+                  >
+                    <Download className="h-4 w-4" />
+                    {t("reports.exportXlsx")}
                   </Button>
-                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleExport(r.id, t(`reports.catalog.${r.id}.name`), "pdf")}>
-                    <Download className="h-4 w-4" /> {t("reports.exportPdf")}
+
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-red-600 text-white hover:bg-red-700 transition"
+                    onClick={() =>
+                      handleExport(
+                        r.id,
+                        t(`reports.catalog.${r.id}.name`),
+                        "pdf"
+                      )
+                    }
+                  >
+                    <Download className="h-4 w-4" />
+                    {t("reports.exportPdf")}
                   </Button>
                 </div>
               </CardContent>
-            </Card>
+            </div>
           ))}
-        </div>
+
+        </Card>
+
+        
 
         {/* Generate Options */}
         <Card className="shadow-card h-fit">
@@ -541,6 +572,7 @@ const Reports = () => {
                 </RadioGroup>
               )}
             </div>
+
             <div>
               <p className="text-sm font-medium mb-3">{t("reports.generateOptions.format")}</p>
               <RadioGroup value={format} onValueChange={setFormat} className="space-y-2">
@@ -563,11 +595,19 @@ const Reports = () => {
                 ? t("reports.generateOptions.pdfGroupHint")
                 : t("reports.generateOptions.excelHint")}
             </div>
-            <Button
-              className="w-full gap-1.5"
-              onClick={() => handleExport("bulk-export", t("reports.bulkExportName"))}
+            <Button variant="outline" className={`w-full gap-1.5 text-white transition
+                ${
+                  exportLabel.toLowerCase().includes("pdf")
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                }
+              `}
+              onClick={() =>
+                handleExport("bulk-export", t("reports.bulkExportName"))
+              }
             >
-              <Download className="h-4 w-4" /> {exportLabel}
+              <Download className="h-4 w-4" />
+              {exportLabel}
             </Button>
           </CardContent>
         </Card>

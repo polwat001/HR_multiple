@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Sheet,SheetContent,SheetHeader,SheetTitle,SheetTrigger, } from "@/components/ui/sheet";
 
 type ShiftRow = {
   id: number;
@@ -157,6 +158,7 @@ const TimeAttendance = () => {
     endTime: "",
     reason: "",
   });
+  const [showCreateShift, setShowCreateShift] = useState(false);
   const [isSubmittingOt, setIsSubmittingOt] = useState(false);
   const [showEmployeeOtForm, setShowEmployeeOtForm] = useState(false);
   const [attendanceActionLoading, setAttendanceActionLoading] = useState<"check-in" | "check-out" | null>(null);
@@ -181,8 +183,7 @@ const TimeAttendance = () => {
         console.error("Failed to fetch OT requests:", error);
       }
     }, []);
-
-  const fetchSchedules = useCallback(async () => {
+    const fetchSchedules = useCallback(async () => {
     try {
       setSchedulesLoading(true);
       // Prefer /shifts to keep API coverage complete; fallback to /schedules for compatibility.
@@ -218,14 +219,14 @@ const TimeAttendance = () => {
           };
         })
       );
-
       setScheduleRows(shiftsWithEmployees);
-    } catch (error) {
-      console.error("Failed to fetch schedules:", error);
-    } finally {
-      setSchedulesLoading(false);
-    }
-  }, []);
+        } catch (error) {
+          console.error("Failed to fetch schedules:", error);
+        } finally {
+          setSchedulesLoading(false);
+        }
+      }, []);
+
 
   const fetchAdjustmentApprovals = useCallback(async () => {
     if (!canManageAdjustments) {
@@ -261,6 +262,9 @@ const TimeAttendance = () => {
     }
   }, [canManageAdjustments]);
 
+
+
+
   const fetchAttendance = useCallback(async () => {
       try {
         const res = await apiGet<any>("/attendance");
@@ -270,7 +274,8 @@ const TimeAttendance = () => {
         console.error("Failed to fetch attendance logs:", error);
       }
     }, []);
-
+    
+    
   useEffect(() => {
     const run = async () => {
       const tasks: Array<Promise<unknown>> = [fetchOt(), fetchAttendance(), fetchSchedules()];
@@ -474,6 +479,7 @@ const TimeAttendance = () => {
 
     return (
       <div className="space-y-6 animate-fade-in">
+        
         <div className="flex items-center gap-3 text-sm">
           <span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-3 py-1 font-medium">{t("timeAttendance.employee.badge")}</span>
           <span className="text-muted-foreground">{t("timeAttendance.employee.onlyYourSchedule")}</span>
@@ -656,41 +662,115 @@ const TimeAttendance = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="space-y-6">
-
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">{t("timeAttendance.tabs.workSchedule")}</h3>
+        <div className="mt-4">
         <Card className="shadow-card">
+
+          {/* การจัดการกะ */}
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("timeAttendance.shiftManagement.title")}</CardTitle>
             <Badge variant="outline">{t("timeAttendance.shiftManagement.totalShifts").replace("{{count}}", String(visibleScheduleRows.length))}</Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            
+            {/* ตารางการจัดการกะ */}
             {canCreateShift && (
-              <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
-                <p className="text-sm font-medium">{t("timeAttendance.shiftManagement.addNew")}</p>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">{t("timeAttendance.shiftManagement.fields.shiftName")}</p>
-                    <Input value={newShift.shiftName} onChange={(e) => setNewShift((p) => ({ ...p, shiftName: e.target.value }))} placeholder={t("timeAttendance.shiftManagement.fields.shiftPlaceholder")} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">{t("timeAttendance.shiftManagement.fields.timeIn")}</p>
-                    <Input type="time" value={newShift.timeIn} onChange={(e) => setNewShift((p) => ({ ...p, timeIn: e.target.value }))} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">{t("timeAttendance.shiftManagement.fields.timeOut")}</p>
-                    <Input type="time" value={newShift.timeOut} onChange={(e) => setNewShift((p) => ({ ...p, timeOut: e.target.value }))} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">{t("timeAttendance.shiftManagement.fields.graceMinutes")}</p>
-                    <Input type="number" value={newShift.graceMinutes} onChange={(e) => setNewShift((p) => ({ ...p, graceMinutes: e.target.value }))} min={0} />
-                  </div>
-                </div>
-                <Button onClick={handleCreateShift} disabled={isCreatingShift}>
-                  {isCreatingShift ? t("timeAttendance.actions.saving") : t("timeAttendance.shiftManagement.createShift")}
+            <Sheet open={showCreateShift} onOpenChange={setShowCreateShift}>
+              
+              {/* BUTTON */}
+              <SheetTrigger asChild>
+                <Button variant="outline" className="gap-2 px-4">
+                  + {t("timeAttendance.shiftManagement.addNew")}
                 </Button>
-              </div>
-            )}
+              </SheetTrigger>
+
+              {/* PANEL */}
+              <SheetContent side="right" className="w-full sm:w-[420px] p-6">
+                
+                <SheetHeader>
+                  <SheetTitle className="text-lg font-semibold">
+                    {t("timeAttendance.shiftManagement.addNew")}
+                  </SheetTitle>
+                </SheetHeader>
+
+                <div className="mt-6 space-y-4">
+
+                  {/* FORM */}
+                  <div className="space-y-3">
+
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Shift Name</p>
+                      <Input
+                        placeholder={t("timeAttendance.shiftManagement.fields.shiftPlaceholder")}
+                        value={newShift.shiftName}
+                        onChange={(e) =>
+                          setNewShift((p) => ({ ...p, shiftName: e.target.value }))
+                        }
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Time In</p>
+                        <Input
+                          type="time"
+                          value={newShift.timeIn}
+                          onChange={(e) =>
+                            setNewShift((p) => ({ ...p, timeIn: e.target.value }))
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Time Out</p>
+                        <Input
+                          type="time"
+                          value={newShift.timeOut}
+                          onChange={(e) =>
+                            setNewShift((p) => ({ ...p, timeOut: e.target.value }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Grace Minutes</p>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={newShift.graceMinutes}
+                        onChange={(e) =>
+                          setNewShift((p) => ({ ...p, graceMinutes: e.target.value }))
+                        }
+                      />
+                    </div>
+
+                  </div>
+
+                  {/* ACTION */}
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCreateShift(false)}
+                    >
+                      {t("timeAttendance.actions.cancel")}
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        handleCreateShift();
+                        setShowCreateShift(false);
+                      }}
+                      disabled={isCreatingShift}
+                    >
+                      {isCreatingShift
+                        ? t("timeAttendance.actions.saving")
+                        : t("timeAttendance.shiftManagement.createShift")}
+                    </Button>
+                  </div>
+
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
+          </CardHeader>
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -744,94 +824,181 @@ const TimeAttendance = () => {
                 </tbody>
               </table>
             </div>
-          </CardContent>
         </Card>
       </div>
 
       {!isEmployeeOnly && (
       <div className="mt-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">{t("timeAttendance.tabs.attendanceLog")}</h3>
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">{t("timeAttendance.attendanceLog.title")}</CardTitle>
-            <div className="flex items-center gap-2">
-              <select
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                value={selectedAttendanceShift}
-                onChange={(e) => setSelectedAttendanceShift(e.target.value)}
-              >
-                <option value="all">{t("timeAttendance.attendanceLog.allShifts")}</option>
-                {scheduleRows.map((s) => (
-                  <option key={s.id} value={String(s.id)}>{s.shiftName}</option>
+        <Card className="rounded-xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-base">
+                {t("timeAttendance.attendanceLog.title")}
+              </CardTitle>
+              
+              <div className="flex flex-wrap gap-2 flex-1 justify-center">
+                {Object.entries(
+                  teamAttendanceRows
+                    .filter(
+                      (a) =>
+                        selectedAttendanceShift === "all" ||
+                        String(a.shiftId || "") === selectedAttendanceShift
+                    )
+                    .reduce((acc: Record<string, any[]>, row: any) => {
+                      const key =
+                        row.shiftName ||
+                        t("timeAttendance.common.unassignedShift");
+                      if (!acc[key]) acc[key] = [];
+                      acc[key].push(row);
+                      return acc;
+                    }, {})
+                ).map(([shiftName, rows]) => (
+                  <Badge
+                    key={shiftName}
+                    variant="outline"
+                    className="rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1"
+                  >
+                    <span className="font-medium">{shiftName}</span>
+                    <span className="opacity-70">({rows.length})</span>
+                  </Badge>
                 ))}
-              </select>
-              <Button size="sm" variant="outline" className="gap-1.5">
-                <Upload className="h-4 w-4" /> {t("timeAttendance.attendanceLog.importFile")}
-              </Button>
-            </div>
+              </div>
+
+              {/* RIGHT: Filter + Action */}
+              <div className="flex items-center gap-2 shrink-0">
+                <select
+                  className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
+                  value={selectedAttendanceShift}
+                  onChange={(e) => setSelectedAttendanceShift(e.target.value)}
+                >
+                  <option value="all">
+                    {t("timeAttendance.attendanceLog.allShifts")}
+                  </option>
+                  {scheduleRows.map((s) => (
+                    <option key={s.id} value={String(s.id)}>
+                      {s.shiftName}
+                    </option>
+                  ))}
+                </select>
+
+                <Button size="sm" className="h-9 rounded-lg border border-input bg-background px-3 text-sm">
+                  <Upload className="h-4 w-4" />
+                  {t("timeAttendance.attendanceLog.importFile")}
+                </Button>
+              </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {Object.entries(
-              teamAttendanceRows
-                .filter((a) => selectedAttendanceShift === "all" || String(a.shiftId || "") === selectedAttendanceShift)
-                .reduce((acc: Record<string, any[]>, row: any) => {
-                  const key = row.shiftName || t("timeAttendance.common.unassignedShift");
-                  if (!acc[key]) acc[key] = [];
-                  acc[key].push(row);
-                  return acc;
-                }, {})
-            ).length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">{t("timeAttendance.attendanceLog.emptyByShift")}</div>
-            ) : (
-              Object.entries(
+
+            {/* CONTENT */}
+            <CardContent className="p-0 overflow-x-auto">
+              {Object.entries(
                 teamAttendanceRows
-                  .filter((a) => selectedAttendanceShift === "all" || String(a.shiftId || "") === selectedAttendanceShift)
+                  .filter(
+                    (a) =>
+                      selectedAttendanceShift === "all" ||
+                      String(a.shiftId || "") === selectedAttendanceShift
+                  )
                   .reduce((acc: Record<string, any[]>, row: any) => {
-                    const key = row.shiftName || t("timeAttendance.common.unassignedShift");
+                    const key =
+                      row.shiftName ||
+                      t("timeAttendance.common.unassignedShift");
                     if (!acc[key]) acc[key] = [];
                     acc[key].push(row);
                     return acc;
                   }, {})
-              ).map(([shiftName, rows]) => (
-                <div key={shiftName} className="rounded-lg border overflow-hidden">
-                  <div className="px-4 py-2 bg-muted/40 text-sm font-medium">{shiftName} ({rows.length} {t("timeAttendance.attendanceLog.person")})</div>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/20">
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.date")}</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.code")}</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.name")}</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.scanIn")}</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.scanOut")}</th>
-                        <th className="text-left px-4 py-2 font-medium text-muted-foreground">{t("timeAttendance.table.status")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((a: any) => (
-                        <tr key={a.id} className="border-b last:border-b-0">
-                          <td className="px-4 py-2 font-mono text-xs">{a.workDate}</td>
-                          <td className="px-4 py-2 font-mono text-xs">{a.code}</td>
-                          <td className="px-4 py-2">{a.name}</td>
-                          <td className="px-4 py-2">{a.timeIn}</td>
-                          <td className="px-4 py-2">{a.timeOut}</td>
-                          <td className="px-4 py-2">
-                            <Badge variant="outline" className={statusBadge[a.status]}>{t(`timeAttendance.attendanceStatus.${a.status}`, a.status)}</Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              ).length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground text-sm">
+                  {t("timeAttendance.attendanceLog.emptyByShift")}
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              ) : (
+                Object.entries(
+                  teamAttendanceRows
+                    .filter(
+                      (a) =>
+                        selectedAttendanceShift === "all" ||
+                        String(a.shiftId || "") === selectedAttendanceShift
+                    )
+                    .reduce((acc: Record<string, any[]>, row: any) => {
+                      const key =
+                        row.shiftName ||
+                        t("timeAttendance.common.unassignedShift");
+                      if (!acc[key]) acc[key] = [];
+                      acc[key].push(row);
+                      return acc;
+                    }, {})
+                ).map(([shiftName, rows]) => (
+                  <div
+                    key={shiftName}
+                  >
+                    {/* TABLE */}
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/40">
+                            <th className="text-left px-4 py-3">
+                              {t("timeAttendance.table.date")}
+                            </th>
+                            <th className="text-left px-4 py-3">
+                              {t("timeAttendance.table.code")}
+                            </th>
+                            <th className="text-left px-4 py-3">
+                              {t("timeAttendance.table.name")}
+                            </th>
+                            <th className="text-left px-4 py-3">
+                              {t("timeAttendance.table.scanIn")}
+                            </th>
+                            <th className="text-left px-4 py-3">
+                              {t("timeAttendance.table.scanOut")}
+                            </th>
+                            <th className="text-left px-4 py-3">
+                              {t("timeAttendance.table.status")}
+                            </th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {rows.map((a: any, index: number) => (
+                            <tr
+                              key={a.id}
+                              className={`border-t hover:bg-muted/20 transition ${
+                                index % 2 === 0
+                                  ? "bg-background"
+                                  : "bg-muted/5"
+                              }`}
+                            >
+                              <td className="px-4 py-4 font-mono text-xs">
+                                {a.workDate}
+                              </td>
+                              <td className="px-4 py-4 font-mono text-xs">
+                                {a.code}
+                              </td>
+                              <td className="px-4 py-4 font-medium">
+                                {a.name}
+                              </td>
+                              <td className="px-4 py-4">{a.timeIn}</td>
+                              <td className="px-4 py-4">{a.timeOut}</td>
+                              <td className="px-4 py-4">
+                                <Badge
+                                  variant="outline"
+                                  className={`${statusBadge[a.status]} px-2 py-0.5`}
+                                >
+                                  {t(
+                                    `timeAttendance.attendanceStatus.${a.status}`,
+                                    a.status
+                                  )}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                ))
+              )}
+              </CardContent>
+            </Card>
+          </div>
       )}
 
       {canManageAdjustments && (
       <div className="mt-4">
-        <h3 className="text-sm font-semibold text-foreground mb-2">{t("timeAttendance.tabs.adjustmentRequests")}</h3>
         <Card className="shadow-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">{t("timeAttendance.adjustments.title")}</CardTitle>
@@ -954,8 +1121,8 @@ const TimeAttendance = () => {
                     <td className="px-4 py-3">
                       {o.status === "pending" ? (
                         <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-success bg-success/10 hover:bg-success/20" onClick={() => handleUpdateOtStatus(o.id, "approved")}><Check className="h-4 w-4" /></Button>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive bg-destructive/10 hover:bg-destructive/20" onClick={() => handleUpdateOtStatus(o.id, "rejected")}><X className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="outline" onClick={() => handleUpdateOtStatus(o.id, "approved")}><Check className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="outline" onClick={() => handleUpdateOtStatus(o.id, "rejected")}><X className="h-4 w-4" /></Button>
                         </div>
                       ) : (
                         <Badge variant="secondary" className="text-xs capitalize">{t(`timeAttendance.otStatus.${o.status}`, o.status)}</Badge>
