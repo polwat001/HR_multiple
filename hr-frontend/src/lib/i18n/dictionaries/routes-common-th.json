@@ -1,0 +1,1212 @@
+{"th": {
+    "notFound": {
+      "message": "ไม่พบหน้าที่ต้องการ",
+      "backHome": "กลับหน้าหลัก"
+    },
+    "approvalInbox": {
+      "title": "รายการคำขออนุมัติ",
+      "subtitle": "รวมคำขอลาและค่่าล่วงเวลา(OT)เพื่ออนุมัติจากหน้าเดียว",
+      "roleHint": {
+        "superAdmin": "Super Admin - โหมดนี้สำหรับดูข้อมูลเท่านั้น (read-only)",
+        "manager": "เห็นเฉพาะคำขอของทีมคุณตามสิทธิ์ที่กำหนด",
+        "default": "เห็นคำขอตามสิทธิ์ของบทบาทที่ได้รับ"
+      },
+      "card": {
+        "pendingTotal": "รายการรออนุมัติทั้งหมด",
+        "slaRisk": "เสี่ยง SLA (เกิน 2 วัน)",
+        "actionMode": "โหมดการดำเนินการ",
+        "actionEnabled": "สามารถอนุมัติ / ปฏิเสธได้",
+        "readOnly": "โหมดอ่านอย่างเดียว"
+      },
+      "section": {
+        "filters": "ตั้งค่าตัวกรอง",
+        "queue": "รายการคำขออนุมัติ"
+      },
+      "filter": {
+        "search": "ค้นหา ชื่อ/รหัส/เหตุผล",
+        "allModules": "ทุกโมดูล",
+        "allStatus": "ทุกสถานะ",
+        "showing": "รายการที่แสดง"
+      },
+      "module": {
+        "leave": "การลา",
+        "ot": "การทำงานล่วงเวลา"
+      },
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "table": {
+        "module": "ประเภท",
+        "employee": "พนักงาน",
+        "period": "ช่วงเวลา",
+        "reason": "เหตุผล",
+        "status": "สถานะ",
+        "pendingDays": "จำนวนวันที่รอ",
+        "actions": "การดำเนินการ"
+      },
+      "state": {
+        "loading": "กำลังโหลด...",
+        "noData": "ไม่พบรายการ"
+      },
+      "action": {
+        "refresh": "รีเฟรช",
+        "approve": "อนุมัติ",
+        "reject": "ปฏิเสธ"
+      },
+      "error": {
+        "loadFailed": "โหลดรายการคำขอไม่สำเร็จ",
+        "updateFailed": "อัปเดตสถานะไม่สำเร็จ"
+      }
+    },
+    "approvalFlow": {
+      "title": "ตั้งค่าสายการอนุมัติ",
+      "subtitle": "ตั้งค่าเส้นทางอนุมัติของเอกสาร Leave, OT และ Payroll",
+      "badgeSystemAdmin": "ผู้ดูแลระบบ",
+      "badgeCentralHr": "HR ส่วนกลาง",
+      "table": {
+        "module": "โมดูล",
+        "level1": "ระดับ 1",
+        "level2": "ระดับ 2",
+        "level3": "ระดับ 3"
+      },
+      "save": "บันทึกสายการอนุมัติ",
+      "module": {
+        "leave": "การลา",
+        "ot": "OT",
+        "payroll": "เงินเดือน"
+      }
+    },
+    "positionMaster": {
+      "title": "ข้อมูลตำแหน่ง",
+      "add": "เพิ่มตำแหน่งใหม่",
+      "table": {
+        "index": "#",
+        "position": "ตำแหน่ง",
+        "level": "ระดับ",
+        "companies": "บริษัทที่ใช้งาน",
+        "status": "สถานะ"
+      },
+      "status": {
+        "active": "ใช้งาน",
+        "inactive": "ไม่ใช้งาน"
+      }
+    },
+    "payroll": {
+      "title": "จัดการเงินเดือน",
+
+      "overview": {
+        "title": "ภาพรวมรอบเงินเดือน",
+        "description": {
+          "manage": "จัดการรอบเงินเดือนของบริษัท และส่งออกไฟล์ธนาคาร",
+          "readOnly": "โหมดอ่านอย่างเดียวสำหรับตรวจสอบและ support payroll"
+        },
+        "metrics": {
+          "costTrend": "แนวโน้มต้นทุนเงินเดือน",
+          "vsPreviousMonth": "เทียบกับเดือนก่อนหน้า",
+          "currentMonthBreakdown": "รายละเอียดเดือนนี้",
+          "recentCycles": "รอบเงินเดือนล่าสุด"
+        },
+        "actions": {
+          "runWizard": "รันวิซาร์ดเงินเดือน"
+        }
+      },
+
+      "wizard": {
+        "title": "Payroll Wizard",
+        "steps": {
+          "step1": "ซิงค์และตรวจสอบข้อมูล",
+          "step2": "ตั้งค่าเบี้ยเลี้ยงและหักต่างๆ",
+          "step3": "ตรวจสอบก่อนคำนวณจริง",
+          "step4": "อนุมัติและสร้างไฟล์จ่ายเงิน"
+        },
+        "labels": {
+          "name": "ชื่อ",
+          "step": "ขั้นตอน",
+          "lastSync": "ซิงค์ล่าสุด",
+          "syncing": "กำลังซิงค์...",
+          "employee": "พนักงาน",
+          "present": "มาทำงาน",
+          "absent": "ขาดงาน",
+          "otHours": "ชั่วโมง OT",
+          "leaveDays": "วันลา",
+          "missingScan": "สแกนนิ้วที่ขาด",
+          "alert": "แจ้งเตือน"
+          
+        },
+        "actions": {
+          "sync": "ซิงค์ข้อมูล",
+          "importExcel": "นำเข้า Excel",
+          "recalculate": "คำนวณใหม่",
+          "exportDraft": "ส่งออกแบบร่าง",
+          "generating": "กำลังสร้าง...",
+          "generateBankFile": "สร้างไฟล์ธนาคาร",
+          "generatePayslips": "สร้างสลิปเงินเดือน",
+          "back": "ย้อนกลับ",
+          "next": "ถัดไป",
+          "publishing": "กำลังเผยแพร่...",
+          "publishPayslips": "เผยแพร่สลิปเงินเดือน"
+        },
+        "income": {
+          "baseSalary": "ฐานเงินเดือน",
+          "otherIncome": "รายได้อื่นๆ",
+          "ot": "OT",
+          "commission": "คอมมิชชั่น",
+          "travel": "ค่าเดินทาง",
+          "bonus": "โบนัส"
+        },
+        "deduction": {
+          "absentLate": "ขาดงาน/สาย",
+          "late": "หักสาย",
+          "loan": "หักกู้ยืม",
+          "sso": "SSO",
+          "wht": "WHT"
+        },
+        "summary": {
+          "netPay": "เงินเดือนสุทธิ",
+          "totalNetPay": "รวมเงินเดือนสุทธิ",
+          "employees": "จำนวนพนักงาน",
+          "paymentDate": "วันที่จ่ายเงิน"
+        },
+        "status": {
+          "recalculating": "กำลังคำนวณใหม่...",
+          "generating": "กำลังสร้างไฟล์ธนาคาร..."
+        },
+        "employeeSettings": {
+          "title": "ตั้งค่าเงินเดือนพนักงาน",
+          "empty": "ไม่มีข้อมูลตั้งค่าเงินเดือนพนักงาน",
+          "fields": {
+            "bankName": "ชื่อธนาคาร",
+            "bankAccountNo": "เลขบัญชีธนาคาร",
+            "taxDependent": "จำนวนผู้ที่ต้องหักภาษี (เช่น ลูก)",
+            "lifeInsurance": "ยอดหักประกันชีวิต",
+            "ssoEnabled": "หักเงินประกันสังคม (SSO)"
+          },
+          "actions": {
+            "save": "บันทึกการตั้งค่าเงินเดือน"
+          }
+        }
+      },
+
+      "report": {
+        "title": "รายงานเงินเดือน",
+        "description": "ดูและส่งออกรายงานเงินเดือนสำหรับรอบที่เลือก",
+        "filters": {
+          "month": "รอบเดือนเงินเดือน",
+          "department": "แผนก",
+          "allDepartments": "ทุกแผนก"
+        },
+        "downloads": {
+          "attendance": "ดาวน์โหลดรายงานการเข้างาน",
+          "pnd1": "ดาวน์โหลดแบบ ภ.ง.ด. 1 (ภาษีหัก ณ ที่จ่าย)",
+          "sso": "ดาวน์โหลดรายงานประกันสังคม (สปส. 1-10)",
+          "ot": "ดาวน์โหลดรายงานค่าล่วงเวลาแยกตามศูนย์ต้นทุน"
+        }
+      },
+
+      "roles": {
+        "hrCompany": "HR Company (จัดการ)",
+        "centralHr": "Central HR (อ่านอย่างเดียว)",
+        "systemAdmin": "System Admin (อ่านอย่างเดียว)"
+      },
+
+      "fields": {
+        "month": "รอบเดือนเงินเดือน",
+        "company": "บริษัท",
+        "employees": "จำนวนพนักงาน",
+        "otAmount": "ยอด OT",
+        "netAmount": "ยอดสุทธิ",
+        "paymentDate": "วันที่จ่ายเงิน",
+        "status": "สถานะ",
+        "allowanceAmount": "ยอดค่าเบี้ยเลี้ยง",
+        "deductionAmount": "ยอดหัก",
+        "action": "การจัดการ"
+      },
+
+      "actions": {
+        "view": "ดูรายละเอียด",
+        "runCycle": "รันรอบเงินเดือน",
+        "recalculate": "คำนวณ OT/ลาซ้ำ",
+        "exportReport": "ส่งออกรายงานเงินเดือน",
+        "exportBank": "ส่งออกไฟล์ธนาคาร",
+        "generatePayslip": "สร้างสลิปเงินเดือน"
+      },
+
+      "table": {
+        "month": "เดือน",
+        "company": "บริษัท",
+        "ot": "OT",
+        "leaveDeduction": "หักลา",
+        "net": "สุทธิ",
+        "status": "สถานะ"
+      },
+
+      "status": {
+        "draft": "ฉบับร่าง",
+        "processing": "กำลังประมวลผล",
+        "waitingApproval": "รออนุมัติ",
+        "completed": "เสร็จสมบูรณ์",
+        "closed": "ปิดรอบ"
+      },
+
+      "notice": {
+        "readOnly": "โหมดอ่านอย่างเดียว: บทบาทนี้ใช้สำหรับตรวจสอบและ support ไม่สามารถรัน Payroll หรือสร้างไฟล์จ่ายเงินได้"
+      }
+    },
+
+    "systemSettings": {
+      "tabs": {
+        "general": "ทั่วไป",
+        "dataFix": "แก้ข้อมูล",
+        "security": "ความปลอดภัย"
+      },
+      "title": "ตั้งค่าระบบ",
+      "groupName": "ชื่อกลุ่มบริษัท",
+      "defaultTimezone": "เขตเวลาตั้งต้น",
+      "saveSettings": "บันทึกการตั้งค่า",
+      "dataCorrectionTitle": "เครื่องมือแก้ไขข้อมูล",
+      "dataCorrectionDesc": "สำหรับทีม IT/Implementation: ใช้แก้ข้อมูลผิดพลาดในระบบส่วนกลาง",
+      "recalculateLeave": "คำนวณสิทธิ์ลาซ้ำ",
+      "reindexAttendance": "ทำดัชนีเวลาเข้างานใหม่",
+      "deleteInvalid": "ลบรายการที่ไม่ถูกต้อง",
+      "securityTitle": "การควบคุมความปลอดภัย",
+      "securityDesc": "กำหนดนโยบายความปลอดภัยระดับระบบ",
+      "forceLogout": "บังคับออกจากระบบทุกบัญชี",
+      "rotateApiKeys": "หมุนเวียน API Keys",
+      "applyPolicy": "ใช้นโยบาย"
+    },
+    "auditLog": {
+      "filtersTitle": "ตัวกรองบันทึกการใช้งาน",
+      "filter": {
+        "user": "ผู้ใช้",
+        "allActions": "ทุกการกระทำ",
+        "ipAddress": "IP Address",
+        "apply": "ใช้ตัวกรอง"
+      },
+      "tableTitle": "บันทึกธุรกรรม (Audit Trail)",
+      "exportCsv": "ส่งออก CSV",
+      "headers": {
+        "time": "เวลา",
+        "user": "ผู้ใช้",
+        "action": "การกระทำ",
+        "target": "เป้าหมาย",
+        "ip": "IP"
+      },
+      "loading": "กำลังโหลดบันทึกการใช้งาน...",
+      "empty": "ไม่พบบันทึกการใช้งาน",
+      "fallbackError": "โหลด Audit Logs ไม่สำเร็จ"
+    },
+    "employeeList": {
+      "loading": "กำลังโหลดข้อมูลพนักงาน...",
+      "searchPlaceholder": "ค้นหารหัส หรือชื่อพนักงาน...",
+      "allDepartments": "แผนกทั้งหมด",
+      "foundCount": "พบ {{count}} รายชื่อ",
+      "addEmployee": "เพิ่มพนักงานใหม่",
+      "title": "รายชื่อพนักงาน",
+      "table": {
+        "profile": "โปรไฟล์",
+        "employeeCode": "รหัสพนักงาน",
+        "fullName": "ชื่อ-นามสกุล",
+        "company": "บริษัท",
+        "department": "แผนก",
+        "position": "ตำแหน่ง",
+        "status": "สถานะ",
+        "manage": "จัดการ"
+      },
+      "actions": {
+        "edit": "แก้ไข",
+        "delete": "ลบ",
+        "transferCompany": "ย้ายบริษัท"
+      },
+      "deleteConfirm": "ต้องการลบข้อมูลพนักงานนี้หรือไม่?",
+      "deleteFailed": "ยังไม่สามารถลบพนักงานได้ในระบบปัจจุบัน",
+      "empty": "ไม่พบข้อมูลพนักงาน",
+      "na": "N/A"
+    },
+    "holidayManagement": {
+      "fetchFailed": "ไม่สามารถโหลดข้อมูลวันหยุดได้",
+      "noManagePermission": "คุณไม่มีสิทธิ์จัดการวันหยุด",
+      "saveFailed": "บันทึกวันหยุดไม่สำเร็จ",
+      "noDeletePermission": "คุณไม่มีสิทธิ์ลบวันหยุด",
+      "deleteConfirm": "ยืนยันการลบวันหยุดรายการนี้?",
+      "deleteFailed": "ลบวันหยุดไม่สำเร็จ",
+      "title": "ข้อมูลวันหยุด",
+      "readOnlyNotice": "สิทธิ์ของคุณเป็นแบบดูข้อมูลเท่านั้น",
+      "fields": {
+        "date": "วัน/เดือน/ปี",
+        "nameTh": "ชื่อวันหยุด (TH)",
+        "nameEn": "ชื่อวันหยุด (EN)",
+        "payType": "ประเภทการจ่าย",
+        "description": "รายละเอียด"
+      },
+      "payType": {
+        "paidHoliday": "Paid Holiday",
+        "unpaidHoliday": "Unpaid Holiday",
+        "paid": "Paid",
+        "unpaid": "Unpaid"
+      },
+      "actions": {
+        "saveChanges": "บันทึกการเปลี่ยนแปลง",
+        "addHoliday": "เพิ่มวันหยุด",
+        "cancelEdit": "ยกเลิกการแก้ไข",
+        "edit": "แก้ไข",
+        "delete": "ลบ"
+      },
+      "calendarTitle": "ปฏิทินวันหยุด",
+      "table": {
+        "date": "วันที่",
+        "nameTh": "ชื่อวันหยุด (TH)",
+        "nameEn": "ชื่อวันหยุด (EN)",
+        "type": "ประเภท",
+        "actions": "การจัดการ"
+      },
+      "loading": "กำลังโหลดวันหยุด...",
+      "empty": "ไม่มีข้อมูลวันหยุด"
+    },
+    "selfService": {
+      "title": "Self-Service",
+      "loading": "กำลังโหลด Self-Service...",
+      "monthData": "เดือนข้อมูล:",
+      "thisMonth": "เดือนนี้",
+      "jobInfo": {
+        "tenure": "อายุงาน"
+      },
+      "leaveQuota": "โควต้าวันลา",
+      "used": "ใช้แล้ว",
+      "remaining": "คงเหลือ",
+      "leaveTypeCodes": {
+        "annual": "ลาพักร้อน",
+        "sick": "ลาป่วย",
+        "personal": "ลากิจ",
+        "maternity": "ลาคลอด"
+      },
+      "noLeaveQuota": "ไม่พบข้อมูลโควต้าวันลา",
+      "attendance": {
+        "title": "ปฏิทินเข้างาน",
+        "status": "สถานะ",
+        "present": "มาทำงาน",
+        "late": "สาย",
+        "absent": "ขาด",
+        "leave": "ลา"
+      },
+      "otSummary": "สรุป OT เดือนนี้",
+      "otHours": "ชั่วโมง",
+      "otValue": "ค่า OT",
+      "otTable": {
+        "date": "วันที่",
+        "hours": "ชั่วโมง",
+        "amount": "จำนวนเงิน",
+        "status": "สถานะ"
+      },
+      "otStatus": {
+        "approved": "อนุมัติ",
+        "pending": "รออนุมัติ",
+        "rejected": "ปฏิเสธ"
+      },
+      "noOtData": "ยังไม่มีข้อมูล OT",
+      "dayUnit": "วัน",
+      "yearUnit": "ปี",
+      "monthUnit": "เดือน",
+      "hourAbbr": "ชม."
+    },
+    "employeeProfile": {
+      "loading": "กำลังโหลดข้อมูลพนักงาน...",
+      "backToList": "กลับไปรายการพนักงาน",
+      "saving": "กำลังบันทึก...",
+      "save": "บันทึกข้อมูลพนักงาน",
+      "saveSuccess": "บันทึกข้อมูลพนักงานเรียบร้อย",
+      "savePartialWarning": "ระบบยังไม่รองรับการบันทึกบางฟิลด์บนฐานข้อมูล แต่ข้อมูลในหน้าจอได้รับการอัปเดตแล้ว",
+      "historyRequired": "กรุณากรอกข้อมูล History Log ให้ครบ",
+      "avatar": "Avatar",
+      "uploadProfile": "อัปโหลดรูปโปรไฟล์",
+      "uploadFile": "อัปโหลดไฟล์",
+      "firstName": "ชื่อ",
+      "lastName": "นามสกุล",
+      "nickname": "ชื่อเล่น",
+      "nationalId": "รหัสบัตรประชาชน",
+      "birthDate": "วันเกิด",
+      "gender": "เพศ",
+      "genderOption": {
+        "unspecified": "ไม่ระบุ",
+        "male": "ชาย",
+        "female": "หญิง",
+        "other": "อื่นๆ"
+      },
+      "phone": "เบอร์โทร",
+      "email": "อีเมล",
+      "emergencyName": "ชื่อผู้ติดต่อฉุกเฉิน",
+      "emergencyPhone": "เบอร์ผู้ติดต่อฉุกเฉิน",
+      "emergencyRelation": "ความสัมพันธ์ผู้ติดต่อฉุกเฉิน",
+      "position": "ตำแหน่ง",
+      "department": "แผนก",
+      "employeeCode": "รหัสพนักงาน (Employee Code)",
+      "company": "สังกัดบริษัท",
+      "reportTo": "หัวหน้างาน (Report to)",
+      "employeeType": "ประเภทพนักงาน",
+      "employeeTypeOption": {
+        "monthly": "รายเดือน",
+        "daily": "รายวัน"
+      },
+      "status": "สถานะ",
+      "statusOption": {
+        "active": "Active",
+        "resigned": "Resigned"
+      },
+      "unspecified": "ไม่ระบุ",
+      "tabs": {
+        "personal": "Personal Info",
+        "work": "Work Info",
+        "attachments": "Attachments",
+        "history": "History Log"
+      },
+      "personalTitle": "ข้อมูลส่วนตัว (Personal Info)",
+      "workTitle": "ข้อมูลการทำงาน (Work Info)",
+      "attachmentsTitle": "เอกสารแนบ (Attachments)",
+      "noAttachments": "ยังไม่มีไฟล์แนบ",
+      "historyTitle": "ประวัติการทำงาน (History Log)",
+      "type": "ประเภท",
+      "historyEvent": {
+        "promote": "เลื่อนตำแหน่ง",
+        "salaryAdjust": "ปรับเงินเดือน",
+        "transferDepartment": "ย้ายแผนก"
+      },
+      "oldValue": "ตำแหน่ง/ค่าเดิม",
+      "newValue": "ตำแหน่ง/ค่าใหม่",
+      "note": "หมายเหตุเพิ่มเติม",
+      "addItem": "เพิ่มรายการ",
+      "noHistory": "ยังไม่มีประวัติการเปลี่ยนแปลง"
+    },
+    "userPermission": {
+      "tabs": {
+        "accounts": "บัญชีผู้ใช้",
+        "assignments": "กำหนดบทบาท",
+        "roles": "สิทธิ์การใช้งาน",
+        "logs": "บันทึกธุรกรรม"
+      },
+      "messages": {
+        "loadFailedUsingDefault": "โหลด Permission Matrix ไม่สำเร็จ กำลังใช้ค่าเริ่มต้น",
+        "saveSuccessPrefix": "บันทึก Permission Matrix สำเร็จสำหรับ role",
+        "saveFailed": "บันทึก Permission Matrix ไม่สำเร็จ"
+      },
+      "status": {
+        "active": "ใช้งาน",
+        "locked": "ล็อก"
+      },
+      "accounts": {
+        "title": "บัญชีผู้ใช้",
+        "addUser": "เพิ่มผู้ใช้",
+        "changePassword": "เปลี่ยนรหัสผ่าน",
+        "table": {
+          "emailUsername": "อีเมล / ชื่อผู้ใช้",
+          "displayName": "ชื่อผู้ใช้งาน",
+          "lastLogin": "เข้าสู่ระบบล่าสุด",
+          "status": "สถานะ",
+          "action": "การจัดการ"
+        },
+        "actions": {
+          "lock": "ล็อก",
+          "unlock": "ปลดล็อก"
+        }
+      },
+      "roles": {
+        "newRole": "เพิ่มบทบาทใหม่",
+        "permissionMatrix": "ตารางสิทธิ์",
+        "loading": "กำลังโหลด...",
+        "saving": "กำลังบันทึก...",
+        "save": "บันทึก Permission Matrix",
+        "table": {
+          "module": "โมดูล",
+          "view": "ดู",
+          "create": "สร้าง",
+          "edit": "แก้ไข",
+          "delete": "ลบ"
+        }
+      },
+      "modules": {
+        "dashboard": "แดชบอร์ด",
+        "organization": "โครงสร้างองค์กร",
+        "employee": "พนักงาน",
+        "attendance": "เวลาเข้าออกงาน",
+        "leave": "การลา",
+        "contract": "สัญญา",
+        "reports": "รายงาน",
+        "permissions": "สิทธิ์การใช้งาน",
+        "holidays": "วันหยุด",
+        "audit_log": "บันทึกตรวจสอบ"
+      },
+      "assignments": {
+        "assignRole": "กำหนดบทบาท",
+        "addAssignment": "เพิ่มการกำหนด",
+        "fields": {
+          "user": "ผู้ใช้",
+          "role": "บทบาท",
+          "companyScope": "ขอบเขตบริษัท",
+          "departmentScope": "ขอบเขตแผนก"
+        },
+        "table": {
+          "title": "ตารางกำหนดบทบาท",
+          "user": "ผู้ใช้",
+          "role": "บทบาท",
+          "companyScope": "ขอบเขตบริษัท",
+          "departmentScope": "ขอบเขตแผนก",
+          "unknown": "ไม่ทราบชื่อ"
+        }
+      },
+      "logs": {
+        "title": "บันทึกธุรกรรม",
+        "table": {
+          "user": "ผู้ใช้",
+          "action": "การกระทำ",
+          "target": "เป้าหมาย",
+          "datetime": "วันเวลา"
+        }
+      }
+    },
+    "contractManagement": {
+      "tabs": {
+        "list": "รายการสัญญา",
+        "templates": "เทมเพลต"
+      },
+      "title": "จัดการสัญญา (ตามขอบเขตบริษัท)",
+      "createContract": "สร้างสัญญา",
+      "createContractHint": "สร้างสัญญาใหม่ (ระบบจะเติมข้อมูลพนักงานลงฟอร์ม PDF ให้พิมพ์/บันทึก)",
+      "selectEmployee": "เลือกพนักงาน",
+      "salaryPlaceholder": "เงินเดือน",
+      "createPdf": "สร้างเอกสาร PDF (พิมพ์/บันทึก)",
+      "close": "ปิด",
+      "loading": "กำลังโหลดสัญญา...",
+      "empty": "ไม่พบข้อมูลสัญญาในขอบเขตบริษัทของคุณ",
+      "contractType": {
+        "probation": "ทดลองงาน",
+        "yearly": "รายปี",
+        "permanent": "ประจำ"
+      },
+      "status": {
+        "active": "ใช้งาน",
+        "expired": "หมดอายุ",
+        "expiring": "ใกล้หมดอายุ"
+      },
+      "table": {
+        "employee": "พนักงาน",
+        "contractType": "ประเภทสัญญา",
+        "company": "บริษัท",
+        "start": "เริ่ม",
+        "end": "สิ้นสุด",
+        "status": "สถานะ",
+        "action": "การจัดการ"
+      },
+      "actions": {
+        "renew": "ต่ออายุ",
+        "generatePdf": "สร้าง PDF"
+      },
+      "templates": {
+        "title": "เทมเพลตสัญญา (บริษัท)",
+        "newTemplate": "เพิ่มเทมเพลต",
+        "builder": "ตัวสร้างเทมเพลต",
+        "save": "บันทึกเทมเพลต",
+        "previewVariables": "ตัวแปรตัวอย่างในเทมเพลต",
+        "selectTemplateForPdf": "เลือกเทมเพลตเพื่อใช้งานตอน Generate PDF",
+        "fields": {
+          "templateName": "ชื่อเทมเพลต",
+          "companyScope": "บริษัท (ขอบเขตโลโก้)",
+          "logoUrl": "ลิงก์โลโก้",
+          "templateContent": "เนื้อหาเทมเพลต",
+          "contentPlaceholder": "ใช้ตัวแปรเช่น {{employee_name}}, {{position}}, {{salary}}"
+        }
+      },
+      "alerts": {
+        "fillTemplateNameAndContent": "กรุณากรอกชื่อเทมเพลตและเนื้อหา",
+        "templateCreatedDemo": "สร้างเทมเพลตสำเร็จ (เดโมหน้า UI)",
+        "selectEmployeeAndDates": "กรุณาเลือกพนักงานและช่วงวันที่สัญญา"
+      },
+      "pdf": {
+        "title": "สัญญาจ้างงาน",
+        "employeeSignature": "ลายเซ็นพนักงาน",
+        "companySignature": "ลายเซ็นบริษัท"
+      }
+    },
+    "reports": {
+      "exportPdf": "Export PDF",
+      "exportXlsx": "Export XLSX",
+      "myDashboardTitle": "แดชบอร์ดรายงานของฉัน",
+      "fetchFailed": "ไม่สามารถดึงรายงานจากระบบได้",
+      "myDashboardSubtitle": "สรุปรายงานเฉพาะข้อมูลส่วนตัวของคุณ",
+      "employeeScope": "ขอบเขตพนักงาน",
+      "refreshing": "กำลังรีเฟรช...",
+      "refreshSummary": "รีเฟรชสรุป",
+      "dateFrom": "วันที่เริ่มต้น",
+      "dateTo": "วันที่สิ้นสุด",
+      "exportAttendance": "Export Attendance",
+      "exportOt": "Export OT",
+      "exportLeave": "Export Leave",
+      "availablePersonal": "รายงานส่วนตัวที่ใช้งานได้",
+      "currentCompany": "บริษัทปัจจุบัน",
+      "myDepartment": "แผนกของฉัน",
+      "filters": {
+        "title": "ตัวกรองรายงาน",
+        "company": "บริษัท",
+        "department": "แผนก",
+        "employeeStatus": "สถานะพนักงาน",
+        "companies": {
+          "all": "ทุกบริษัท",
+          "abc": "ABC",
+          "xyz": "XYZ",
+          "def": "DEF"
+        },
+        "departments": {
+          "all": "ทุกแผนก",
+          "hr": "HR",
+          "it": "IT",
+          "acc": "บัญชี",
+          "ops": "ปฏิบัติการ"
+        },
+        "statuses": {
+          "all": "ทุกสถานะ",
+          "active": "ทำงาน",
+          "resigned": "ลาออก"
+        }
+      },
+      "summary": {
+        "attendanceRecords": "บันทึกการเข้างาน",
+        "late": "มาสาย",
+        "absent": "ขาดงาน",
+        "otHours": "OT ชั่วโมงรวม",
+        "pendingLeave": "ใบลารออนุมัติ",
+        "remainingLeave": "วันลาคงเหลือ"
+      },
+      "badge": {
+        "high": "สูง",
+        "watch": "เฝ้าระวัง",
+        "normal": "ปกติ",
+        "longPending": "รอนาน"
+      },
+      "catalog": {
+        "title": "ตัวเลือกบันทึกรายงาน",
+        "employee-list": {
+          "name": "Employee List (ทะเบียนประวัติพนักงาน)",
+          "description": "รายชื่อพนักงานพร้อมข้อมูลสำคัญ"
+        },
+        "attendance-summary": {
+          "name": "Attendance Summary (สรุปขาดลามาสาย)",
+          "description": "สรุปสถิติการเข้างานรายเดือน"
+        },
+        "ot-monthly": {
+          "name": "OT Monthly Summary (สรุปชั่วโมง OT ประจำเดือน)",
+          "description": "รายงานชั่วโมง OT สำหรับส่งทำเงินเดือน"
+        },
+        "leave-usage": {
+          "name": "Leave Usage (สรุปการใช้วันลา)",
+          "description": "สรุปการใช้สิทธิ์ลาตามช่วงวันที่"
+        }
+      },
+      "generateOptions": {
+        "title": "ตัวเลือกการสร้างรายงาน",
+        "scope": "Scope",
+        "format": "Format",
+        "excel": "Excel (.xlsx)",
+        "pdf": "PDF",
+        "holdingHint": "Consolidated export mode: รวมข้อมูลทุกบริษัทในไฟล์เดียวสำหรับผู้บริหาร",
+        "pdfCompanyHint": "PDF will use the selected company's header & logo",
+        "pdfGroupHint": "PDF will use Group (Holding) header",
+        "excelHint": "Excel file will include all selected data"
+      },
+      "scope": {
+        "myDataOnly": "ข้อมูลของฉันเท่านั้น",
+        "teamOnly": "เฉพาะทีม (ขอบเขตแผนก)",
+        "currentCompanyOnly": "เฉพาะบริษัทปัจจุบัน",
+        "allCompanies": "ทุกบริษัท (รวมศูนย์)"
+      },
+      "bulkExportName": "ส่งออกรายงานรวม"
+    },
+    "dashboard": {
+      "loading": "กำลังโหลดแดชบอร์ด...",
+      "roles": {
+        "employee": "พนักงาน",
+        "manager": "ผู้จัดการ",
+        "hrCompany": "HR บริษัท",
+        "centralHr": "HR ส่วนกลาง",
+        "superAdmin": "ผู้ดูแลระบบ"
+      },
+      "common": {
+        "dashboard": "แดชบอร์ด",
+        "allCompanies": "ทุกบริษัท",
+        "unassigned": "ไม่ระบุแผนก",
+        "noData": "ไม่มีข้อมูล",
+        "date": "วันที่",
+        "status": "สถานะ",
+        "upcomingHolidays": "วันหยุดที่กำลังจะมาถึง",
+        "noUpcomingHolidays": "ไม่มีวันหยุดในช่วง 30 วันถัดไป",
+        "pending": "รออนุมัติ",
+        "noPendingApprovals": "ไม่มีคำยื่นที่รออนุมัติ",
+        "noPendingLeave": "ไม่มีคำขอลาที่รออนุมัติ"
+      },
+      "header": {
+        "welcomeBackPrefix": "ยินดีต้อนรับกลับ",
+        "superAdminTitle": "แดชบอร์ดผู้ดูแลระบบ",
+        "superAdminSubtitle": "ภาพรวมเชิงกลยุทธ์ทั้งระบบ พร้อมจุดที่ต้องตัดสินใจทันที",
+        "centralHrTitle": "แดชบอร์ด HR ส่วนกลาง",
+        "centralHrSubtitle": "ภาพรวมข้ามบริษัท เน้นอนุมัติและกำลังคนระดับองค์กร",
+        "hrCompanyTitle": "แดชบอร์ด HR บริษัท",
+        "hrCompanySubtitlePrefix": "ภาพรวมบริษัท",
+        "welcomeDashboard": "ยินดีต้อนรับสู่แดชบอร์ด"
+      },
+      "employee": {
+        "title": "แดชบอร์ดพนักงาน",
+        "subtitle": "สรุปข้อมูลสำคัญของคุณ",
+        "latestAttendance": "ข้อมูลการลงเวลาล่าสุด",
+        "cards": {
+          "remainingLeave": "วันลาคงเหลือ",
+          "pendingLeave": "คำขอลาที่รออนุมัติ",
+          "lateThisMonth": "มาสายเดือนนี้",
+          "otThisMonth": "OT เดือนนี้"
+        }
+      },
+      "manager": {
+        "title": "แดชบอร์ดผู้จัดการ",
+        "subtitle": "ภาพรวมแผนก/ทีมของคุณ",
+        "teamOtChart": "กราฟ OT ของทีม",
+        "pendingRequests": "คำยื่นจากลูกน้อง (Pending Approval)",
+        "latestTeamLeave": "คำขอลาจากลูกน้อง (ล่าสุด)",
+        "cards": {
+          "pendingApprovals": "คำยื่นรออนุมัติ",
+          "present": "ทำงาน",
+          "late": "สาย",
+          "absent": "ขาด",
+          "leave": "ลา",
+          "teamMembers": "สมาชิกในทีม"
+        }
+      },
+      "charts": {
+        "employeeDistribution": "สัดส่วนพนักงานตามแผนก",
+        "attendanceStatus": "สถานะการเข้างาน"
+      },
+      "attendance": {
+        "present": "ทำงาน",
+        "late": "สาย",
+        "absent": "ขาด",
+        "leave": "ลา"
+      },
+      "statCards": {
+        "totalHeadcount": "จำนวนพนักงานทั้งหมด",
+        "newJoiners": "พนักงานเข้าใหม่",
+        "resigned": "พนักงานลาออก",
+        "totalOtHours": "ชั่วโมง OT รวม",
+        "contractsExpiring": "สัญญาใกล้หมดอายุ",
+        "pendingApprovals": "รายการรออนุมัติ"
+      },
+      "alerts": {
+        "expiringContracts": "สัญญาใกล้หมดอายุ (30-60 วัน)",
+        "noExpiringContracts": "ไม่มีสัญญาใกล้หมดอายุ",
+        "pendingApprovals": "คำขอรออนุมัติ",
+        "noPendingApprovals": "ไม่มีคำขอที่รออนุมัติ",
+        "upcomingHolidays": "วันหยุดที่กำลังจะมาถึง (30 วันข้างหน้า)",
+        "noUpcomingHolidays": "ไม่มีวันหยุดที่กำลังจะมาถึง"
+      }
+    },
+    "leaveManagement": {
+      "loading": "กำลังโหลดข้อมูล...",
+      "noHistory": "ไม่พบประวัติการลา",
+      "common": {
+        "na": "-",
+        "unknown": "ไม่ทราบประเภท",
+        "day": "วัน"
+      },
+      "tabs": {
+        "myLeave": "การลาของฉัน",
+        "requestLeave": "ขอลา",
+        "teamRequests": "คำร้องของลูกทีม",
+        "balanceAdjustment": "ปรับ Leave Balance",
+        "leavePolicy": "นโยบายการลา",
+        "leaveCalendar": "ปฏิทินลา",
+        "holidayManagement": "การจัดการวันหยุด"
+      },
+      "status": {
+        "all": "ทั้งหมด",
+        "pending": "รออนุมัติ",
+        "approved": "อนุมัติ",
+        "rejected": "ไม่อนุมัติ"
+      },
+      "messages": {
+        "fillRequired": "กรุณากรอกข้อมูลใบลาให้ครบถ้วน",
+        "requestSubmitted": "ส่งคำร้องขอลางานเรียบร้อยแล้ว",
+        "requestFailed": "ไม่สามารถส่งคำร้องได้"
+      },
+      "employee": {
+        "tab": "พนักงาน",
+        "historyTab": "ประวัติการลาของคุณ",
+        "requestLeave": "ขอลา",
+        "requestTitle": "คำขอลางาน",
+        "leaveHistory": "ประวัติการลา"
+      },
+      "fields": {
+        "leaveType": "ประเภทการลา",
+        "totalDaysHours": "จำนวนวัน/ชั่วโมง",
+        "totalDaysPlaceholder": "เช่น 1 หรือ 0.5",
+        "startDate": "วันที่เริ่มต้น",
+        "endDate": "วันที่สิ้นสุด",
+        "reason": "เหตุผลการลา",
+        "reasonPlaceholder": "ระบุเหตุผลการลา",
+        "status": "สถานะ"
+      },
+      "actions": {
+        "submitting": "กำลังส่งคำร้อง...",
+        "confirmSubmit": "ยืนยันส่งคำขอ",
+        "cancel": "ยกเลิก",
+        "reject": "ไม่อนุมัติ",
+        "approve": "อนุมัติ"
+      },
+      "history": {
+        "summary": "ทั้งหมด"
+      },
+      "table": {
+        "type": "ประเภท",
+        "date": "วันที่",
+        "total": "จำนวน",
+        "status": "สถานะ"
+      },
+      "leaveTypes": {
+        "1": "Vacation (พักร้อน)",
+        "2": "Sick Leave (ลาป่วย)",
+        "3": "Personal Leave (ลากิจ)",
+        "4": "Maternity (ลาคลอด)"
+      },
+      "leaveTypeCodes": {
+        "annual": "ลาพักร้อน",
+        "sick": "ลาป่วย",
+        "personal": "ลากิจ",
+        "maternity": "ลาคลอด"
+      },
+      "labels": {
+        "leave": "ลา"
+      },
+      "myLeave": {
+        "balanceTitle": "Leave Balance (แยกตามประเภทการลา)",
+        "historyTitle": "ประวัติการลา",
+        "emptyBalance": "ไม่พบข้อมูลโควต้าการลา",
+        "table": {
+          "leaveType": "ประเภทการลา",
+          "quota": "โควตา",
+          "used": "ใช้แล้ว",
+          "pending": "รออนุมัติ",
+          "balance": "คงเหลือ"
+        }
+      },
+      "request": {
+        "title": "สร้างคำขอลา",
+        "create": "สร้างคำขอลา",
+        "attachment": "แนบไฟล์ (เช่น ใบรับรองแพทย์)",
+        "selectedFile": "ไฟล์ที่เลือก"
+      },
+      "approval": {
+        "title": "คำร้องของลูกทีม (Leave)",
+        "loading": "กำลังโหลดคำร้อง...",
+        "empty": "ไม่มีคำร้องที่รออนุมัติ",
+        "overlapWarning": "คำเตือน: วันที่ลาซ้อนรวม {{count}} รายการ (อนุมัติแล้ว {{approved}})",
+        "noOverlap": "ไม่มีการลาซ้อน",
+        "confirmOverlap": "คำเตือน: มีพนักงานในทีมลาซ้อนช่วงวันเดียวกันที่อนุมัติแล้ว {{count}} คน\nต้องการอนุมัติต่อหรือไม่?",
+        "table": {
+          "employee": "พนักงาน",
+          "leaveType": "ประเภทการลา",
+          "dateRange": "ช่วงวันที่ลา",
+          "overlapWarning": "แจ้งเตือนการลาซ้อน",
+          "action": "การจัดการ"
+        }
+      },
+      "balanceAdjust": {
+        "title": "ปรับยอด Leave Balance ของพนักงาน",
+        "empty": "ไม่พบข้อมูล Leave Balance",
+        "summary": "Quota: {{quota}} | Used: {{used}} | Balance: {{balance}}",
+        "adjust": "ปรับยอด"
+      },
+      "policy": {
+        "title": "ตั้งค่าการลารายบริษัท",
+        "save": "บันทึกนโยบายการลา",
+        "table": {
+          "company": "บริษัท",
+          "serviceYears": "อายุงานขั้นต่ำ (ปี)",
+          "vacationDays": "พักร้อนที่ได้ (วัน/ปี)",
+          "sickCert": "ลาป่วยเกินกี่วันต้องแนบใบรับรองแพทย์"
+        }
+      },
+      "calendar": {
+        "placeholder": "มุมมองปฏิทินลา - สรุปภาพรวมวันลาของทีม (ตัวอย่าง)"
+      },
+      "holidays": {
+        "title": "ปฏิทินวันหยุด 2026",
+        "add": "เพิ่มวันหยุด",
+        "edit": "แก้ไข",
+        "table": {
+          "date": "วันที่",
+          "name": "ชื่อวันหยุด",
+          "action": "การจัดการ"
+        },
+        "names": {
+          "newYear": "วันขึ้นปีใหม่",
+          "makhaBucha": "วันมาฆบูชา",
+          "chakri": "วันจักรี",
+          "songkran": "วันสงกรานต์",
+          "labour": "วันแรงงาน",
+          "coronation": "วันฉัตรมงคล",
+          "queenSuthidaBirthday": "วันเฉลิมพระชนมพรรษา ร.10",
+          "kingBirthdaySubstitute": "วันเฉลิมพระชนมพรรษา ร.10 (ชดเชย)",
+          "mothersDay": "วันแม่แห่งชาติ",
+          "chulalongkorn": "วันปิยมหาราช",
+          "fathersDay": "วันพ่อแห่งชาติ",
+          "constitution": "วันรัฐธรรมนูญ",
+          "yearEnd": "วันสิ้นปี"
+        }
+      }
+    },
+    "timeAttendance": {
+      "tabs": {
+        "workSchedule": "ตารางกะงาน",
+        "attendanceLog": "บันทึกเวลา",
+        "adjustmentRequests": "คำขอปรับเวลา",
+        "otRequest": "คำขอ OT",
+        "teamOtRequests": "คำร้องของลูกทีม (OT)"
+      },
+      "common": {
+        "date": "วันที่",
+        "in": "เข้า",
+        "out": "ออก",
+        "hour": "ชั่วโมง",
+        "currentUser": "ผู้ใช้งานปัจจุบัน",
+        "waitingApprover": "รอผู้อนุมัติ",
+        "unassignedShift": "กะไม่ระบุ"
+      },
+      "actions": {
+        "saving": "กำลังบันทึก...",
+        "checkIn": "Check In",
+        "checkOut": "Check Out",
+        "checkedInToday": "Check In แล้ววันนี้",
+        "checkedOutToday": "Check Out แล้ววันนี้",
+        "submitting": "กำลังส่ง...",
+        "confirmSubmit": "ยืนยันส่งคำขอ",
+        "cancel": "ยกเลิก"
+      },
+      "employee": {
+        "badge": "พนักงาน",
+        "onlyYourSchedule": "ดูเฉพาะตารางของคุณ",
+        "yourSchedule": "ตารางงานของคุณ",
+        "breakTime": "พัก 12:00 - 13:00",
+        "checkInOut": "ลงเวลาเข้า-ออกงาน",
+        "todayStatus": "สถานะวันนี้",
+        "latestRecord": "รายการล่าสุด",
+        "yourOtRequests": "คำขอ OT ของคุณ",
+        "requestOt": "ขอ OT",
+        "viewInSelfService": "ดูคำขอ OT ได้ที่หน้า Self-Service",
+        "attendanceHistory": "ประวัติการลงเวลาของคุณ",
+        "status": {
+          "done": "ลงเวลาครบแล้ว",
+          "checkedIn": "ลงเวลาเข้าแล้ว",
+          "notChecked": "ยังไม่ลงเวลา"
+        }
+      },
+      "fields": {
+        "otDate": "วันที่ขอทำ OT",
+        "startTime": "เวลาเริ่มต้น",
+        "endTime": "เวลาสิ้นสุด",
+        "otReason": "เหตุผลที่ขอ OT",
+        "totalHours": "จำนวนชั่วโมงรวม"
+      },
+      "messages": {
+        "noShiftPermission": "คุณไม่มีสิทธิ์สร้างกะเวลา",
+        "fillShiftRequired": "กรุณากรอกชื่อกะ เวลาเข้า และเวลาออกให้ครบ",
+        "shiftCreated": "สร้างกะเวลาเรียบร้อยแล้ว",
+        "shiftCreateFailed": "ไม่สามารถสร้างกะเวลาได้",
+        "adjustmentUpdateFailed": "ไม่สามารถอัปเดตสถานะคำขอปรับเวลาได้",
+        "checkInSuccess": "ลงเวลาเข้างานสำเร็จ",
+        "checkOutSuccess": "ลงเวลาออกงานสำเร็จ",
+        "attendanceSaveFailed": "ไม่สามารถบันทึกเวลาได้",
+        "fillOtRequired": "กรุณากรอกข้อมูล OT Request ให้ครบ",
+        "invalidOtTime": "เวลา OT ไม่ถูกต้อง",
+        "otSubmitted": "ส่งคำขอ OT เรียบร้อยแล้ว",
+        "otSubmitFailed": "ไม่สามารถส่งคำขอ OT ได้",
+        "otStatusUpdateFailed": "ไม่สามารถอัปเดตสถานะ OT ได้",
+        "noAttendanceData": "ยังไม่มีข้อมูลการลงเวลา"
+      },
+      "table": {
+        "status": "สถานะ",
+        "time": "เวลา",
+        "timeIn": "เวลาเข้า",
+        "timeOut": "เวลาออก",
+        "date": "วันที่",
+        "code": "รหัส",
+        "name": "ชื่อ",
+        "scanIn": "สแกนเข้า",
+        "scanOut": "สแกนออก"
+      },
+      "attendanceStatus": {
+        "present": "มาทำงาน",
+        "late": "สาย",
+        "absent": "ขาดงาน",
+        "missing_scan": "สแกนไม่ครบ"
+      },
+      "otStatus": {
+        "pending": "รออนุมัติ",
+        "approved": "อนุมัติ",
+        "rejected": "ไม่อนุมัติ"
+      },
+      "shiftManagement": {
+        "title": "จัดการกะงาน",
+        "totalShifts": "กะทั้งหมด: {{count}}",
+        "addNew": "เพิ่มกะเวลาใหม่",
+        "loading": "กำลังโหลดกะงาน...",
+        "empty": "ไม่พบข้อมูลกะเวลา",
+        "createShift": "สร้างกะเวลา",
+        "fields": {
+          "shiftName": "ชื่อกะ",
+          "shiftPlaceholder": "เช่น กะเช้า",
+          "timeIn": "เวลาเข้า",
+          "timeOut": "เวลาออก",
+          "graceMinutes": "Grace (นาที)"
+        },
+        "table": {
+          "shift": "กะ",
+          "time": "เวลา",
+          "grace": "Grace",
+          "company": "บริษัท",
+          "employeesInShift": "พนักงานในกะ"
+        }
+      },
+      "attendanceLog": {
+        "title": "บันทึกเวลา",
+        "allShifts": "ทุกกะเวลา",
+        "importFile": "นำเข้าไฟล์",
+        "emptyByShift": "ไม่พบข้อมูล Attendance ตามกะที่เลือก",
+        "person": "คน"
+      },
+      "adjustments": {
+        "title": "คำขอปรับเวลาเข้างาน",
+        "refresh": "รีเฟรช",
+        "loading": "กำลังโหลดคำขอปรับเวลา...",
+        "empty": "ไม่มีคำขอปรับเวลาที่รออนุมัติ",
+        "table": {
+          "requester": "ผู้ขอ",
+          "type": "ประเภท",
+          "department": "แผนก",
+          "reason": "เหตุผล",
+          "requestedAt": "เวลาที่ยื่น",
+          "action": "การจัดการ"
+        }
+      },
+      "otRequest": {
+        "title": "ส่งคำขอ OT",
+        "create": "สร้างคำขอ OT"
+      },
+      "otApproval": {
+        "title": "คำร้องของลูกทีม (OT)",
+        "payrollPrep": "คำนวณสรุป OT เพื่อส่ง Payroll",
+        "table": {
+          "employee": "พนักงาน",
+          "requestDate": "วันที่ยื่น",
+          "startEnd": "เวลาเริ่ม-สิ้นสุด",
+          "totalHours": "ชั่วโมงรวม",
+          "reason": "เหตุผล",
+          "approver": "ผู้อนุมัติ",
+          "status": "สถานะ",
+          "action": "การจัดการ"
+        }
+      }
+    },
+    "organizationStructure": {
+      "loading": "กำลังโหลดโครงสร้างองค์กร...",
+      "errorPrefix": "เกิดข้อผิดพลาด",
+      "noData": "ไม่มีข้อมูลโครงสร้างองค์กร",
+      "none": "ไม่มี",
+      "unspecified": "ไม่ระบุ",
+      "tabs": {
+        "company": "บริษัท",
+        "department": "แผนก",
+        "position": "ตำแหน่ง",
+        "orgChart": "ผังองค์กร"
+      },
+      "messages": {
+        "companyAddedDemo": "เพิ่มบริษัทใหม่ในหน้าเดโมสำเร็จ (ยังไม่บันทึกลงฐานข้อมูล)",
+        "departmentAddedDemo": "เพิ่มแผนกใหม่ในหน้าเดโมสำเร็จ (ยังไม่บันทึกลงฐานข้อมูล)",
+        "positionAddedDemo": "เพิ่มตำแหน่งใหม่ในหน้าเดโมสำเร็จ (ยังไม่บันทึกลงฐานข้อมูล)"
+      },
+      "company": {
+        "title": "ข้อมูลบริษัท",
+        "add": "เพิ่มบริษัทใหม่",
+        "fields": {
+          "code": "รหัสบริษัท (Code)",
+          "nameTh": "ชื่อบริษัทภาษาไทย",
+          "nameEn": "ชื่อบริษัทภาษาอังกฤษ",
+          "taxId": "เลขประจำตัวผู้เสียภาษี",
+          "logoUrl": "โลโก้บริษัท (URL)",
+          "phone": "เบอร์ติดต่อ",
+          "address": "ที่อยู่"
+        },
+        "table": {
+          "code": "Code",
+          "nameTh": "ชื่อไทย",
+          "nameEn": "ชื่ออังกฤษ",
+          "taxId": "Tax ID",
+          "contact": "Contact"
+        }
+      },
+      "department": {
+        "title": "ข้อมูลแผนก",
+        "add": "เพิ่มแผนก",
+        "fields": {
+          "code": "รหัสแผนก",
+          "name": "ชื่อแผนก",
+          "company": "บริษัท",
+          "parent": "แผนกหลัก (Parent Department)",
+          "costCenter": "Cost Center"
+        },
+        "placeholders": {
+          "selectCompany": "เลือกบริษัท",
+          "selectParent": "เลือกแผนกหลัก"
+        },
+        "table": {
+          "code": "Code",
+          "department": "Department",
+          "company": "Company",
+          "parent": "Parent",
+          "costCenter": "Cost Center"
+        }
+      },
+      "position": {
+        "title": "ข้อมูลตำแหน่ง",
+        "add": "เพิ่มตำแหน่ง",
+        "fields": {
+          "code": "รหัสตำแหน่ง",
+          "title": "ชื่อตำแหน่ง",
+          "level": "ระดับขั้น",
+          "company": "บริษัท",
+          "department": "แผนก"
+        },
+        "placeholders": {
+          "selectLevel": "เลือกระดับ",
+          "selectCompany": "เลือกบริษัท",
+          "selectDepartment": "เลือกแผนก"
+        },
+        "table": {
+          "code": "Code",
+          "title": "Title",
+          "level": "Level",
+          "company": "Company"
+        }
+      },
+      "division": {
+        "title": "Division Master"
+      },
+      "section": {
+        "title": "Section Master"
+      },
+      "level": {
+        "title": "Level Overview"
+      },
+      "adminTools": {
+        "title": "เครื่องมือผู้ดูแลองค์กร",
+        "addCompany": "เพิ่มบริษัทใหม่",
+        "createDepartment": "สร้างแผนก",
+        "createPosition": "สร้างตำแหน่ง"
+      },
+      "orgChartTitle": "ผังองค์กร (Tree View)"
+    }
+  }
+}
