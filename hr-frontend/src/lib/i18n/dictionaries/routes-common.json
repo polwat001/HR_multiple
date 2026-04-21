@@ -4,6 +4,63 @@
       "message": "ไม่พบหน้าที่ต้องการ",
       "backHome": "กลับหน้าหลัก"
     },
+    "approvalInbox": {
+      "title": "รายการคำขออนุมัติ",
+      "subtitle": "รวมคำขอลาและค่าล่วงเวลา(OT)เพื่ออนุมัติจากหน้าเดียว",
+      "roleHint": {
+        "superAdmin": "Super Admin - โหมดนี้สำหรับดูข้อมูลเท่านั้น (read-only)",
+        "manager": "เห็นเฉพาะคำขอของทีมคุณตามสิทธิ์ที่กำหนด",
+        "default": "เห็นคำขอตามสิทธิ์ของบทบาทที่ได้รับ"
+      },
+      "card": {
+        "pendingTotal": "รายการรออนุมัติทั้งหมด",
+        "slaRisk": "เสี่ยง SLA (เกิน 2 วัน)",
+        "actionMode": "โหมดการดำเนินการ",
+        "actionEnabled": "สามารถอนุมัติ / ปฏิเสธได้",
+        "readOnly": "โหมดอ่านอย่างเดียว"
+      },
+      "section": {
+        "filters": "ตั้งค่าตัวกรอง",
+        "queue": "รายการคำขออนุมัติ"
+      },
+      "filter": {
+        "search": "ค้นหา ชื่อ/รหัส/เหตุผล",
+        "allModules": "ทุกโมดูล",
+        "allStatus": "ทุกสถานะ",
+        "showing": "รายการที่แสดง"
+      },
+      "module": {
+        "leave": "การลา",
+        "ot": "การทำงานล่วงเวลา"
+      },
+      "status": {
+        "pending": "รออนุมัติ",
+        "approved": "อนุมัติ",
+        "rejected": "ปฏิเสธ"
+      },
+      "table": {
+        "module": "ประเภท",
+        "employee": "พนักงาน",
+        "period": "ช่วงเวลา",
+        "reason": "เหตุผล",
+        "status": "สถานะ",
+        "pendingDays": "จำนวนวันที่รอ",
+        "actions": "การดำเนินการ"
+      },
+      "state": {
+        "loading": "กำลังโหลด...",
+        "noData": "ไม่พบรายการ"
+      },
+      "action": {
+        "refresh": "รีเฟรช",
+        "approve": "อนุมัติ",
+        "reject": "ปฏิเสธ"
+      },
+      "error": {
+        "loadFailed": "โหลดรายการคำขอไม่สำเร็จ",
+        "updateFailed": "อัปเดตสถานะไม่สำเร็จ"
+      }
+    },
     "approvalFlow": {
       "title": "ตั้งค่าสายการอนุมัติ",
       "subtitle": "ตั้งค่าเส้นทางอนุมัติของเอกสาร Leave, OT และ Payroll",
@@ -58,7 +115,7 @@
       },
 
       "wizard": {
-        "title": "Payroll Wizard",
+        "title": "ตัวช่วยสร้างเงินเดือน",
         "steps": {
           "step1": "ซิงค์และตรวจสอบข้อมูล",
           "step2": "ตั้งค่าเบี้ยเลี้ยงและหักต่างๆ",
@@ -555,7 +612,7 @@
           "companyScope": "บริษัท (ขอบเขตโลโก้)",
           "logoUrl": "ลิงก์โลโก้",
           "templateContent": "เนื้อหาเทมเพลต",
-          "contentPlaceholder": "ใช้ตัวแปรเช่น {{employee_name}}, {{position}}, {{salary}}"
+          "contentPlaceholder": "ใช้ตัวแปรเช่น ชื่อ, ตำแหน่ง, เงินเดือน "
         }
       },
       "alerts": {
@@ -1147,6 +1204,63 @@
     "notFound": {
       "message": "Oops! Page not found",
       "backHome": "Return to Home"
+    },
+    "approvalInbox": {
+      "title": "Approval Inbox",
+      "subtitle": "Combine Leave and OT requests for approval in one place",
+      "roleHint": {
+        "superAdmin": "Super Admin - This mode is read-only for support",
+        "manager": "View only your team requests according to policy",
+        "default": "View requests within your role scope"
+      },
+      "card": {
+        "pendingTotal": "Total Pending",
+        "slaRisk": "SLA Risk (≥ 2 days)",
+        "actionMode": "Action Mode",
+        "actionEnabled": "Approve/Reject Enabled",
+        "readOnly": "Read-only"
+      },
+      "section": {
+        "filters": "Filters",
+        "queue": "Approval Queue"
+      },
+      "filter": {
+        "search": "Search name/code/reason",
+        "allModules": "All Modules",
+        "allStatus": "All Status",
+        "showing": "Records shown"
+      },
+      "module": {
+        "leave": "Leave",
+        "ot": "OT"
+      },
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "table": {
+        "module": "Module",
+        "employee": "Employee",
+        "period": "Period",
+        "reason": "Reason",
+        "status": "Status",
+        "pendingDays": "Pending Days",
+        "actions": "Actions"
+      },
+      "state": {
+        "loading": "Loading...",
+        "noData": "No records found"
+      },
+      "action": {
+        "refresh": "Refresh",
+        "approve": "Approve",
+        "reject": "Reject"
+      },
+      "error": {
+        "loadFailed": "Failed to load Approval Inbox",
+        "updateFailed": "Failed to update status"
+      }
     },
     "approvalFlow": {
       "title": "Approval Flow Configuration",
