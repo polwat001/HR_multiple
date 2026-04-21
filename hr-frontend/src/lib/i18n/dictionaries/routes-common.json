@@ -93,7 +93,7 @@
           "publishPayslips": "เผยแพร่สลิปเงินเดือน"
         },
         "income": {
-          "baseSalary": "เงินเดือนฐาน",
+          "baseSalary": "ฐานเงินเดือน",
           "otherIncome": "รายได้อื่นๆ",
           "ot": "OT",
           "commission": "คอมมิชชั่น",
