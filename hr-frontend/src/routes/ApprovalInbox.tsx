@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,8 +41,42 @@ function fmtDate(isoLike?: string) {
   return d.toLocaleDateString("th-TH");
 }
 
+// Centralized styling constants (refined theme)
+const cardClass: Record<string, string> = {
+  pending: "border-amber-400/30 bg-amber-500/5",
+  slaRisk: "border-red-400/30 bg-red-500/5",
+  actionMode: "border-green-400/30 bg-green-500/5",
+};
+
+const statusBadge: Record<string, string> = {
+  pending: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  approved: "bg-green-500/10 text-green-600 border-green-500/20",
+  rejected: "bg-red-500/10 text-red-600 border-red-500/20",
+};
+
+const moduleBadge: Record<string, string> = {
+  leave: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  ot: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+};
+
+
+function getCardClass(cardType: "pending" | "slaRisk" | "actionMode"): string {
+  return cardClass[cardType] || cardClass.pending;
+}
+
+function getStatusBadgeClass(status?: string): string {
+  const key = String(status || "").toLowerCase();
+  return statusBadge[key] || statusBadge.pending;
+}
+
+function getModuleBadgeClass(module?: string): string {
+  const key = String(module || "").toLowerCase();
+  return moduleBadge[key] || moduleBadge.leave;
+}
+
 export default function ApprovalInbox() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const roleViewKey = resolveRoleViewKey(user as any);
   const roleLevel = Number((user as any)?.role_level || 0);
   const canAction = roleLevel >= 20 && roleLevel < 99;
@@ -53,6 +88,7 @@ export default function ApprovalInbox() {
   const [moduleFilter, setModuleFilter] = useState<"all" | "leave" | "ot">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
   const [rows, setRows] = useState<InboxRow[]>([]);
+
 
   const fetchData = async () => {
     try {
@@ -144,27 +180,29 @@ export default function ApprovalInbox() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-foreground">Approval Inbox</h2>
-          <p className="text-sm text-muted-foreground mt-1">รวมคำขอ Leave + OT เพื่ออนุมัติจากหน้าเดียว</p>
+          <h2 className="text-2xl font-semibold text-foreground">{t("approvalInbox.title")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("approvalInbox.subtitle")}</p>
           <p className="text-xs text-muted-foreground mt-1">{roleHint}</p>
         </div>
-        <Button variant="outline" onClick={fetchData} disabled={loading}>Refresh</Button>
+        <Button variant="outline" onClick={fetchData} disabled={loading}>
+          {t("approvalInbox.action.refresh")}
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Pending ทั้งหมด</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-semibold">{pendingCount}</div></CardContent>
+        <Card className={`border ${getCardClass("pending")}`}>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("approvalInbox.status.pending")}   </CardTitle></CardHeader>
+          <CardContent><div className="text-3xl font-semibold text-primary">{pendingCount}</div></CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{"SLA Risk (>= 2 วัน)"}</CardTitle></CardHeader>
+        <Card className={`border ${getCardClass("slaRisk")}`}>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("approvalInbox.card.slaRisk")}</CardTitle></CardHeader>
           <CardContent><div className="text-3xl font-semibold text-destructive">{slaRiskCount}</div></CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Action Mode</CardTitle></CardHeader>
+        <Card className={`border ${getCardClass("actionMode")}`}>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("approvalInbox.card.actionMode")}   </CardTitle></CardHeader>
           <CardContent>
             <Badge className={canAction ? "bg-success/10 text-success border-success/20" : "bg-muted text-muted-foreground"}>
-              {canAction ? "Approve/Reject Enabled" : "Read-only"}
+              {canAction ? t("approvalInbox.card.actionEnabled") : t("approvalInbox.card.readOnly")}
             </Badge>
           </CardContent>
         </Card>
@@ -172,20 +210,20 @@ export default function ApprovalInbox() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Filters</CardTitle>
+          <CardTitle className="text-base">{t("approvalInbox.section.filters")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-4">
-          <Input placeholder="ค้นหา ชื่อ/รหัส/เหตุผล" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input placeholder={t("approvalInbox.filter.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
           <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value as any)}>
-            <option value="all">ทุกโมดูล</option>
-            <option value="leave">Leave</option>
-            <option value="ot">OT</option>
+            <option value="all">{t("approvalInbox.filter.allModules")}</option>
+            <option value="leave">{t("approvalInbox.module.leave")}</option>
+            <option value="ot">{t("approvalInbox.module.ot")}</option>
           </select>
           <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
-            <option value="all">ทุกสถานะ</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="all">{t("approvalInbox.filter.allStatus")}</option>
+            <option value="pending">{t("approvalInbox.status.pending")}</option>
+            <option value="approved">{t("approvalInbox.status.approved")}</option>
+            <option value="rejected">{t("approvalInbox.status.rejected")}</option>
           </select>
           <div className="text-sm text-muted-foreground flex items-center">รายการที่แสดง: {filteredRows.length}</div>
         </CardContent>
@@ -193,7 +231,7 @@ export default function ApprovalInbox() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Approval Queue</CardTitle>
+          <CardTitle className="text-base">{t("approvalInbox.section.queue")}  </CardTitle>
         </CardHeader>
         <CardContent>
           {error ? <div className="text-sm text-destructive mb-3">{error}</div> : null}
@@ -201,20 +239,20 @@ export default function ApprovalInbox() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="py-2 pr-3">Module</th>
-                  <th className="py-2 pr-3">Employee</th>
-                  <th className="py-2 pr-3">Period</th>
-                  <th className="py-2 pr-3">Reason</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2 pr-3">Pending Days</th>
-                  <th className="py-2 pr-0 text-right">Actions</th>
+                  <th className="py-2 pr-3">{t("approvalInbox.table.module")}</th>
+                  <th className="py-2 pr-3">{t("approvalInbox.table.employee")}</th>
+                  <th className="py-2 pr-3">{t("approvalInbox.table.period")}</th>
+                  <th className="py-2 pr-3">{t("approvalInbox.table.reason")}</th>
+                  <th className="py-2 pr-3">{t("approvalInbox.table.status")}</th>
+                  <th className="py-2 pr-3">{t("approvalInbox.table.pendingDays")}</th>
+                  <th className="py-2 pr-0 text-right">{t("approvalInbox.table.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td className="py-4 text-muted-foreground" colSpan={7}>กำลังโหลด...</td></tr>
+                  <tr><td className="py-4 text-muted-foreground" colSpan={7}>{t("approvalInbox.state.loading")}</td></tr>
                 ) : filteredRows.length === 0 ? (
-                  <tr><td className="py-4 text-muted-foreground" colSpan={7}>ไม่พบรายการ</td></tr>
+                  <tr><td className="py-4 text-muted-foreground" colSpan={7}>{t("approvalInbox.state.noData")}</td></tr>
                 ) : (
                   filteredRows.map((row) => {
                     const key = `${row.module}-${row.id}`;
@@ -232,7 +270,7 @@ export default function ApprovalInbox() {
                         <td className="py-3 pr-3">{row.dateLabel}</td>
                         <td className="py-3 pr-3 max-w-[320px] truncate" title={row.reason}>{row.reason}</td>
                         <td className="py-3 pr-3">
-                          <Badge className={row.status === "approved" ? "bg-success/10 text-success" : row.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"}>
+                          <Badge className={getStatusBadgeClass(row.status)}>
                             {row.status}
                           </Badge>
                         </td>
@@ -249,14 +287,15 @@ export default function ApprovalInbox() {
                               disabled={!canAction || !isPending || busy}
                               onClick={() => updateStatus(row, "rejected")}
                             >
-                              Reject
+                              {t("approvalInbox.action.reject")}
                             </Button>
                             <Button
                               size="sm"
+                              variant="outline"
                               disabled={!canAction || !isPending || busy}
                               onClick={() => updateStatus(row, "approved")}
                             >
-                              Approve
+                              {t("approvalInbox.action.approve")}
                             </Button>
                           </div>
                         </td>

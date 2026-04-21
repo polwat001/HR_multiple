@@ -67,6 +67,7 @@ const getMonthEndDate = (month: string) => {
   return `${year}-${String(mon).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
+
 export default function PayrollManagement() {
   const { hasRole } = useAuth();
   const { t } = useLanguage();
@@ -97,6 +98,8 @@ export default function PayrollManagement() {
     const endDate = getMonthEndDate(`${year}-${String(mon).padStart(2, "0")}`);
     return { startDate, endDate };
   };
+
+  const cardClassName = "border-blue-400/30 bg-blue-500/5";
 
   const fetchPayrollData = async () => {
     const [employeesRes, attendanceRes, leaveReqRes, otReqRes, payrollSettingsRes, departmentsRes] = await Promise.all([
@@ -535,31 +538,44 @@ export default function PayrollManagement() {
 
           <div className="space-y-6">
             <div className="space-y-6">
-              <h3 className="text-sm font-semibold text-foreground">{t("payroll.overview.title")}</h3>
-              <div className="grid grid-cols-0 md:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">{t("payroll.fields.month")}</p>
-                  <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {t("payroll.overview.title")}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {t("payroll.fields.month")}
+                  </p>
                 </div>
-                <Card className="border-border/70">
+
+                <div className="w-[180px]">
+                  <Input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-0 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className={`shadow-card ${cardClassName}`}>
                   <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground">{t("payroll.fields.netAmount")}</p>
                     <p className="text-xl font-semibold mt-1">{(currentRow?.netAmount || 0).toLocaleString()}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-border/70">
+                <Card className={`shadow-card ${cardClassName}`}>
                   <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground">{t("payroll.fields.employees")}</p>
                     <p className="text-xl font-semibold mt-1">{currentRow?.employees || 0}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-border/70">
+                <Card className={`shadow-card ${cardClassName}`}>
                   <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground">{t("payroll.fields.paymentDate")}</p>
                     <p className="text-xl font-semibold mt-1">{currentRow?.paymentDate || "-"}</p>
                   </CardContent>
                 </Card>
-                <Card className="border-border/70">
+                <Card className={`shadow-card ${cardClassName}`}>
                   <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground">{t("payroll.fields.status")}</p>
                     <Badge variant="outline" className={`mt-2 ${statusClassMap[currentRow?.status || "draft"]}`}>

@@ -406,7 +406,7 @@ const ContractManagement = () => {
                     <td className="px-4 py-3 font-mono text-xs">{c.start}</td>
                     <td className="px-4 py-3 font-mono text-xs">{c.end}</td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className={statusColor[c.status] || statusColor.active}>
+                      <Badge className={statusColor[c.status] || statusColor.active}>                        
                         {t(`contractManagement.status.${c.status}`, c.status)}
                       </Badge>
                     </td>
@@ -511,7 +511,7 @@ const ContractManagement = () => {
                         </div>
                       </>
                     ) : (
-                      <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/20">No template available</div>
+                      <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/20">{t("contractManagement.templates.noTemplateSelected")}</div>
                     )}
                   </CardContent>
                 </Card>

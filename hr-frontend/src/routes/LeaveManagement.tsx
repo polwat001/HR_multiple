@@ -88,10 +88,10 @@ const LeaveManagement = () => {
 
   const getStatusClass = (status?: string) => {
     const s = String(status || "").toLowerCase();
-    if (s === "approved") return "bg-success/10 text-success border-success/30";
-    if (s === "pending") return "bg-warning/10 text-warning border-warning/30";
-    if (s === "rejected") return "bg-destructive/10 text-destructive border-destructive/30";
-    return "";
+    if (s === "approved") return "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (s === "pending") return "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-amber-50 text-amber-700 border-amber-200";
+    if (s === "rejected") return "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-red-50 text-red-700 border-red-200";
+    return ""; 
   };
 
   useEffect(() => {
@@ -312,6 +312,7 @@ const LeaveManagement = () => {
       setFormLoading(false);
     }
   };
+  
 
   const handlePolicyChange = (index: number, field: "service_years" | "vacation_days" | "sick_cert_required_after_days", value: string) => {
     const next = Number(value || 0);
@@ -442,6 +443,7 @@ const LeaveManagement = () => {
   };
 
   if (isEmployeeOnly) {
+
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between gap-3">

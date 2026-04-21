@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Filter, Plus, Pencil, Trash2, Table } from "lucide-react";
+import { Search, Filter, Plus, Pencil, Trash2 } from "lucide-react";
 import { apiDelete, apiGet, apiPost } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
 
@@ -76,6 +76,29 @@ const statusStyles: Record<string, string> = {
   probation: "bg-yellow-100 text-yellow-700 border-yellow-200",
   inactive: "bg-gray-100 text-gray-600 border-gray-200",
   resigned: "bg-red-100 text-red-600 border-red-200",
+};
+
+const departmentStyles = [
+  "bg-sky-100 text-sky-700 border-sky-200",
+  "bg-emerald-100 text-emerald-700 border-emerald-200",
+  "bg-amber-100 text-amber-700 border-amber-200",
+  "bg-violet-100 text-violet-700 border-violet-200",
+  "bg-rose-100 text-rose-700 border-rose-200",
+  "bg-cyan-100 text-cyan-700 border-cyan-200",
+  "bg-lime-100 text-lime-700 border-lime-200",
+  "bg-orange-100 text-orange-700 border-orange-200",
+];
+
+const getDepartmentClass = (departmentName?: string) => {
+  const name = String(departmentName || "").trim().toLowerCase();
+  if (!name) return "bg-slate-100 text-slate-700 border-slate-200";
+  const hash = Array.from(name).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return departmentStyles[hash % departmentStyles.length];
+};
+
+const getEmployeeFullName = (employee: Employee) => {
+  const fullName = `${employee.firstname_th || ""} ${employee.lastname_th || ""}`.trim();
+  return fullName || employee.firstname_th || employee.lastname_th || employee.employee_code || "-";
 };
 
 const EmployeeList = () => {
@@ -501,6 +524,7 @@ const EmployeeList = () => {
             </svg>
             {importing ? "Importing..." : "นำเข้าข้อมูล"}
           </Button>
+          <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportFile} />
 
             {/* Add Employee */}
             <Button
@@ -682,7 +706,7 @@ const EmployeeList = () => {
                       <td className="px-3 py-2">{r.row}</td>
                       <td className="px-3 py-2 font-mono">{r.employee_code}</td>
                       <td className="px-3 py-2">
-                        <Badge variant="outline" className={r.ok ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"}>
+                        <Badge variant="outline" className={r.ok ? "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200" : "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-red-50 text-red-700 border-red-200"}>
                           {r.ok ? "OK" : "FAIL"}
                         </Badge>
                       </td>
@@ -816,16 +840,20 @@ const EmployeeList = () => {
 
                           <td className="px-4 py-3 font-mono text-xs">{emp.employee_code || t("employeeList.na")}</td>
                           <td className="px-4 py-3">
-                            <span className="font-medium text-foreground">{emp.firstname_th} {emp.lastname_th}</span>
+                            <span className="font-medium text-foreground">{getEmployeeFullName(emp)}</span>
                           </td>
 
                           <td className="px-4 py-3">
-                            <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                            <Badge variant="secondary" className="text-xs px-2 py-0.5 rounded-full">
                               {emp.company_name || t("employeeList.na")}
-                            </span>
+                            </Badge>
                           </td>
 
-                          <td className="px-4 py-3">{emp.department_name || t("employeeList.na")}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className={`text-xs px-2 py-0.5 rounded-full font-medium ${getDepartmentClass(emp.department_name)}`}>
+                              {emp.department_name || t("employeeList.na")}
+                            </Badge>
+                          </td>
                           <td className="px-4 py-3">{emp.position_name || t("employeeList.na")}</td>
                           <td className="px-4 py-3">
 

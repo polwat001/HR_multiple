@@ -97,6 +97,7 @@ const UserPermissions = () => {
     companyScope: "All Companies",
     departmentScope: "All Departments",
   });
+  
 
   const userMap = useMemo(() => {
     const map = new Map<number, { username: string; displayName: string }>();
@@ -387,7 +388,7 @@ const UserPermissions = () => {
                   <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 transition shadow-sm font-medium"
+                    className="gap-1.5"
                   onClick={handleChangeOwnPassword}
                 >
                   {t("userPermission.accounts.changePassword")}
@@ -395,7 +396,7 @@ const UserPermissions = () => {
 
                 <Button
                   size="sm"
-                  className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm font-medium"
+                  className="gap-1.5"
                   onClick={handleCreateUser}
                 >
                   <Plus className="h-4 w-4" />
@@ -458,8 +459,8 @@ const UserPermissions = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-foreground mb-2">{t("userPermission.tabs.roles")}</h3>
             <Button 
-              variant="outline" 
-              className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm font-medium m-3">
+              variant="default"
+              className="gap-1.5 m-3">
                 <Plus className="h-4 w-4" /> {t("userPermission.roles.newRole")}
             </Button>
           </div>
@@ -517,7 +518,7 @@ const UserPermissions = () => {
                   </tbody>
                 </table>
                 <div className="mt-4 flex justify-end">
-                  <Button variant="outline" size="sm" className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm font-medium" onClick={handleSaveMatrix} disabled={matrixSaving || matrixLoading}>
+                  <Button variant="default" size="sm" className="gap-1.5" onClick={handleSaveMatrix} disabled={matrixSaving || matrixLoading}>
                     {matrixLoading ? t("userPermission.roles.loading") : matrixSaving ? t("userPermission.roles.saving") : t("userPermission.roles.save")}
                   </Button>
                 </div>
@@ -627,7 +628,8 @@ const UserPermissions = () => {
                 <div className="pt-2 flex justify-end">
                   <Button
                     size="sm"
-                    className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm font-medium px-5"
+                    variant="default"
+                    className="gap-1.5 px-5"
                     onClick={handleAddAssignment}
                   >
                     {t("userPermission.assignments.addAssignment")}
@@ -640,7 +642,8 @@ const UserPermissions = () => {
             {/* Assignments Table */}
             <Card className="shadow-lg rounded-2xl border bg-background lg:col-span-2">
               <CardHeader className="pb-3 border-b">
-                <CardTitle className="text-base font-semibold flex items-center gap-2"><Users className="h-4 w-4 text-primary" />{t("userPermission.assignments.table.title")}</CardTitle>
+                <CardTitle className="text-base font-semibold flex items-center gap-2"><Users className="h-4 w-4 text-primary" />
+                {t("userPermission.assignments.table.title")}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <table className="w-full text-sm">
@@ -668,8 +671,7 @@ const UserPermissions = () => {
                           <td className="px-4 py-3 text-xs text-muted-foreground">{a.departmentScope}</td>
                           <td className="px-4 py-3 text-right">
                             <Button size="sm"
-                              variant="outline"
-                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 transition"
+                              variant="destructive"
                               onClick={() => handleRemoveRole(a.userId, a.role)}>
                               Remove
                             </Button>

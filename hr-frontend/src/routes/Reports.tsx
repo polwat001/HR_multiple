@@ -190,6 +190,21 @@ const Reports = () => {
 
     return null;
   };
+  const getExcelButtonClass = () =>
+  "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
+
+  const getPdfButtonClass = () =>
+    "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-red-50 text-red-700 border-red-200 hover:bg-red-100";
+  const getExportButtonClass = (label: string) => {
+    const isPdf = label.toLowerCase().includes("pdf");
+
+    return `rounded-full w-full border px-2.5 gap-1.5 shadow-sm text-white transition ${
+      isPdf
+        ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+        : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+    }`;
+  };
+
 
   const employeeSummaryCards = useMemo(
     () => [
@@ -502,14 +517,10 @@ const Reports = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
-                    size="sm"
-                    className="gap-1.5 bg-green-600 text-white hover:bg-green-700 transition"
+                    variant="outline"
+                    className={`w-full gap-1.5 transition ${getExcelButtonClass()}`}
                     onClick={() =>
-                      handleExport(
-                        r.id,
-                        t(`reports.catalog.${r.id}.name`),
-                        "excel"
-                      )
+                      handleExport("bulk-export", t("reports.bulkExportName"), "excel")
                     }
                   >
                     <Download className="h-4 w-4" />
@@ -517,14 +528,10 @@ const Reports = () => {
                   </Button>
 
                   <Button
-                    size="sm"
-                    className="gap-1.5 bg-red-600 text-white hover:bg-red-700 transition"
+                    variant="outline"
+                    className={`w-full gap-1.5 transition ${getPdfButtonClass()}`}
                     onClick={() =>
-                      handleExport(
-                        r.id,
-                        t(`reports.catalog.${r.id}.name`),
-                        "pdf"
-                      )
+                      handleExport("bulk-export", t("reports.bulkExportName"), "pdf")
                     }
                   >
                     <Download className="h-4 w-4" />
@@ -595,13 +602,9 @@ const Reports = () => {
                 ? t("reports.generateOptions.pdfGroupHint")
                 : t("reports.generateOptions.excelHint")}
             </div>
-            <Button variant="outline" className={`w-full gap-1.5 text-white transition
-                ${
-                  exportLabel.toLowerCase().includes("pdf")
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-green-600 hover:bg-green-700"
-                }
-              `}
+            <Button
+              variant="outline"
+              className={getExportButtonClass(exportLabel)}
               onClick={() =>
                 handleExport("bulk-export", t("reports.bulkExportName"))
               }
