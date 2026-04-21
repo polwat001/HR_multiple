@@ -888,7 +888,7 @@ export default function PayrollManagement() {
                   </div>
 
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">{t("payroll.wizard.income.basicSalary")}</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("payroll.wizard.income.baseSalary")}</p>
                     <Input type="number" value={selectedSetting?.basicSalary || 0} onChange={(e) => updateSelectedSetting("basicSalary", e.target.value)} disabled={isReadOnly} />
                   </div>
                   <div>
