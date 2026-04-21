@@ -71,8 +71,8 @@ function normalizeTemplate(row: ContractTemplateApiRow): ContractTemplate {
 
 const statusColor: Record<string, string> = {
   active: "bg-success/10 text-success border-success/20",
-  expired: "bg-destructive/10 text-destructive border-destructive/20",
   expiring: "bg-warning/10 text-warning border-warning/20",
+  expired: "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const ContractManagement = () => {
