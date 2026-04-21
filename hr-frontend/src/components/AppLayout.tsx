@@ -131,7 +131,7 @@ const visibleNavItems = (() => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "bg-[#1B2E3C] flex flex-col transition-all duration-300 relative z-10",
+          "bg-[#002855] flex flex-col transition-all duration-300 relative z-10",
           collapsed ? "w-[68px]" : "w-[250px]"
         )}
       >
@@ -166,7 +166,7 @@ const visibleNavItems = (() => {
                     className={cn(
                       "flex flex-1 items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors-300",
                       isActive
-                        ? "bg-[#289c9e] text-white font-medium"
+                        ? "bg-[#00a3cc] text-white font-medium"
                         : "text-white hover:bg-white/10"
                     )}
                   >
