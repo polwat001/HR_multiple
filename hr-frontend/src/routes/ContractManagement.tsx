@@ -10,6 +10,32 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Permission } from "@/types/roles";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+type ContractApiRow = {
+  id?: number | string;
+  contract_type?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  employee_code?: string;
+  firstname_th?: string;
+  lastname_th?: string;
+  company_name?: string;
+};
+
+type EmployeeApiRow = {
+  id?: number | string;
+  firstname_th?: string;
+  lastname_th?: string;
+  employee_code?: string;
+  position_name?: string;
+  company_name?: string;
+};
+
+type CompanyApiRow = {
+  id?: number | string;
+  code?: string;
+};
+
 type ContractTemplate = {
   id: number;
   name: string;
@@ -18,6 +44,30 @@ type ContractTemplate = {
   content: string;
   variables: string[];
 };
+
+type ContractTemplateApiRow = Partial<ContractTemplate> & {
+  company_scope?: string;
+  logo_url?: string;
+  html_content?: string;
+  category?: string;
+  updated_at?: string;
+};
+
+function extractTemplateVariables(content: string): string[] {
+  return Array.from(new Set((content.match(/\{\{[^}]+\}\}/g) || [])));
+}
+
+function normalizeTemplate(row: ContractTemplateApiRow): ContractTemplate {
+  const content = String(row.content || row.html_content || "");
+  return {
+    id: Number(row.id || 0),
+    name: String(row.name || "Untitled Template"),
+    company: String(row.company || row.company_scope || "ALL"),
+    logoUrl: String(row.logoUrl || row.logo_url || ""),
+    content,
+    variables: Array.isArray(row.variables) && row.variables.length > 0 ? row.variables.map((value) => String(value)) : extractTemplateVariables(content),
+  };
+}
 
 const statusColor: Record<string, string> = {
   active: "bg-success/10 text-success border-success/20",
@@ -30,8 +80,8 @@ const ContractManagement = () => {
   const { t } = useLanguage();
   const canManageCompanyContracts = hasPermission(Permission.MANAGE_COMPANY_CONTRACTS);
   const canManageTemplates = hasPermission(Permission.MANAGE_CONTRACT_TEMPLATES);
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<ContractApiRow[]>([]);
+  const [employees, setEmployees] = useState<EmployeeApiRow[]>([]);
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
   const [companyScopes, setCompanyScopes] = useState<string[]>(["ALL"]);
   const [loading, setLoading] = useState(true);
@@ -56,18 +106,18 @@ const ContractManagement = () => {
       try {
         setLoading(true);
         const [contractData, employeeData, templateData, companyData] = await Promise.all([
-          apiGet<any>("/contracts"),
-          apiGet<any>("/employees"),
-          apiGet<any>("/contracts/templates"),
-          apiGet<any>("/organization/companies"),
+          apiGet<ContractApiRow[] | { data?: ContractApiRow[] }>("/contracts"),
+          apiGet<EmployeeApiRow[] | { data?: EmployeeApiRow[] }>("/employees"),
+          apiGet<ContractTemplateApiRow[] | { data?: ContractTemplateApiRow[] }>("/contracts/templates"),
+          apiGet<CompanyApiRow[] | { data?: CompanyApiRow[] }>("/organization/companies"),
         ]);
         setContracts(Array.isArray(contractData) ? contractData : contractData?.data || []);
         setEmployees(Array.isArray(employeeData) ? employeeData : employeeData?.data || []);
-        const templateRows = Array.isArray(templateData) ? templateData : templateData?.data || [];
+        const templateRows = (Array.isArray(templateData) ? templateData : templateData?.data || []).map(normalizeTemplate);
         setTemplates(templateRows);
 
-        const companyRows = Array.isArray(companyData) ? companyData : companyData?.data || [];
-        const scopes = ["ALL", ...companyRows.map((row: any) => String(row.code || row.id || "ALL"))];
+        const companyRows: CompanyApiRow[] = Array.isArray(companyData) ? companyData : companyData?.data || [];
+        const scopes = ["ALL", ...companyRows.map((row: CompanyApiRow) => String(row.code || row.id || "ALL"))];
         setCompanyScopes(Array.from(new Set(scopes)));
 
         if (templateRows[0]) {
@@ -84,7 +134,7 @@ const ContractManagement = () => {
   }, []);
 
   const contractRows = useMemo(() => {
-    return (contracts || []).map((c: any) => {
+    return (contracts || []).map((c) => {
       const endDate = c.end_date ? new Date(c.end_date) : null;
       const daysLeft = endDate
         ? Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
@@ -110,7 +160,7 @@ const ContractManagement = () => {
   );
 
   const employeeOptions = useMemo(() => {
-    return (employees || []).map((e: any) => ({
+    return (employees || []).map((e) => ({
       id: String(e.id),
       name: `${e.firstname_th || ""} ${e.lastname_th || ""}`.trim() || e.employee_code || "-",
       employeeCode: e.employee_code || "-",
@@ -124,13 +174,13 @@ const ContractManagement = () => {
     [employeeOptions, newContractForm.employeeId],
   );
 
-  const handleGeneratePdf = (contract: any) => {
+  const handleGeneratePdf = (contract: (typeof contractRows)[number]) => {
     if (!selectedTemplate) {
       window.alert("No contract template configured");
       return;
     }
 
-    const templateText = selectedTemplate.content
+    const templateText = (selectedTemplate.content || "")
       .replaceAll("{{employee_name}}", contract.employee || "-")
       .replaceAll("{{position}}", "-")
       .replaceAll("{{salary}}", "-")
@@ -198,15 +248,15 @@ const ContractManagement = () => {
       variables,
     })
       .then(async () => {
-        const res = await apiGet<any>("/contracts/templates");
-        const nextRows = Array.isArray(res) ? res : res?.data || [];
+        const res = await apiGet<ContractTemplateApiRow[] | { data?: ContractTemplateApiRow[] }>("/contracts/templates");
+        const nextRows = (Array.isArray(res) ? res : res?.data || []).map(normalizeTemplate);
         setTemplates(nextRows);
         if (nextRows[0]) setSelectedTemplateId(Number(nextRows[0].id));
         setTemplateDraft({ name: "", company: "ALL", logoUrl: "", content: "" });
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         console.error("Failed to create template:", error);
-        alert(error?.message || "Failed to create template");
+        alert(error instanceof Error ? error.message : "Failed to create template");
       });
   };
 
@@ -447,7 +497,10 @@ const ContractManagement = () => {
                     </div>
                     {selectedTemplate ? (
                       <>
-                        {selectedTemplate.logoUrl ? <img src={selectedTemplate.logoUrl} alt="company-logo" className="h-8 object-contain" /> : null}
+                        {selectedTemplate.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={selectedTemplate.logoUrl} alt="company-logo" className="h-8 object-contain" />
+                        ) : null}
                         <div className="flex gap-1.5 flex-wrap">
                           {selectedTemplate.variables.map((v) => (
                             <Badge key={v} variant="secondary" className="text-xs font-mono">{v}</Badge>
