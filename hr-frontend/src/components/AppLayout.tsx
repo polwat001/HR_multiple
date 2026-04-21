@@ -91,7 +91,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         : undefined;
       const leaveSubItems = key === "leave" && Number((user as any)?.role_level || 0) >= 20
         ? [
-            { label: "Approval Inbox", path: "/approvals", icon: ClipboardList },
+            { label: "Approval", labelKey: "module.leaveSub.Approval", path: "/approvals", icon: ClipboardList },
           ]
         : undefined;
       return {
