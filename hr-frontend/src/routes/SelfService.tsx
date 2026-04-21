@@ -316,8 +316,6 @@ const SelfService = () => {
         setHasLoadedOnce(true);
       }
     };
-    
-
     fetchData();
   }, [authUser?.user_id, selectedMonth]);
 
