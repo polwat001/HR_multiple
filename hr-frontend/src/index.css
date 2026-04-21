@@ -106,6 +106,25 @@
   }
 }
 
+table tbody tr {
+  background-color: rgb(255 255 255);
+  color: rgb(55 65 81);
+  box-shadow: inset 0 -1px 0 rgb(255, 255, 255);
+}
+
+table tbody tr:hover {
+  background-color: rgb(238, 239, 242);
+}
+
+table {
+  background-color: rgb(255 255 255);
+}
+
+table tbody tr > td,
+table tbody tr > th {
+  color: inherit;
+}
+
 @layer utilities {
   .gradient-primary {
     background: linear-gradient(135deg, hsl(215 70% 45%), hsl(175 60% 40%));
