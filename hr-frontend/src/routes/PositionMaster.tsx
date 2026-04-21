@@ -16,6 +16,53 @@ type PositionRow = {
   status: "active" | "inactive";
 };
 
+type PositionApiRow = {
+  id?: number | string;
+  title_th?: string;
+  title?: string;
+  position_name?: string;
+  level?: string | number;
+  position_level?: string | number;
+  company_name?: string;
+  department_name?: string;
+  department_id?: string | number;
+};
+
+type CompanyRow = {
+  id: string | number;
+  company_name?: string;
+  company_code?: string;
+};
+
+type DepartmentRow = {
+  id: string | number;
+  department_name?: string;
+  company_id?: string | number;
+};
+
+const level: Record<string, string> = {
+  1: "bg-sky-100 text-sky-700 border-sky-200",
+  2: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  3: "bg-amber-100 text-amber-700 border-amber-200",
+  4: "bg-violet-100 text-violet-700 border-violet-200",
+  5: "bg-rose-100 text-rose-700 border-rose-200",
+  6: "bg-cyan-100 text-cyan-700 border-cyan-200",
+  7: "bg-lime-100 text-lime-700 border-lime-200",
+  8: "bg-orange-100 text-orange-700 border-orange-200",
+};
+
+const getLevelKey = (value: unknown) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return "1";
+  if (normalized.startsWith("l")) return normalized.slice(1) || "1";
+  return normalized;
+};
+
+const getLevelLabel = (value: unknown) => {
+  const normalized = getLevelKey(value);
+  return normalized.toUpperCase().startsWith("L") ? normalized.toUpperCase() : `L${normalized}`;
+};
+
 const PositionMaster = () => {
   const { hasRole } = useAuth();
   const { t } = useLanguage();
@@ -27,14 +74,29 @@ const PositionMaster = () => {
   const fetchPositions = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiGet<any>("/organization/positions");
-      const items = Array.isArray(res) ? res : res?.data || [];
+      const [positionRes, departmentRes, companyRes] = await Promise.all([
+        apiGet<PositionApiRow[] | { data?: PositionApiRow[] }>("/organization/positions"),
+        apiGet<DepartmentRow[] | { data?: DepartmentRow[] }>("/organization/departments"),
+        apiGet<CompanyRow[] | { data?: CompanyRow[] }>("/organization/companies"),
+      ]);
+      const items = Array.isArray(positionRes) ? positionRes : positionRes?.data || [];
+      const departments: DepartmentRow[] = Array.isArray(departmentRes) ? departmentRes : departmentRes?.data || [];
+      const companies: CompanyRow[] = Array.isArray(companyRes) ? companyRes : companyRes?.data || [];
+      const departmentMap = new Map(departments.map((department) => [String(department.id), department]));
+      const companyMap = new Map(companies.map((company) => [String(company.id), company]));
+
       setRows(
-        items.map((item: any) => ({
+        items.map((item) => ({
           id: Number(item.id),
-          title: String(item.title_th || item.title || "-"),
-          level: String(item.level || "-"),
-          companies: [String(item.company_name || "-")],
+          title: String(item.position_name || item.title_th || item.title || "-"),
+          level: getLevelLabel(item.level || item.position_level || "1"),
+          companies: (() => {
+            const department = departmentMap.get(String(item.department_id || ""));
+            const company = department ? companyMap.get(String(department.company_id || "")) : null;
+            const companyName = String(company?.company_name || company?.company_code || item.company_name || "-");
+            const departmentName = String(department?.department_name || item.department_name || "-");
+            return companyName === "-" ? [departmentName] : [companyName, departmentName];
+          })(),
           status: "active" as const,
         }))
       );
@@ -60,8 +122,8 @@ const PositionMaster = () => {
         level: Number(level || 1),
       });
       await fetchPositions();
-    } catch (error: any) {
-      window.alert(error?.message || "Failed to create position");
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : "Failed to create position");
     }
   };
 
@@ -76,8 +138,8 @@ const PositionMaster = () => {
         level: Number(level || 1),
       });
       await fetchPositions();
-    } catch (error: any) {
-      window.alert(error?.message || "Failed to update position");
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : "Failed to update position");
     }
   };
 
@@ -86,8 +148,8 @@ const PositionMaster = () => {
     try {
       await apiDelete(`/organization/positions/${row.id}`);
       await fetchPositions();
-    } catch (error: any) {
-      window.alert(error?.message || "Failed to delete position");
+    } catch (error: unknown) {
+      window.alert(error instanceof Error ? error.message : "Failed to delete position");
     }
   };
 
@@ -172,9 +234,12 @@ const PositionMaster = () => {
 
                     {/* Level */}
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 text-xs rounded-md bg-muted">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${level[getLevelKey(p.level)] || "bg-slate-100 text-slate-700 border-slate-200"}`}
+                      >
                         {p.level}
-                      </span>
+                      </Badge>
                     </td>
 
                     {/* Companies */}
