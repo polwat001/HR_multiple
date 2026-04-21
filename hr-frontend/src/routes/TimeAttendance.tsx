@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, Check, X, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Permission, UserRole } from "@/types/roles";
+import { Permission } from "@/types/roles";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 import { resolveRoleViewKey } from "@/lib/accessMatrix";
@@ -25,12 +25,75 @@ type ShiftRow = {
 type ApprovalRow = {
   id: number;
   approval_type?: string;
+  type?: string;
   requester_name?: string;
   department_name?: string;
   request_reason?: string;
+  reason?: string;
   requested_date?: string;
+  created_at?: string;
   status?: string;
 };
+
+type AuthUserLike = {
+  user_id?: number | string;
+  company_id?: number | string;
+};
+
+type AttendanceApiRow = {
+  id: number | string;
+  user_id?: number | string | null;
+  work_date?: unknown;
+  employee_code?: string;
+  employeeCode?: string;
+  code?: string;
+  firstname_th?: string;
+  lastname_th?: string;
+  employee_name?: string;
+  shift_id?: number | string | null;
+  shift_name?: string;
+  shift_time_in?: string;
+  shift_time_out?: string;
+  check_in_time?: unknown;
+  check_out_time?: unknown;
+  check_in?: unknown;
+  check_out?: unknown;
+  status?: string;
+  gps?: string;
+};
+
+type OtApiRow = {
+  id: number | string;
+  user_id?: number | string | null;
+  firstname_th?: string;
+  lastname_th?: string;
+  employee_name?: string;
+  employee_code?: string;
+  request_date?: string;
+  start_time?: string;
+  end_time?: string;
+  total_hours?: number | string;
+  reason?: string;
+  approver_name?: string;
+  status?: string;
+};
+
+type ShiftApiRow = {
+  id: number | string;
+  shift_name?: string;
+  name?: string;
+  time_in?: string;
+  time_out?: string;
+  grace_period_mins?: number | string;
+  company_name?: string;
+};
+
+type ScheduleEmployeeApiRow = {
+  firstname_th?: string;
+  lastname_th?: string;
+};
+
+type ApiListResponse<T> = T[] | { data?: T[] };
 
 const toDateOnly = (value: unknown): string => {
   if (!value) return "-";
@@ -75,28 +138,28 @@ const toTimeOnly = (value: unknown): string => {
   return "-";
 };
 
-const toUiAttendanceRow = (row: any) => ({
+const toUiAttendanceRow = (row: AttendanceApiRow) => ({
   id: Number(row.id),
   userId: row.user_id ? Number(row.user_id) : null,
   workDate: toDateOnly(row.work_date),
-  code: row.employee_code || "-",
-  name: `${row.firstname_th || ""} ${row.lastname_th || ""}`.trim() || "-",
+  code: row.employee_code || row.employeeCode || row.code || "-",
+  name: `${row.firstname_th || row.employee_name || ""} ${row.lastname_th || ""}`.trim() || row.employee_name || "-",
   shiftId: row.shift_id ? Number(row.shift_id) : null,
   shiftName: row.shift_name || "",
   shiftTimeIn: row.shift_time_in || "-",
   shiftTimeOut: row.shift_time_out || "-",
-  timeIn: toTimeOnly(row.check_in_time),
-  timeOut: toTimeOnly(row.check_out_time),
+  timeIn: toTimeOnly(row.check_in_time || row.check_in),
+  timeOut: toTimeOnly(row.check_out_time || row.check_out),
   status: String(row.status || "present").toLowerCase(),
   gps: row.gps || "-",
 });
 
-const otRequests: Array<any> = [];
+const otRequests: Array<ReturnType<typeof toUiOtRow>> = [];
 
-const toUiOtRow = (row: any) => ({
+const toUiOtRow = (row: OtApiRow) => ({
   id: Number(row.id),
   userId: row.user_id ? Number(row.user_id) : null,
-  employeeName: `${row.firstname_th || ""} ${row.lastname_th || ""}`.trim() || row.employee_code || "-",
+  employeeName: `${row.firstname_th || row.employee_name || ""} ${row.lastname_th || ""}`.trim() || row.employee_name || row.employee_code || "-",
   requestDate: row.request_date || "-",
   startTime: row.start_time || "-",
   endTime: row.end_time || "-",
@@ -107,25 +170,51 @@ const toUiOtRow = (row: any) => ({
 });
 
 const statusBadge: Record<string, string> = {
-  present: "bg-success/10 text-success",
-  late: "bg-warning/10 text-warning",
-  absent: "bg-destructive/10 text-destructive",
-  missing_scan: "bg-orange-100 text-orange-700",
+  present: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200",
+  late: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-amber-50 text-amber-700 border-amber-200",
+  absent: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-red-50 text-red-700 border-red-200",
+  missing_scan: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-amber-50 text-amber-700 border-amber-200",
+  leave: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-slate-100 text-slate-700 border-slate-200",
+  pending: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-amber-50 text-amber-700 border-amber-200",
+  approved: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200",
+  rejected: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-red-50 text-red-700 border-red-200",
+};
+
+const getAttendanceStatusClass = (status?: string): string => {
+  const key = String(status || "").toLowerCase();
+  return statusBadge[key] || "bg-slate-100 text-slate-700 border-slate-200";
 };
 
 const otStatusBadge: Record<string, string> = {
-  pending: "bg-warning/10 text-warning",
-  approved: "bg-success/10 text-success",
-  rejected: "bg-destructive/10 text-destructive",
+  pending: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-amber-50 text-amber-700 border-amber-200",
+  approved: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-emerald-50 text-emerald-700 border-emerald-200",
+  rejected: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-red-50 text-red-700 border-red-200",
+};
+
+const departmentBadgeClass: Record<string, string> = {
+  IT: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-blue-50 text-blue-700 border-blue-200",
+  HR: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
+  Operations: "rounded-full border px-2.5 py-0.5 text-xs font-medium shadow-sm bg-amber-50 text-amber-700 border-amber-200",
+};
+
+const getDepartmentBadgeClass = (departmentName?: string): string => {
+  if (!departmentName) return "bg-slate-50 text-slate-700 border-slate-200";
+  return departmentBadgeClass[departmentName] || "bg-slate-50 text-slate-700 border-slate-200";
+};
+
+const decisionButtonClass: Record<"approved" | "rejected", string> = {
+  approved: "border-success/80 bg-success/20 text-success hover:bg-success/30",
+  rejected: "border-destructive/80 bg-destructive/20 text-destructive hover:bg-destructive/30",
 };
 
 const TimeAttendance = () => {
   const { t } = useLanguage();
-  const { hasPermission, hasRole, user } = useAuth();
-  const roleViewKey = resolveRoleViewKey(user as any);
+  const { hasPermission, user } = useAuth();
+  const authUser = (user || {}) as AuthUserLike;
+  const roleViewKey = resolveRoleViewKey(user as unknown as Record<string, unknown>);
   const isManagerView = roleViewKey === "manager";
-  const ownUserId = Number((user as any)?.user_id || 0);
-  const userCompanyId = Number((user as any)?.company_id || 0);
+  const ownUserId = Number(authUser.user_id || 0);
+  const userCompanyId = Number(authUser.company_id || 0);
   const canCreateShift = roleViewKey === "hr_company" || roleViewKey === "central_hr" || roleViewKey === "super_admin";
   const canRequestOt = hasPermission(Permission.REQUEST_OT);
   const canApproveOt = hasPermission(Permission.APPROVE_DEPARTMENT_OT) || hasPermission(Permission.MANAGE_COMPANY_OT) || hasPermission(Permission.MANAGE_ALL_OT);
@@ -140,7 +229,7 @@ const TimeAttendance = () => {
 
   const [scheduleRows, setScheduleRows] = useState<ShiftRow[]>([]);
   const [schedulesLoading, setSchedulesLoading] = useState(false);
-  const [attendanceRows, setAttendanceRows] = useState<any[]>([]);
+  const [attendanceRows, setAttendanceRows] = useState<Array<ReturnType<typeof toUiAttendanceRow>>>([]);
   const [adjustmentRows, setAdjustmentRows] = useState<ApprovalRow[]>([]);
   const [adjustmentsLoading, setAdjustmentsLoading] = useState(false);
   const [selectedAttendanceShift, setSelectedAttendanceShift] = useState("all");
@@ -171,12 +260,12 @@ const TimeAttendance = () => {
     endTime: string;
     totalHours: number;
     reason: string;
-    status: "pending" | "approved";
+    status: "pending" | "approved" | "rejected";
   }>>([]);
 
   const fetchOt = useCallback(async () => {
       try {
-        const res = await apiGet<any>("/ot/requests");
+        const res = await apiGet<ApiListResponse<OtApiRow>>("/ot/requests");
         const rows = Array.isArray(res) ? res : res?.data || [];
         setOtRows(rows.map(toUiOtRow));
       } catch (error) {
@@ -187,23 +276,23 @@ const TimeAttendance = () => {
     try {
       setSchedulesLoading(true);
       // Prefer /shifts to keep API coverage complete; fallback to /schedules for compatibility.
-      let rows: any[] = [];
+      let rows: ShiftApiRow[] = [];
       try {
-        const shiftRes = await apiGet<any>("/shifts");
+        const shiftRes = await apiGet<ApiListResponse<ShiftApiRow>>("/shifts");
         rows = Array.isArray(shiftRes) ? shiftRes : shiftRes?.data || [];
       } catch (shiftError) {
         console.error("Failed to fetch shifts, fallback to schedules:", shiftError);
-        const scheduleRes = await apiGet<any>("/schedules");
+        const scheduleRes = await apiGet<ApiListResponse<ShiftApiRow>>("/schedules");
         rows = Array.isArray(scheduleRes) ? scheduleRes : scheduleRes?.data || [];
       }
 
       const shiftsWithEmployees: ShiftRow[] = await Promise.all(
-        rows.map(async (row: any) => {
+        rows.map(async (row) => {
           let names: string[] = [];
           try {
-            const employeeRes = await apiGet<any>(`/schedules/${row.id}/employees`);
+            const employeeRes = await apiGet<ApiListResponse<ScheduleEmployeeApiRow>>(`/schedules/${row.id}/employees`);
             const employeeRows = Array.isArray(employeeRes) ? employeeRes : employeeRes?.data || [];
-            names = employeeRows.map((emp: any) => `${emp.firstname_th || ""} ${emp.lastname_th || ""}`.trim()).filter(Boolean);
+            names = employeeRows.map((emp) => `${emp.firstname_th || ""} ${emp.lastname_th || ""}`.trim()).filter(Boolean);
           } catch (error) {
             console.error("Failed to fetch schedule employees:", error);
           }
@@ -237,15 +326,15 @@ const TimeAttendance = () => {
     try {
       setAdjustmentsLoading(true);
       const [pendingRes, allRes] = await Promise.all([
-        apiGet<any>("/approvals/pending"),
-        apiGet<any>("/approvals"),
+        apiGet<ApiListResponse<ApprovalRow>>("/approvals/pending"),
+        apiGet<ApiListResponse<ApprovalRow>>("/approvals"),
       ]);
       const pendingRows = Array.isArray(pendingRes) ? pendingRes : pendingRes?.data || [];
       const allRows = Array.isArray(allRes) ? allRes : allRes?.data || [];
       const rows = [...pendingRows, ...allRows].filter(
-        (item: any, index: number, self: any[]) => index === self.findIndex((x) => Number(x.id) === Number(item.id))
+        (item, index, self) => index === self.findIndex((x) => Number(x.id) === Number(item.id))
       );
-      const attendanceAdjustments = rows.filter((item: any) => {
+      const attendanceAdjustments = rows.filter((item) => {
         const type = String(item?.approval_type || "").toLowerCase();
         return type.includes("attendance") || type.includes("adjust") || type.includes("time");
       });
@@ -267,7 +356,7 @@ const TimeAttendance = () => {
 
   const fetchAttendance = useCallback(async () => {
       try {
-        const res = await apiGet<any>("/attendance");
+        const res = await apiGet<ApiListResponse<AttendanceApiRow>>("/attendance");
         const rows = Array.isArray(res) ? res : res?.data || [];
         setAttendanceRows(rows.map(toUiAttendanceRow));
       } catch (error) {
@@ -319,8 +408,9 @@ const TimeAttendance = () => {
       setNewShift({ shiftName: "", timeIn: "", timeOut: "", graceMinutes: "0" });
       await fetchSchedules();
       alert(t("timeAttendance.messages.shiftCreated"));
-    } catch (error: any) {
-      alert(error?.message || t("timeAttendance.messages.shiftCreateFailed"));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : t("timeAttendance.messages.shiftCreateFailed");
+      alert(message);
     } finally {
       setIsCreatingShift(false);
     }
@@ -346,7 +436,7 @@ const TimeAttendance = () => {
       setAttendanceActionMessage(action === "check-in" ? t("timeAttendance.messages.checkInSuccess") : t("timeAttendance.messages.checkOutSuccess"));
       setAttendanceActionMessageTone("success");
       await fetchAttendance();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : t("timeAttendance.messages.attendanceSaveFailed");
       const alreadyCheckedIn = action === "check-in" && /ลงเวลาเข้างานแล้ว|checked\s*in\s*already/i.test(message);
       const alreadyCheckedOut = action === "check-out" && /ลงเวลาออกงานแล้ว|checked\s*out\s*already/i.test(message);
@@ -368,11 +458,24 @@ const TimeAttendance = () => {
 
   const visibleScheduleRows = isEmployeeOnly ? scheduleRows.slice(0, 1) : scheduleRows;
   const teamAttendanceRows = isManagerView
-    ? attendanceRows.filter((row: any) => Number(row.userId || 0) !== ownUserId)
+    ? attendanceRows.filter((row) => Number(row.userId || 0) !== ownUserId)
     : attendanceRows;
   const teamOtRows = isManagerView
-    ? otRows.filter((row: any) => Number(row.userId || 0) !== ownUserId)
+    ? otRows.filter((row) => Number(row.userId || 0) !== ownUserId)
     : otRows;
+
+  const groupedAttendanceRows = useMemo(() => {
+    const filtered = teamAttendanceRows.filter(
+      (row) => selectedAttendanceShift === "all" || String(row.shiftId || "") === selectedAttendanceShift
+    );
+
+    return filtered.reduce((acc: Record<string, Array<ReturnType<typeof toUiAttendanceRow>>>, row) => {
+      const key = row.shiftName || t("timeAttendance.common.unassignedShift");
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(row);
+      return acc;
+    }, {});
+  }, [selectedAttendanceShift, t, teamAttendanceRows]);
 
   const computedHours = useMemo(() => {
     if (!newOt.startTime || !newOt.endTime) return 0;
@@ -398,7 +501,7 @@ const TimeAttendance = () => {
 
     try {
       setIsSubmittingOt(true);
-      await apiPost<any>("/ot/request", {
+      await apiPost("/ot/request", {
         request_date: newOt.requestDate,
         start_time: newOt.startTime,
         end_time: newOt.endTime,
@@ -423,6 +526,7 @@ const TimeAttendance = () => {
       setOtRows((prev) => [
         {
           id: Date.now(),
+          userId: null,
           employeeName: t("timeAttendance.common.currentUser"),
           requestDate: newOt.requestDate,
           startTime: newOt.startTime,
@@ -646,7 +750,7 @@ const TimeAttendance = () => {
                       <td className="px-4 py-3">{a.timeIn}</td>
                       <td className="px-4 py-3">{a.timeOut}</td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className={statusBadge[a.status] || ""}>{t(`timeAttendance.attendanceStatus.${a.status}`, a.status)}</Badge>
+                        <Badge variant="outline" className={getAttendanceStatusClass(a.status)}>{t(`timeAttendance.attendanceStatus.${a.status}`, a.status)}</Badge>
                       </td>
                     </tr>
                   ))
@@ -837,20 +941,7 @@ const TimeAttendance = () => {
               
               <div className="flex flex-wrap gap-2 flex-1 justify-center">
                 {Object.entries(
-                  teamAttendanceRows
-                    .filter(
-                      (a) =>
-                        selectedAttendanceShift === "all" ||
-                        String(a.shiftId || "") === selectedAttendanceShift
-                    )
-                    .reduce((acc: Record<string, any[]>, row: any) => {
-                      const key =
-                        row.shiftName ||
-                        t("timeAttendance.common.unassignedShift");
-                      if (!acc[key]) acc[key] = [];
-                      acc[key].push(row);
-                      return acc;
-                    }, {})
+                  groupedAttendanceRows
                 ).map(([shiftName, rows]) => (
                   <Badge
                     key={shiftName}
@@ -889,42 +980,12 @@ const TimeAttendance = () => {
 
             {/* CONTENT */}
             <CardContent className="p-0 overflow-x-auto">
-              {Object.entries(
-                teamAttendanceRows
-                  .filter(
-                    (a) =>
-                      selectedAttendanceShift === "all" ||
-                      String(a.shiftId || "") === selectedAttendanceShift
-                  )
-                  .reduce((acc: Record<string, any[]>, row: any) => {
-                    const key =
-                      row.shiftName ||
-                      t("timeAttendance.common.unassignedShift");
-                    if (!acc[key]) acc[key] = [];
-                    acc[key].push(row);
-                    return acc;
-                  }, {})
-              ).length === 0 ? (
+              {Object.entries(groupedAttendanceRows).length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground text-sm">
                   {t("timeAttendance.attendanceLog.emptyByShift")}
                 </div>
               ) : (
-                Object.entries(
-                  teamAttendanceRows
-                    .filter(
-                      (a) =>
-                        selectedAttendanceShift === "all" ||
-                        String(a.shiftId || "") === selectedAttendanceShift
-                    )
-                    .reduce((acc: Record<string, any[]>, row: any) => {
-                      const key =
-                        row.shiftName ||
-                        t("timeAttendance.common.unassignedShift");
-                      if (!acc[key]) acc[key] = [];
-                      acc[key].push(row);
-                      return acc;
-                    }, {})
-                ).map(([shiftName, rows]) => (
+                Object.entries(groupedAttendanceRows).map(([shiftName, rows]) => (
                   <div
                     key={shiftName}
                   >
@@ -954,7 +1015,7 @@ const TimeAttendance = () => {
                         </thead>
 
                         <tbody>
-                          {rows.map((a: any, index: number) => (
+                          {rows.map((a, index: number) => (
                             <tr
                               key={a.id}
                               className={`border-t hover:bg-muted/20 transition ${
@@ -977,7 +1038,7 @@ const TimeAttendance = () => {
                               <td className="px-4 py-4">
                                 <Badge
                                   variant="outline"
-                                  className={`${statusBadge[a.status]} px-2 py-0.5`}
+                                  className={`${getAttendanceStatusClass(a.status)} px-2 py-0.5`}
                                 >
                                   {t(
                                     `timeAttendance.attendanceStatus.${a.status}`,
@@ -1030,9 +1091,16 @@ const TimeAttendance = () => {
                     <tr key={row.id} className="border-b last:border-b-0">
                       <td className="px-4 py-3">{row.requester_name || "-"}</td>
                       <td className="px-4 py-3">{row.approval_type || "-"}</td>
-                      <td className="px-4 py-3">{row.department_name || "-"}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className={getDepartmentBadgeClass(row.department_name)}>
+                          {row.department_name || "-"}
+                        </Badge>
+                      </td>
                       <td className="px-4 py-3 max-w-[300px] truncate" title={row.request_reason || ""}>{row.request_reason || "-"}</td>
-                      <td className="px-4 py-3">{row.requested_date ? new Date(row.requested_date).toLocaleString() : "-"}</td>
+                      <td className="px-4 py-3">{(() => {
+                        const requestedAt = row.requested_date || row.created_at || "";
+                        return requestedAt ? new Date(requestedAt).toLocaleString() : "-";
+                      })()}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
                           <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-success bg-success/10 hover:bg-success/20" onClick={() => handleAdjustmentDecision(row.id, "approve")}><Check className="h-4 w-4" /></Button>
@@ -1121,8 +1189,22 @@ const TimeAttendance = () => {
                     <td className="px-4 py-3">
                       {o.status === "pending" ? (
                         <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => handleUpdateOtStatus(o.id, "approved")}><Check className="h-4 w-4" /></Button>
-                          <Button size="sm" variant="outline" onClick={() => handleUpdateOtStatus(o.id, "rejected")}><X className="h-4 w-4" /></Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={decisionButtonClass.approved}
+                            onClick={() => handleUpdateOtStatus(o.id, "approved")}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className={decisionButtonClass.rejected}
+                            onClick={() => handleUpdateOtStatus(o.id, "rejected")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       ) : (
                         <Badge variant="secondary" className="text-xs capitalize">{t(`timeAttendance.otStatus.${o.status}`, o.status)}</Badge>
