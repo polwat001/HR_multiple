@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { UserRole } from "@/types/roles";
+import { BadgeCheck, CalendarDays, FileText, ShieldCheck, Download } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import * as XLSX from "xlsx";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
@@ -60,6 +61,14 @@ type EmployeeSettingRow = {
 };
 
 type BankExportFormat = "KTB_TXT" | "SCB_CSV" | "GENERIC_CSV";
+
+type ReportDownloadButton = {
+  key: string;
+  label: string;
+  onClick: () => void;
+  icon: typeof Download;
+  className: string;
+};
 
 const getMonthEndDate = (month: string) => {
   const [year, mon] = month.split("-").map(Number);
@@ -381,6 +390,37 @@ export default function PayrollManagement() {
       setRunningActionKey(null);
     }
   };
+
+  const reportDownloadButtons: ReportDownloadButton[] = [
+    {
+      key: "attendance",
+      label: t("payroll.report.downloads.attendance"),
+      onClick: handleDownloadAttendanceReport,
+      icon: CalendarDays,
+      className: "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:text-sky-800",
+    },
+    {
+      key: "pnd1",
+      label: t("payroll.report.downloads.pnd1"),
+      onClick: handleDownloadAttendanceReport,
+      icon: FileText,
+      className: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:text-amber-900",
+    },
+    {
+      key: "sso",
+      label: t("payroll.report.downloads.sso"),
+      onClick: handleDownloadAttendanceReport,
+      icon: ShieldCheck,
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800",
+    },
+    {
+      key: "ot",
+      label: t("payroll.report.downloads.ot"),
+      onClick: handleDownloadOtReport,
+      icon: BadgeCheck,
+      className: "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 hover:text-violet-800",
+    },
+  ];
 
   const monthDelta = (currentRow?.netAmount || 0) - (previousRow?.netAmount || 0);
   const monthDeltaPct = previousRow?.netAmount
@@ -878,7 +918,8 @@ export default function PayrollManagement() {
                 <Button variant="outline" disabled={wizardStep === 4} onClick={() => setWizardStep((s) => Math.min(4, s + 1))}>{t("payroll.wizard.actions.next")}</Button>
               </div>
             </div>
-
+            
+            {/* Employee Settings */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-foreground">{t("payroll.wizard.employeeSettings.title")}</h3>
               <Card className="shadow-card">
@@ -949,31 +990,60 @@ export default function PayrollManagement() {
                   <CardTitle className="text-base">{t("payroll.report.title")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">{t("payroll.report.filters.month")}</p>
-                      <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+                  <div className="grid grid-rows-1 md:grid-cols-3 gap-4">
+                    {/* Month Filter */}
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        {t("payroll.report.filters.month")}
+                      </p>
+                      <Input
+                        type="month"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="h-10"
+                      />
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">{t("payroll.report.filters.department")}</p>
+
+                    {/* Department Filter */}
+                    <div className="space-y-1 md:col-span-2">
+                      <p className="text-xs text-muted-foreground">
+                        {t("payroll.report.filters.department")}
+                      </p>
                       <select
                         className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                         value={reportDepartment}
                         onChange={(e) => setReportDepartment(e.target.value)}
                       >
-                        <option value="all">{t("payroll.report.filters.allDepartments")}</option>
+                        <option value="all">
+                          {t("payroll.report.filters.allDepartments")}
+                        </option>
                         {departmentOptions.map((dept) => (
-                          <option key={dept} value={dept}>{dept}</option>
+                          <option key={dept} value={dept}>
+                            {dept}
+                          </option>
                         ))}
                       </select>
                     </div>
+
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>{t("payroll.report.downloads.attendance")}</Button>
-                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>{t("payroll.report.downloads.pnd1")}</Button>
-                    <Button variant="outline" className="justify-start" onClick={handleDownloadAttendanceReport}>{t("payroll.report.downloads.sso")}</Button>
-                    <Button variant="outline" className="justify-start" onClick={handleDownloadOtReport}>{t("payroll.report.downloads.ot")}</Button>
+                    {reportDownloadButtons.map((button) => {
+                      const Icon = button.icon;
+                      return (
+                        <Button
+                          key={button.key}
+                          variant="outline"
+                          className={`justify-start gap-2 border ${button.className} transition-all duration-200`}
+                          onClick={button.onClick}
+                        >
+                          <span className="items-center justify-center rounded-md bg-background/70 shadow-sm">
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span>{button.label}</span>
+                        </Button>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
