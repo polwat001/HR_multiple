@@ -225,7 +225,7 @@ export default function ApprovalInbox() {
             <option value="approved">{t("approvalInbox.status.approved")}</option>
             <option value="rejected">{t("approvalInbox.status.rejected")}</option>
           </select>
-          <div className="text-sm text-muted-foreground flex items-center">รายการที่แสดง: {filteredRows.length}</div>
+          <div className="rounded-md border border-input text-sm text-muted-foreground flex items-center justify-center text-center px-3 py-2">รายการที่แสดง: {filteredRows.length}</div>        
         </CardContent>
       </Card>
 

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, RefreshCw, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
@@ -53,8 +54,63 @@ type ContractTemplateApiRow = Partial<ContractTemplate> & {
   updated_at?: string;
 };
 
+type TemplateFieldOption = {
+  token: string;
+  label: string;
+};
+
+const variableLabels: Record<string, string> = {
+  "{{company_name}}": "ชื่อบริษัท",
+  "{{employee_name}}": "ชื่อลูกค้า",
+  "{{start_date}}": "วันที่เริ่มต้น",
+  "{{end_date}}": "วันที่สิ้นสุด",
+  "{{position}}": "ตำแหน่ง",
+  "{{salary}}": "เงินเดือน",
+};
+
+const defaultTemplateFields: TemplateFieldOption[] = Object.entries(variableLabels).map(([token, label]) => ({
+  token,
+  label,
+}));
+
+function getVariableDisplayLabel(variableToken: string): string {
+  return variableLabels[variableToken] || variableToken;
+}
+
+function buildTemplateContentFromFields(fields: string[]): string {
+  return fields.join(" - ");
+}
+
+function replaceTemplateVariablesForDisplay(content: string, getLabel: (variableToken: string) => string): string {
+  return content.replace(/\{\{[^}]+\}\}/g, (token) => getLabel(token));
+}
+
 function extractTemplateVariables(content: string): string[] {
   return Array.from(new Set((content.match(/\{\{[^}]+\}\}/g) || [])));
+}
+
+function splitTemplateForPreview(
+  content: string,
+  getLabel: (variableToken: string) => string,
+): Array<{ type: "text" | "variable"; value: string }> {
+  const parts: Array<{ type: "text" | "variable"; value: string }> = [];
+  const regex = /\{\{[^}]+\}\}/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: "text", value: content.substring(lastIndex, match.index) });
+    }
+    parts.push({ type: "variable", value: getLabel(match[0]) });
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    parts.push({ type: "text", value: content.substring(lastIndex) });
+  }
+
+  return parts.length > 0 ? parts : [{ type: "text", value: content }];
 }
 
 function normalizeTemplate(row: ContractTemplateApiRow): ContractTemplate {
@@ -100,6 +156,12 @@ const ContractManagement = () => {
     logoUrl: "",
     content: "",
   });
+  const [customTemplateFields, setCustomTemplateFields] = useState<TemplateFieldOption[]>([]);
+  const [isFieldDialogOpen, setIsFieldDialogOpen] = useState(false);
+  const [fieldLabelInput, setFieldLabelInput] = useState("");
+  const [fieldTokenInput, setFieldTokenInput] = useState("");
+  const [selectedTemplateFields, setSelectedTemplateFields] = useState<string[]>([]);
+  const [isEditingContent] = useState(false);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -174,11 +236,75 @@ const ContractManagement = () => {
     [employeeOptions, newContractForm.employeeId],
   );
 
+  const templateBuilderPreview = useMemo(
+    () => buildTemplateContentFromFields(selectedTemplateFields),
+    [selectedTemplateFields],
+  );
+
+  const availableTemplateFields = useMemo(
+    () => [...defaultTemplateFields, ...customTemplateFields],
+    [customTemplateFields],
+  );
+
+  const variableLabelMap = useMemo(() => {
+    return availableTemplateFields.reduce<Record<string, string>>((acc, field) => {
+      acc[field.token] = field.label;
+      return acc;
+    }, {});
+  }, [availableTemplateFields]);
+
+  const getDisplayLabel = (variableToken: string) => variableLabelMap[variableToken] || variableToken;
+
+  useEffect(() => {
+    setTemplateDraft((prev) => ({ ...prev, content: templateBuilderPreview }));
+  }, [templateBuilderPreview]);
+
+  const normalizeFieldToken = (token: string) => {
+    const trimmed = token.trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    const inner = trimmed.replace(/^\{\{/, "").replace(/\}\}$/, "");
+    return `{{${inner}}}`;
+  };
+
+  const handleSaveCustomField = () => {
+    const nextLabel = fieldLabelInput.trim();
+    const nextToken = normalizeFieldToken(fieldTokenInput);
+
+    if (!nextLabel || !nextToken) {
+      return;
+    }
+
+    setCustomTemplateFields((prev) => {
+      const nextFields = prev.filter((field) => field.token !== nextToken);
+      return [...nextFields, { token: nextToken, label: nextLabel }];
+    });
+
+    setFieldLabelInput("");
+    setFieldTokenInput("");
+    setIsFieldDialogOpen(false);
+  };
+
+  const toggleTemplateField = (fieldToken: string) => {
+    setSelectedTemplateFields((prev) => {
+      if (prev.includes(fieldToken)) {
+        return prev.filter((token) => token !== fieldToken);
+      }
+      return [...prev, fieldToken];
+    });
+  };
+
+  const removeTemplateField = (fieldToken: string) => {
+    setSelectedTemplateFields((prev) => prev.filter((token) => token !== fieldToken));
+  };
+
   const handleGeneratePdf = (contract: (typeof contractRows)[number]) => {
     if (!selectedTemplate) {
       window.alert("No contract template configured");
       return;
-    }
+  }
 
     const templateText = (selectedTemplate.content || "")
       .replaceAll("{{employee_name}}", contract.employee || "-")
@@ -238,7 +364,9 @@ const ContractManagement = () => {
       return;
     }
 
-    const variables = Array.from(new Set((templateDraft.content.match(/\{\{[^}]+\}\}/g) || [])));
+    const variables = selectedTemplateFields.length > 0
+      ? selectedTemplateFields
+      : Array.from(new Set((templateDraft.content.match(/\{\{[^}]+\}\}/g) || [])));
 
     apiPost("/contracts/templates", {
       name: templateDraft.name,
@@ -253,11 +381,18 @@ const ContractManagement = () => {
         setTemplates(nextRows);
         if (nextRows[0]) setSelectedTemplateId(Number(nextRows[0].id));
         setTemplateDraft({ name: "", company: "ALL", logoUrl: "", content: "" });
+        setSelectedTemplateFields([]);
       })
       .catch((error: unknown) => {
         console.error("Failed to create template:", error);
         alert(error instanceof Error ? error.message : "Failed to create template");
       });
+  };
+
+
+  const handleTemplateContentChange = (content: string) => {
+    setTemplateDraft((prev) => ({ ...prev, content }));
+    setSelectedTemplateFields(extractTemplateVariables(content));
   };
 
   const handleCreateContractPdf = () => {
@@ -428,6 +563,7 @@ const ContractManagement = () => {
           </CardContent>
         </Card>
       </div>
+      
 
       {canManageTemplates && (
       <div className="mt-4">
@@ -438,13 +574,51 @@ const ContractManagement = () => {
             <Button size="sm" variant="outline" className="gap-1.5"><Plus className="h-4 w-4" /> {t("contractManagement.templates.newTemplate")}</Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <Card className="mb-3">
+              <CardHeader>
+                <CardTitle className="text-sm">{t("contractManagement.templates.previewVariables")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 ">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">{t("contractManagement.templates.selectTemplateForPdf")}</p>
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={selectedTemplateId}
+                      onChange={(e) => setSelectedTemplateId(Number(e.target.value))}
+                    >
+                    {templates.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                    ))}
+                    </select>
+                  </div>
+                    {selectedTemplate ? (
+                      <>
+                        {selectedTemplate.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={selectedTemplate.logoUrl} alt="company-logo" className="h-8 object-contain" />
+                        ) : null}
+                        <div className="flex gap-1.5 flex-wrap">
+                          {selectedTemplate.variables.map((v) => (
+                            <Badge key={v} variant="secondary" className="text-xs font-mono">{getVariableDisplayLabel(v)}</Badge>
+                          ))}
+                        </div>
+                        <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/20">
+                          {replaceTemplateVariablesForDisplay(selectedTemplate.content, getDisplayLabel)}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/20">{t("contractManagement.templates.noTemplateSelected")}</div>
+                    )}
+                  </CardContent>
+                </Card>
+
+            <div className="space-y-2">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-sm">{t("contractManagement.templates.builder")}</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-2">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">{t("contractManagement.templates.fields.templateName")}</p>
                       <Input value={templateDraft.name} onChange={(e) => setTemplateDraft((p) => ({ ...p, name: e.target.value }))} />
@@ -466,80 +640,123 @@ const ContractManagement = () => {
                       <Input value={templateDraft.logoUrl} onChange={(e) => setTemplateDraft((p) => ({ ...p, logoUrl: e.target.value }))} />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">{t("contractManagement.templates.fields.templateContent")}</p>
-                      <Textarea
-                        className="min-h-[120px]"
-                        value={templateDraft.content}
-                        onChange={(e) => setTemplateDraft((p) => ({ ...p, content: e.target.value }))}
-                        placeholder={t("contractManagement.templates.fields.contentPlaceholder")}
-                      />
-                    </div>
-                    <Button size="sm" onClick={handleCreateTemplate}>{t("contractManagement.templates.save")}</Button>
-                  </CardContent>
-                </Card>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">{t("contractManagement.templates.fields.templateContent")}</p>
+                        <div>
+                          <Button className="m-3" variant="outline" size="sm" onClick={() => setIsFieldDialogOpen(true)}>
+                            {t("contractManagement.templates.fields.addField")}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="rounded-md border border-border p-3 bg-muted/20 space-y-3">
+                        <div className="flex flex-wrap gap-2">
+                          {availableTemplateFields.map((fieldToken) => {
+                            const isSelected = selectedTemplateFields.includes(fieldToken.token);
+                            return (
+                              <button
+                                key={fieldToken.token}
+                                type="button"
+                                onClick={() => toggleTemplateField(fieldToken.token)}
+                                className={`px-2.5 py-1 rounded-md border text-xs transition-all ${isSelected ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:bg-muted"}`}
+                              >
+                                {fieldToken.label}
+                              </button>
+                            );
+                          })}
+                        </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">{t("contractManagement.templates.previewVariables")}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">{t("contractManagement.templates.selectTemplateForPdf")}</p>
-                      <select
-                        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                        value={selectedTemplateId}
-                        onChange={(e) => setSelectedTemplateId(Number(e.target.value))}
-                      >
-                        {templates.map((tpl) => (
-                          <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    {selectedTemplate ? (
-                      <>
-                        {selectedTemplate.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={selectedTemplate.logoUrl} alt="company-logo" className="h-8 object-contain" />
-                        ) : null}
-                        <div className="flex gap-1.5 flex-wrap">
-                          {selectedTemplate.variables.map((v) => (
-                            <Badge key={v} variant="secondary" className="text-xs font-mono">{v}</Badge>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedTemplateFields.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">{t("contractManagement.templates.fields.contentPlaceholder")}</span>
+                          ) : selectedTemplateFields.map((token) => (
+                            <div key={token} className="inline-flex items-center gap-1">
+                              <Badge variant="secondary" className="text-xs font-mono">{getDisplayLabel(token)}</Badge>
+                              <button
+                                type="button"
+                                className="text-xs text-destructive hover:opacity-80"
+                                onClick={() => removeTemplateField(token)}
+                                aria-label="remove field"
+                              >
+                                x
+                              </button>
+                            </div>
                           ))}
                         </div>
-                        <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/20">
-                          {selectedTemplate.content}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/20">{t("contractManagement.templates.noTemplateSelected")}</div>
-                    )}
+
+                        {isEditingContent ? (
+                          <Textarea
+                            value={templateDraft.content}
+                            onChange={(e) => handleTemplateContentChange(e.target.value)}
+                            className="min-h-32 font-mono text-xs"
+                            placeholder="Enter template content with {{variable}} placeholders"
+                          />
+                        ) : (
+                          <div className="rounded-md border border-dashed border-border bg-background p-3 text-xs text-muted-foreground space-y-1">
+                            {templateDraft.content ? (
+                              splitTemplateForPreview(templateDraft.content, (token) => token).map((part, idx) =>
+                                part.type === "variable" ? (
+                                  <span key={idx} className="bg-primary/20 text-primary px-1 rounded font-mono">
+                                    {part.value}
+                                  </span>
+                                ) : (
+                                  <span key={idx}>{part.value}</span>
+                                )
+                              )
+                            ) : (
+                              <span>{t("contractManagement.templates.fields.contentPlaceholder")}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className=" flex justify-end">
+                      <Button size="sm" onClick={handleCreateTemplate}>
+                        {t("contractManagement.templates.save")}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
-
-              <div className="space-y-3">
-              {templates.map((tpl) => (
-                <div key={tpl.id} className="p-4 rounded-lg border border-border hover:bg-muted/30 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">{tpl.name}</p>
-                      <div className="flex gap-1.5 mt-2 flex-wrap">
-                        {tpl.variables.map((v) => (
-                          <Badge key={v} variant="secondary" className="text-xs font-mono">{v}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-xs">{tpl.company}</Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
             </div>
           </CardContent>
         </Card>
       </div>
       )}
     </div>
+    <Dialog open={isFieldDialogOpen} onOpenChange={setIsFieldDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Template Variable</DialogTitle>
+          <DialogDescription>
+            Create a custom field and it will appear in the variable list immediately.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Field label</p>
+            <Input
+              value={fieldLabelInput}
+              onChange={(e) => setFieldLabelInput(e.target.value)}
+              placeholder="ชื่อลูกค้า"
+            />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Variable token</p>
+            <Input
+              value={fieldTokenInput}
+              onChange={(e) => setFieldTokenInput(e.target.value)}
+              placeholder="{{employee_name}}"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsFieldDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveCustomField}>Save Variable</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
   );
 };
