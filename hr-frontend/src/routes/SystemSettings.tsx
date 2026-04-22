@@ -116,7 +116,7 @@ const SystemSettings = () => {
               <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" onClick={() => handleSystemAction("force-logout")} disabled={runningAction !== null}>{runningAction === "force-logout" ? "Running..." : t("systemSettings.forceLogout")}</Button>
                 <Button variant="outline" onClick={() => handleSystemAction("rotate-api-keys")} disabled={runningAction !== null}>{runningAction === "rotate-api-keys" ? "Running..." : t("systemSettings.rotateApiKeys")}</Button>
-                <Button onClick={() => handleSystemAction("apply-security-policy")} disabled={runningAction !== null}>{runningAction === "apply-security-policy" ? "Running..." : t("systemSettings.applyPolicy")}</Button>
+                <Button variant="outline" onClick={() => handleSystemAction("apply-security-policy")} disabled={runningAction !== null}>{runningAction === "apply-security-policy" ? "Running..." : t("systemSettings.applyPolicy")}</Button>
               </div>
             </CardContent>
           </Card>
