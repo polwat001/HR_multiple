@@ -990,7 +990,7 @@ const TimeAttendance = () => {
                     key={shiftName}
                   >
                     {/* TABLE */}
-                      <table className="w-full text-sm">
+                      <table className="w-full text-sm table-fixed">
                         <thead>
                           <tr className="border-b bg-muted/40">
                             <th className="text-left px-4 py-3">
